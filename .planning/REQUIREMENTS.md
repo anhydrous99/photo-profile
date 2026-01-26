@@ -104,37 +104,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HOME-01 | TBD | Pending |
-| HOME-02 | TBD | Pending |
-| GLRY-01 | TBD | Pending |
-| GLRY-02 | TBD | Pending |
-| GLRY-03 | TBD | Pending |
-| GLRY-04 | TBD | Pending |
-| ALBM-01 | TBD | Pending |
-| ALBM-02 | TBD | Pending |
-| VIEW-01 | TBD | Pending |
-| VIEW-02 | TBD | Pending |
-| VIEW-03 | TBD | Pending |
-| VIEW-04 | TBD | Pending |
-| AUTH-01 | TBD | Pending |
-| AUTH-02 | TBD | Pending |
-| UPLD-01 | TBD | Pending |
-| UPLD-02 | TBD | Pending |
-| UPLD-03 | TBD | Pending |
-| UPLD-04 | TBD | Pending |
-| UPLD-05 | TBD | Pending |
-| MGMT-01 | TBD | Pending |
-| MGMT-02 | TBD | Pending |
-| MGMT-03 | TBD | Pending |
-| ALBM-03 | TBD | Pending |
-| ALBM-04 | TBD | Pending |
-| ALBM-05 | TBD | Pending |
+| HOME-01 | Phase 9 | Pending |
+| HOME-02 | Phase 9 | Pending |
+| GLRY-01 | Phase 7 | Pending |
+| GLRY-02 | Phase 7 | Pending |
+| GLRY-03 | Phase 10 | Pending |
+| GLRY-04 | Phase 7 | Pending |
+| ALBM-01 | Phase 7 | Pending |
+| ALBM-02 | Phase 7 | Pending |
+| ALBM-03 | Phase 6 | Pending |
+| ALBM-04 | Phase 6 | Pending |
+| ALBM-05 | Phase 6 | Pending |
+| VIEW-01 | Phase 8 | Pending |
+| VIEW-02 | Phase 8 | Pending |
+| VIEW-03 | Phase 8 | Pending |
+| VIEW-04 | Phase 8 | Pending |
+| AUTH-01 | Phase 3 | Pending |
+| AUTH-02 | Phase 3 | Pending |
+| UPLD-01 | Phase 4 | Pending |
+| UPLD-02 | Phase 4 | Pending |
+| UPLD-03 | Phase 4 | Pending |
+| UPLD-04 | Phase 2 | Pending |
+| UPLD-05 | Phase 2 | Pending |
+| MGMT-01 | Phase 5 | Pending |
+| MGMT-02 | Phase 5 | Pending |
+| MGMT-03 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 (pending roadmap)
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-01-25*
-*Last updated: 2026-01-25 after initial definition*
+*Last updated: 2026-01-25 after roadmap creation*
