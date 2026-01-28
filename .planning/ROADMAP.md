@@ -35,12 +35,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. File storage directory structure exists for originals and derivatives
   4. Repository pattern implemented for Photo and Album entities
   5. Development server runs without errors
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Project scaffolding and clean architecture setup
-- [ ] 01-02: Database schema and Drizzle ORM configuration
-- [ ] 01-03: Repository pattern implementation
+- [ ] 01-01-PLAN.md — Project scaffolding and clean architecture setup
+- [ ] 01-02-PLAN.md — Domain entities, repository interfaces, and Drizzle schema
+- [ ] 01-03-PLAN.md — Repository implementations and development tooling
 
 ### Phase 2: Image Pipeline
 **Goal**: Enable automatic thumbnail and optimized image generation
@@ -197,7 +197,7 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/3 | Not started | - |
+| 1. Foundation | 0/3 | Planned | - |
 | 2. Image Pipeline | 0/4 | Not started | - |
 | 3. Admin Auth | 0/3 | Not started | - |
 | 4. Photo Upload | 0/3 | Not started | - |
