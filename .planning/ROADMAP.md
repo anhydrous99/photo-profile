@@ -13,7 +13,7 @@ This roadmap delivers a personal photography portfolio website where visitors br
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Domain entities, database schema, file storage infrastructure
+- [x] **Phase 1: Foundation** - Domain entities, database schema, file storage infrastructure
 - [ ] **Phase 2: Image Pipeline** - Async job queue, thumbnail generation, format conversion
 - [ ] **Phase 3: Admin Auth** - Password authentication for admin panel access
 - [ ] **Phase 4: Photo Upload** - Drag-drop interface with batch upload and progress
@@ -42,9 +42,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 
-- [ ] 01-01-PLAN.md — Project scaffolding and clean architecture setup
-- [ ] 01-02-PLAN.md — Domain entities, repository interfaces, and Drizzle schema
-- [ ] 01-03-PLAN.md — Repository implementations and development tooling
+- [x] 01-01-PLAN.md — Project scaffolding and clean architecture setup
+- [x] 01-02-PLAN.md — Domain entities, repository interfaces, and Drizzle schema
+- [x] 01-03-PLAN.md — Repository implementations and development tooling
 
 ### Phase 2: Image Pipeline
 
@@ -226,18 +226,18 @@ Plans:
 **Execution Order:**
 Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 
-| Phase               | Plans Complete | Status      | Completed |
-| ------------------- | -------------- | ----------- | --------- |
-| 1. Foundation       | 0/3            | Planned     | -         |
-| 2. Image Pipeline   | 0/4            | Not started | -         |
-| 3. Admin Auth       | 0/3            | Not started | -         |
-| 4. Photo Upload     | 0/3            | Not started | -         |
-| 5. Photo Management | 0/3            | Not started | -         |
-| 6. Album Management | 0/2            | Not started | -         |
-| 7. Public Gallery   | 0/3            | Not started | -         |
-| 8. Lightbox         | 0/3            | Not started | -         |
-| 9. Homepage         | 0/2            | Not started | -         |
-| 10. Polish          | 0/3            | Not started | -         |
+| Phase               | Plans Complete | Status      | Completed  |
+| ------------------- | -------------- | ----------- | ---------- |
+| 1. Foundation       | 3/3            | Complete    | 2026-01-29 |
+| 2. Image Pipeline   | 0/4            | Not started | -          |
+| 3. Admin Auth       | 0/3            | Not started | -          |
+| 4. Photo Upload     | 0/3            | Not started | -          |
+| 5. Photo Management | 0/3            | Not started | -          |
+| 6. Album Management | 0/2            | Not started | -          |
+| 7. Public Gallery   | 0/3            | Not started | -          |
+| 8. Lightbox         | 0/3            | Not started | -          |
+| 9. Homepage         | 0/2            | Not started | -          |
+| 10. Polish          | 0/3            | Not started | -          |
 
 **Total Plans:** 29
-**Completed:** 0/29 (0%)
+**Completed:** 3/29 (10%)
