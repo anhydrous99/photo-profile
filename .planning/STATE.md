@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 1 of 10 (Foundation)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-01-29 - Completed 01-01-PLAN.md
+Last activity: 2026-01-29 - Completed 01-02-PLAN.md
 
-Progress: [#.........] 3%
+Progress: [##........] 7%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 3 min
-- Total execution time: 3 min
+- Total plans completed: 2
+- Average duration: 2.5 min
+- Total execution time: 5 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 1 | 3 min | 3 min |
+| 01-foundation | 2 | 5 min | 2.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3 min)
-- Trend: Not enough data
+- Last 5 plans: 01-01 (3 min), 01-02 (2 min)
+- Trend: Improving
 
 *Updated after each plan completion*
 
@@ -44,6 +44,9 @@ Recent decisions affecting current work:
 
 - Kept @/* path alias alongside layer-specific aliases for backwards compatibility
 - Used .gitkeep files to track empty directories in git
+- Used Zod 4 with safeParse for fail-fast environment validation
+- Stored timestamps as integer milliseconds with mode: 'timestamp_ms'
+- Domain layer exports types only (no runtime code dependencies)
 
 ### Pending Todos
 
@@ -55,6 +58,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-29T07:16:36Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-01-29T07:21:03Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
