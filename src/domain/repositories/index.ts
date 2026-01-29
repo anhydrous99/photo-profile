@@ -1,2 +1,2 @@
-export type { PhotoRepository } from './PhotoRepository';
-export type { AlbumRepository } from './AlbumRepository';
+export type { PhotoRepository } from "./PhotoRepository";
+export type { AlbumRepository } from "./AlbumRepository";

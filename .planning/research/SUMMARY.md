@@ -46,14 +46,14 @@ Presentation → Application → Domain → Infrastructure
 
 ### Critical Pitfalls to Avoid
 
-| Pitfall | Prevention |
-|---------|------------|
-| Serving 50MP originals | Generate thumbnails in multiple sizes |
-| Sync processing on upload | Use job queue (BullMQ/Redis) |
-| Memory exhaustion | Use Sharp streaming, not buffer-based |
-| Missing EXIF rotation | Sharp auto-rotates based on EXIF |
-| EXIF privacy exposure | Whitelist displayed fields, hide GPS |
-| Logic in route handlers | Repository pattern, dependency injection |
+| Pitfall                   | Prevention                               |
+| ------------------------- | ---------------------------------------- |
+| Serving 50MP originals    | Generate thumbnails in multiple sizes    |
+| Sync processing on upload | Use job queue (BullMQ/Redis)             |
+| Memory exhaustion         | Use Sharp streaming, not buffer-based    |
+| Missing EXIF rotation     | Sharp auto-rotates based on EXIF         |
+| EXIF privacy exposure     | Whitelist displayed fields, hide GPS     |
+| Logic in route handlers   | Repository pattern, dependency injection |
 
 ### Build Order
 
@@ -65,16 +65,16 @@ Presentation → Application → Domain → Infrastructure
 
 ## Technology Decisions
 
-| Category | Choice | Rationale |
-|----------|--------|-----------|
-| Framework | Next.js 16 | Built-in image optimization, SSR, self-hostable |
-| Database | SQLite + Drizzle | Simple, single-file, code-first schemas |
-| Image Processing | Sharp | Fastest, streaming (low memory), WebP/AVIF support |
-| EXIF | exifr | Pure JS, zero dependencies, fast |
-| Auth | Auth.js | Single admin, JWT sessions, no extra DB tables |
-| Styling | Tailwind CSS | No runtime overhead, good photo gallery utilities |
-| Lightbox | yet-another-react-lightbox | React 19 compatible, responsive, accessible |
-| Job Queue | BullMQ + Redis | Production-proven for async processing |
+| Category         | Choice                     | Rationale                                          |
+| ---------------- | -------------------------- | -------------------------------------------------- |
+| Framework        | Next.js 16                 | Built-in image optimization, SSR, self-hostable    |
+| Database         | SQLite + Drizzle           | Simple, single-file, code-first schemas            |
+| Image Processing | Sharp                      | Fastest, streaming (low memory), WebP/AVIF support |
+| EXIF             | exifr                      | Pure JS, zero dependencies, fast                   |
+| Auth             | Auth.js                    | Single admin, JWT sessions, no extra DB tables     |
+| Styling          | Tailwind CSS               | No runtime overhead, good photo gallery utilities  |
+| Lightbox         | yet-another-react-lightbox | React 19 compatible, responsive, accessible        |
+| Job Queue        | BullMQ + Redis             | Production-proven for async processing             |
 
 ## File Organization (Clean Architecture)
 
@@ -115,4 +115,4 @@ src/
 
 ---
 
-*Research synthesized from STACK.md, ARCHITECTURE.md, FEATURES.md, PITFALLS.md*
+_Research synthesized from STACK.md, ARCHITECTURE.md, FEATURES.md, PITFALLS.md_

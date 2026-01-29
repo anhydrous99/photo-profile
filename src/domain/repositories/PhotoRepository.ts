@@ -1,4 +1,4 @@
-import type { Photo } from '../entities/Photo';
+import type { Photo } from "../entities/Photo";
 
 export interface PhotoRepository {
   findById(id: string): Promise<Photo | null>;

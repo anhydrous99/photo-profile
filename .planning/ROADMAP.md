@@ -7,6 +7,7 @@ This roadmap delivers a personal photography portfolio website where visitors br
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
@@ -26,166 +27,196 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Foundation
+
 **Goal**: Establish the core infrastructure for storing photos and albums
 **Depends on**: Nothing (first phase)
 **Requirements**: None directly (infrastructure enables all other requirements)
 **Success Criteria** (what must be TRUE):
-  1. Next.js project scaffolded with clean architecture folder structure
-  2. SQLite database created with Photo and Album tables via Drizzle ORM
-  3. File storage directory structure exists for originals and derivatives
-  4. Repository pattern implemented for Photo and Album entities
-  5. Development server runs without errors
-**Plans**: 3 plans
+
+1. Next.js project scaffolded with clean architecture folder structure
+2. SQLite database created with Photo and Album tables via Drizzle ORM
+3. File storage directory structure exists for originals and derivatives
+4. Repository pattern implemented for Photo and Album entities
+5. Development server runs without errors
+   **Plans**: 3 plans
 
 Plans:
+
 - [ ] 01-01-PLAN.md — Project scaffolding and clean architecture setup
 - [ ] 01-02-PLAN.md — Domain entities, repository interfaces, and Drizzle schema
 - [ ] 01-03-PLAN.md — Repository implementations and development tooling
 
 ### Phase 2: Image Pipeline
+
 **Goal**: Enable automatic thumbnail and optimized image generation
 **Depends on**: Phase 1
 **Requirements**: UPLD-04, UPLD-05
 **Success Criteria** (what must be TRUE):
-  1. Uploading an image triggers async job for processing
-  2. Multiple thumbnail sizes generated (300px, 600px, 1200px, 2400px)
-  3. WebP format generated alongside JPEG
-  4. Original image preserved separately from derivatives
-  5. Processing completes within reasonable time for 50MP images
-**Plans**: TBD
+
+1. Uploading an image triggers async job for processing
+2. Multiple thumbnail sizes generated (300px, 600px, 1200px, 2400px)
+3. WebP format generated alongside JPEG
+4. Original image preserved separately from derivatives
+5. Processing completes within reasonable time for 50MP images
+   **Plans**: TBD
 
 Plans:
+
 - [ ] 02-01: BullMQ and Redis job queue setup
 - [ ] 02-02: Sharp image processing service
 - [ ] 02-03: Multi-size thumbnail generation
 - [ ] 02-04: WebP/AVIF format conversion
 
 ### Phase 3: Admin Auth
+
 **Goal**: Protect admin features with password authentication
 **Depends on**: Phase 1
 **Requirements**: AUTH-01, AUTH-02
 **Success Criteria** (what must be TRUE):
-  1. Admin login page exists at /admin/login
-  2. Incorrect password shows error message
-  3. Correct password creates authenticated session
-  4. Authenticated session persists across page navigation
-  5. Unauthenticated access to /admin/* redirects to login
-**Plans**: TBD
+
+1. Admin login page exists at /admin/login
+2. Incorrect password shows error message
+3. Correct password creates authenticated session
+4. Authenticated session persists across page navigation
+5. Unauthenticated access to /admin/\* redirects to login
+   **Plans**: TBD
 
 Plans:
+
 - [ ] 03-01: Auth.js configuration with credentials provider
 - [ ] 03-02: Login page and session handling
 - [ ] 03-03: Protected route middleware
 
 ### Phase 4: Photo Upload
+
 **Goal**: Admin can upload photos through intuitive drag-drop interface
 **Depends on**: Phase 2, Phase 3
 **Requirements**: UPLD-01, UPLD-02, UPLD-03
 **Success Criteria** (what must be TRUE):
-  1. Drag-drop zone accepts image files
-  2. Multiple files can be dropped at once
-  3. Upload progress shown for each file
-  4. Uploaded photos appear in admin photo list
-  5. Image pipeline processes uploads automatically
-**Plans**: TBD
+
+1. Drag-drop zone accepts image files
+2. Multiple files can be dropped at once
+3. Upload progress shown for each file
+4. Uploaded photos appear in admin photo list
+5. Image pipeline processes uploads automatically
+   **Plans**: TBD
 
 Plans:
+
 - [ ] 04-01: Drag-drop upload component
 - [ ] 04-02: Batch upload with progress tracking
 - [ ] 04-03: Admin photo list view
 
 ### Phase 5: Photo Management
+
 **Goal**: Admin can manage photo metadata and organization
 **Depends on**: Phase 4
 **Requirements**: MGMT-01, MGMT-02, MGMT-03
 **Success Criteria** (what must be TRUE):
-  1. Admin can add/edit description for any photo
-  2. Admin can assign photo to one or more albums
-  3. Admin can delete photos (with confirmation)
-  4. Deleted photos remove all associated files (originals + derivatives)
-**Plans**: TBD
+
+1. Admin can add/edit description for any photo
+2. Admin can assign photo to one or more albums
+3. Admin can delete photos (with confirmation)
+4. Deleted photos remove all associated files (originals + derivatives)
+   **Plans**: TBD
 
 Plans:
+
 - [ ] 05-01: Photo detail editing interface
 - [ ] 05-02: Album assignment functionality
 - [ ] 05-03: Photo deletion with file cleanup
 
 ### Phase 6: Album Management
+
 **Goal**: Admin can organize photos into albums
 **Depends on**: Phase 5
 **Requirements**: ALBM-03, ALBM-04, ALBM-05
 **Success Criteria** (what must be TRUE):
-  1. Admin can create new albums with names
-  2. Admin can rename existing albums
-  3. Admin can delete albums (photos remain, just unassigned)
-  4. Album list shows photo count per album
-**Plans**: TBD
+
+1. Admin can create new albums with names
+2. Admin can rename existing albums
+3. Admin can delete albums (photos remain, just unassigned)
+4. Album list shows photo count per album
+   **Plans**: TBD
 
 Plans:
+
 - [ ] 06-01: Album CRUD interface
 - [ ] 06-02: Album list with photo counts
 
 ### Phase 7: Public Gallery
+
 **Goal**: Visitors can browse albums and view photo grids
 **Depends on**: Phase 6
 **Requirements**: GLRY-01, GLRY-02, GLRY-04, ALBM-01, ALBM-02
 **Success Criteria** (what must be TRUE):
-  1. Album listing page shows all albums with cover thumbnails
-  2. Clicking album displays responsive grid of photos
-  3. Thumbnails load quickly (optimized sizes served)
-  4. Gallery works on mobile and desktop viewports
-  5. Minimalist design keeps focus on photos
-**Plans**: TBD
+
+1. Album listing page shows all albums with cover thumbnails
+2. Clicking album displays responsive grid of photos
+3. Thumbnails load quickly (optimized sizes served)
+4. Gallery works on mobile and desktop viewports
+5. Minimalist design keeps focus on photos
+   **Plans**: TBD
 
 Plans:
+
 - [ ] 07-01: Album listing page
 - [ ] 07-02: Photo grid component with responsive layout
 - [ ] 07-03: Responsive image serving (srcset)
 
 ### Phase 8: Lightbox
+
 **Goal**: Visitors can view photos in immersive full-size display
 **Depends on**: Phase 7
 **Requirements**: VIEW-01, VIEW-02, VIEW-03, VIEW-04
 **Success Criteria** (what must be TRUE):
-  1. Clicking photo opens larger view in lightbox overlay
-  2. Previous/next buttons navigate between photos
-  3. Arrow keys navigate, Escape closes lightbox
-  4. Photo description displayed when viewing
-  5. Lightbox works on mobile and desktop
-**Plans**: TBD
+
+1. Clicking photo opens larger view in lightbox overlay
+2. Previous/next buttons navigate between photos
+3. Arrow keys navigate, Escape closes lightbox
+4. Photo description displayed when viewing
+5. Lightbox works on mobile and desktop
+   **Plans**: TBD
 
 Plans:
+
 - [ ] 08-01: Lightbox component integration
 - [ ] 08-02: Keyboard navigation
 - [ ] 08-03: Photo description display
 
 ### Phase 9: Homepage
+
 **Goal**: Visitors see curated random selection on landing page
 **Depends on**: Phase 7
 **Requirements**: HOME-01, HOME-02
 **Success Criteria** (what must be TRUE):
-  1. Homepage displays photos from across all albums
-  2. Photo selection randomizes on page refresh
-  3. Clicking homepage photo opens lightbox
-  4. Design is clean and photo-focused
-**Plans**: TBD
+
+1. Homepage displays photos from across all albums
+2. Photo selection randomizes on page refresh
+3. Clicking homepage photo opens lightbox
+4. Design is clean and photo-focused
+   **Plans**: TBD
 
 Plans:
+
 - [ ] 09-01: Random photo selection service
 - [ ] 09-02: Homepage layout and design
 
 ### Phase 10: Polish
+
 **Goal**: Final optimizations for production-quality experience
 **Depends on**: Phase 8, Phase 9
 **Requirements**: GLRY-03
 **Success Criteria** (what must be TRUE):
-  1. Blur placeholder shown while full images load
-  2. Page load performance acceptable (thumbnails < 2 seconds)
-  3. No visual layout shift when images load
-  4. Production build works in Docker container
-**Plans**: TBD
+
+1. Blur placeholder shown while full images load
+2. Page load performance acceptable (thumbnails < 2 seconds)
+3. No visual layout shift when images load
+4. Production build works in Docker container
+   **Plans**: TBD
 
 Plans:
+
 - [ ] 10-01: Blur placeholder generation and display
 - [ ] 10-02: Performance optimization audit
 - [ ] 10-03: Docker deployment configuration
@@ -195,18 +226,18 @@ Plans:
 **Execution Order:**
 Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Foundation | 0/3 | Planned | - |
-| 2. Image Pipeline | 0/4 | Not started | - |
-| 3. Admin Auth | 0/3 | Not started | - |
-| 4. Photo Upload | 0/3 | Not started | - |
-| 5. Photo Management | 0/3 | Not started | - |
-| 6. Album Management | 0/2 | Not started | - |
-| 7. Public Gallery | 0/3 | Not started | - |
-| 8. Lightbox | 0/3 | Not started | - |
-| 9. Homepage | 0/2 | Not started | - |
-| 10. Polish | 0/3 | Not started | - |
+| Phase               | Plans Complete | Status      | Completed |
+| ------------------- | -------------- | ----------- | --------- |
+| 1. Foundation       | 0/3            | Planned     | -         |
+| 2. Image Pipeline   | 0/4            | Not started | -         |
+| 3. Admin Auth       | 0/3            | Not started | -         |
+| 4. Photo Upload     | 0/3            | Not started | -         |
+| 5. Photo Management | 0/3            | Not started | -         |
+| 6. Album Management | 0/2            | Not started | -         |
+| 7. Public Gallery   | 0/3            | Not started | -         |
+| 8. Lightbox         | 0/3            | Not started | -         |
+| 9. Homepage         | 0/2            | Not started | -         |
+| 10. Polish          | 0/3            | Not started | -         |
 
 **Total Plans:** 29
 **Completed:** 0/29 (0%)

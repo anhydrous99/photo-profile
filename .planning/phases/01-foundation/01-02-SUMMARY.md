@@ -17,8 +17,10 @@ affects: [01-03, photo-upload, album-management, all-database-operations]
 
 # Tech tracking
 tech-stack:
-  added: [drizzle-orm@0.45.1, better-sqlite3@12.6.2, zod@4.3.6, drizzle-kit@0.31.8]
-  patterns: [repository-interface-pattern, zod-env-validation, drizzle-sqlite-schema]
+  added:
+    [drizzle-orm@0.45.1, better-sqlite3@12.6.2, zod@4.3.6, drizzle-kit@0.31.8]
+  patterns:
+    [repository-interface-pattern, zod-env-validation, drizzle-sqlite-schema]
 
 key-files:
   created:
@@ -123,5 +125,6 @@ None - `.env.local` created with default values. Database auto-created on first 
 - Ready for Plan 03 (Docker Compose and development tooling)
 
 ---
-*Phase: 01-foundation*
-*Completed: 2026-01-29*
+
+_Phase: 01-foundation_
+_Completed: 2026-01-29_

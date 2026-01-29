@@ -1,4 +1,4 @@
-import type { Album } from '../entities/Album';
+import type { Album } from "../entities/Album";
 
 export interface AlbumRepository {
   findById(id: string): Promise<Album | null>;

@@ -58,22 +58,22 @@ A photography portfolio system handling thousands of 50MP images requires a clea
 
 ## Component Boundaries
 
-| Component | Responsibility | Communicates With | Build Phase |
-|-----------|---------------|-------------------|-------------|
-| **Public Gallery** | Display photos to visitors, lazy loading, responsive images | Gallery Service, CDN/File Storage | Phase 3 |
-| **Admin Panel** | Upload photos, manage albums, edit metadata | Upload Service, Photo Service | Phase 2 |
-| **REST API** | Internal API for admin operations | Application Services | Phase 2 |
-| **Gallery Service** | Fetch optimized photo data for display | Domain Layer, Database | Phase 3 |
-| **Upload Service** | Accept uploads, dispatch to job queue | Job Queue, File Storage | Phase 2 |
-| **Photo Service** | CRUD operations on photo metadata | Domain Layer, Database | Phase 1 |
-| **Photo Entity** | Core domain model with business rules | None (pure domain) | Phase 1 |
-| **Album Entity** | Collection of photos with ordering | Photo Entity | Phase 1 |
-| **File Storage** | Store original and processed images | Filesystem | Phase 1 |
-| **Database** | Persist metadata, albums, settings | None (infrastructure) | Phase 1 |
-| **Job Queue** | Async processing coordination | Workers | Phase 2 |
-| **Thumbnail Generator** | Create multiple image sizes | Sharp, File Storage | Phase 2 |
-| **EXIF Extractor** | Parse camera/lens/GPS metadata | ExifTool/Sharp, Database | Phase 2 |
-| **Format Converter** | Generate WebP/AVIF variants | Sharp, File Storage | Phase 2 |
+| Component               | Responsibility                                              | Communicates With                 | Build Phase |
+| ----------------------- | ----------------------------------------------------------- | --------------------------------- | ----------- |
+| **Public Gallery**      | Display photos to visitors, lazy loading, responsive images | Gallery Service, CDN/File Storage | Phase 3     |
+| **Admin Panel**         | Upload photos, manage albums, edit metadata                 | Upload Service, Photo Service     | Phase 2     |
+| **REST API**            | Internal API for admin operations                           | Application Services              | Phase 2     |
+| **Gallery Service**     | Fetch optimized photo data for display                      | Domain Layer, Database            | Phase 3     |
+| **Upload Service**      | Accept uploads, dispatch to job queue                       | Job Queue, File Storage           | Phase 2     |
+| **Photo Service**       | CRUD operations on photo metadata                           | Domain Layer, Database            | Phase 1     |
+| **Photo Entity**        | Core domain model with business rules                       | None (pure domain)                | Phase 1     |
+| **Album Entity**        | Collection of photos with ordering                          | Photo Entity                      | Phase 1     |
+| **File Storage**        | Store original and processed images                         | Filesystem                        | Phase 1     |
+| **Database**            | Persist metadata, albums, settings                          | None (infrastructure)             | Phase 1     |
+| **Job Queue**           | Async processing coordination                               | Workers                           | Phase 2     |
+| **Thumbnail Generator** | Create multiple image sizes                                 | Sharp, File Storage               | Phase 2     |
+| **EXIF Extractor**      | Parse camera/lens/GPS metadata                              | ExifTool/Sharp, Database          | Phase 2     |
+| **Format Converter**    | Generate WebP/AVIF variants                                 | Sharp, File Storage               | Phase 2     |
 
 ## Data Flow
 
@@ -153,6 +153,7 @@ A photography portfolio system handling thousands of 50MP images requires a clea
 **Why:** This is the pillar of Clean Architecture per Robert Martin. It enables testing domain logic without databases, swapping storage backends, and maintaining a clean, educational codebase.
 
 **Example:**
+
 ```typescript
 // Domain layer - no dependencies on infrastructure
 interface PhotoRepository {
@@ -187,17 +188,18 @@ class SQLitePhotoRepository implements PhotoRepository {
 **Why:** 50MP images take seconds to minutes to process. Blocking the web request creates timeouts and poor UX. Queue-based architecture handles spikes and allows retries.
 
 **Example:**
+
 ```typescript
 // Upload endpoint - fast return
 async function uploadPhoto(file: Buffer, metadata: PhotoMetadata) {
   const id = generateId();
   await fileStorage.saveOriginal(id, file);
-  await photoRepo.create({ id, status: 'processing', ...metadata });
+  await photoRepo.create({ id, status: "processing", ...metadata });
 
   // Dispatch to queue - returns immediately
-  await jobQueue.add('process-photo', { photoId: id });
+  await jobQueue.add("process-photo", { photoId: id });
 
-  return { id, status: 'processing' };
+  return { id, status: "processing" };
 }
 
 // Worker - runs in background
@@ -211,7 +213,7 @@ async function processPhotoJob(job: Job<{ photoId: string }>) {
     convertFormats(photoId),
   ]);
 
-  await photoRepo.update(photoId, { status: 'ready' });
+  await photoRepo.update(photoId, { status: "ready" });
 }
 ```
 
@@ -224,41 +226,48 @@ async function processPhotoJob(job: Job<{ photoId: string }>) {
 **Why:** A 50MP original is ~25MB. Nobody needs that on a phone. Proper responsive images reduce bandwidth 90%+ while maintaining quality.
 
 **Example:**
+
 ```html
 <picture>
   <!-- AVIF: Best compression, ~30% smaller than WebP -->
   <source
     type="image/avif"
     srcset="
-      /photos/abc123/300.avif 300w,
-      /photos/abc123/600.avif 600w,
+      /photos/abc123/300.avif   300w,
+      /photos/abc123/600.avif   600w,
       /photos/abc123/1200.avif 1200w,
-      /photos/abc123/2400.avif 2400w"
-    sizes="(max-width: 600px) 100vw, 50vw">
+      /photos/abc123/2400.avif 2400w
+    "
+    sizes="(max-width: 600px) 100vw, 50vw"
+  />
 
   <!-- WebP: Good compression, wider support -->
   <source
     type="image/webp"
     srcset="
-      /photos/abc123/300.webp 300w,
-      /photos/abc123/600.webp 600w,
+      /photos/abc123/300.webp   300w,
+      /photos/abc123/600.webp   600w,
       /photos/abc123/1200.webp 1200w,
-      /photos/abc123/2400.webp 2400w"
-    sizes="(max-width: 600px) 100vw, 50vw">
+      /photos/abc123/2400.webp 2400w
+    "
+    sizes="(max-width: 600px) 100vw, 50vw"
+  />
 
   <!-- JPEG: Universal fallback -->
   <img
     src="/photos/abc123/1200.jpg"
     srcset="
-      /photos/abc123/300.jpg 300w,
-      /photos/abc123/600.jpg 600w,
+      /photos/abc123/300.jpg   300w,
+      /photos/abc123/600.jpg   600w,
       /photos/abc123/1200.jpg 1200w,
-      /photos/abc123/2400.jpg 2400w"
+      /photos/abc123/2400.jpg 2400w
+    "
     sizes="(max-width: 600px) 100vw, 50vw"
     alt="Photo description"
     loading="lazy"
     width="1200"
-    height="800">
+    height="800"
+  />
 </picture>
 ```
 
@@ -271,6 +280,7 @@ async function processPhotoJob(job: Job<{ photoId: string }>) {
 **Why:** Gallery pages may have 50+ images. Loading all at once wastes bandwidth and delays interactivity.
 
 **Example:**
+
 ```typescript
 // Generate tiny blur placeholder during processing
 const blurPlaceholder = await sharp(original)
@@ -295,6 +305,7 @@ const blurDataUri = `data:image/jpeg;base64,${blurPlaceholder.toString('base64')
 **What:** Each module has one reason to change. Separate concerns into distinct files/classes.
 
 **Example directory structure:**
+
 ```
 src/
   domain/
@@ -348,6 +359,7 @@ src/
 **What:** Processing images in the web request handler, blocking until complete.
 
 **Why bad:**
+
 - 50MP images take 5-30 seconds to process
 - HTTP timeouts kill the request
 - Server becomes unresponsive during uploads
@@ -360,6 +372,7 @@ src/
 **What:** Saving image binary data as BLOBs in SQLite/Postgres.
 
 **Why bad:**
+
 - Database becomes enormous (50MP = ~25MB per image)
 - Backups become slow and expensive
 - Cannot leverage filesystem caching
@@ -372,6 +385,7 @@ src/
 **What:** Serving original 50MP images (or one downsized version) to all devices.
 
 **Why bad:**
+
 - 25MB images on mobile = terrible UX
 - Bandwidth costs explode
 - Core Web Vitals tank
@@ -384,6 +398,7 @@ src/
 **What:** Importing SQLite directly in service classes. Hardcoding file paths. Mixing business logic with I/O.
 
 **Why bad:**
+
 - Cannot test business logic without real database
 - Cannot swap storage backends
 - Violates Clean Architecture principles
@@ -396,6 +411,7 @@ src/
 **What:** Modifying the uploaded original image (stripping EXIF, resizing in place).
 
 **Why bad:**
+
 - Loss of original quality forever
 - EXIF data lost (camera info, GPS, copyright)
 - Cannot regenerate better thumbnails later
@@ -405,13 +421,13 @@ src/
 
 ## Scalability Considerations
 
-| Concern | Personal Scale (Now) | Growth Path |
-|---------|---------------------|-------------|
-| **Storage** | Local filesystem, ~500GB for 10K photos | Add object storage (MinIO) if exceeding local capacity |
-| **Processing** | Single worker process | Add workers, Redis persists queue |
-| **Serving** | Direct filesystem serving | Add CDN (Cloudflare) for edge caching |
-| **Database** | SQLite, single file | Migrate to Postgres if concurrent writes become issue |
-| **Memory** | Sharp streams, low memory | Already optimized via libvips |
+| Concern        | Personal Scale (Now)                    | Growth Path                                            |
+| -------------- | --------------------------------------- | ------------------------------------------------------ |
+| **Storage**    | Local filesystem, ~500GB for 10K photos | Add object storage (MinIO) if exceeding local capacity |
+| **Processing** | Single worker process                   | Add workers, Redis persists queue                      |
+| **Serving**    | Direct filesystem serving               | Add CDN (Cloudflare) for edge caching                  |
+| **Database**   | SQLite, single file                     | Migrate to Postgres if concurrent writes become issue  |
+| **Memory**     | Sharp streams, low memory               | Already optimized via libvips                          |
 
 For a personal portfolio with single admin, the "Personal Scale" column is sufficient. The architecture supports growth without rewrites.
 
@@ -532,24 +548,26 @@ Phase 4: Polish (Post-MVP)
 
 ## Technology Recommendations
 
-| Component | Recommended | Rationale |
-|-----------|-------------|-----------|
-| **Image Processing** | Sharp (Node.js) | 4-5x faster than ImageMagick, native AVIF/WebP, low memory via libvips |
-| **EXIF Extraction** | Sharp metadata API + ExifTool fallback | Sharp handles common cases; ExifTool for RAW/advanced |
-| **Job Queue** | BullMQ + Redis | Production-proven, retries, progress tracking, persistence |
-| **Database** | SQLite | Zero config, single file, sufficient for single-admin portfolio |
-| **File Storage** | Local filesystem | Simplest for self-hosted, direct serving, easy backup |
-| **Web Framework** | Next.js or Astro | SSR/SSG support, image optimization built-in, TypeScript |
+| Component            | Recommended                            | Rationale                                                              |
+| -------------------- | -------------------------------------- | ---------------------------------------------------------------------- |
+| **Image Processing** | Sharp (Node.js)                        | 4-5x faster than ImageMagick, native AVIF/WebP, low memory via libvips |
+| **EXIF Extraction**  | Sharp metadata API + ExifTool fallback | Sharp handles common cases; ExifTool for RAW/advanced                  |
+| **Job Queue**        | BullMQ + Redis                         | Production-proven, retries, progress tracking, persistence             |
+| **Database**         | SQLite                                 | Zero config, single file, sufficient for single-admin portfolio        |
+| **File Storage**     | Local filesystem                       | Simplest for self-hosted, direct serving, easy backup                  |
+| **Web Framework**    | Next.js or Astro                       | SSR/SSG support, image optimization built-in, TypeScript               |
 
 ## Sources
 
 ### Authoritative Sources (HIGH confidence)
+
 - [Sharp Documentation](https://sharp.pixelplumbing.com/) - Image processing library
 - [MDN - Responsive Images](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Performance/Multimedia)
 - [AWS Hexagonal Architecture](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/hexagonal-architecture.html)
 - [Azure Background Jobs Guidance](https://learn.microsoft.com/en-us/azure/architecture/best-practices/background-jobs)
 
 ### Community Sources (MEDIUM confidence)
+
 - [DebugBear - Responsive Images Guide](https://www.debugbear.com/blog/responsive-images)
 - [Request Metrics - Image Optimization 2026](https://requestmetrics.com/web-performance/high-performance-images/)
 - [BullMQ Documentation](https://bullmq.io/)
@@ -557,10 +575,12 @@ Phase 4: Polish (Post-MVP)
 - [ExifTool](https://exiftool.org/)
 
 ### Reference Implementations (MEDIUM confidence)
+
 - [Photoview](https://github.com/photoview/photoview) - Self-hosted photo gallery
 - [HomeGallery](https://home-gallery.org/) - Self-hosted gallery with similar architecture
 - [Lychee](https://lychee.electerious.com/) - Self-hosted photo management
 
 ### Clean Architecture (HIGH confidence)
+
 - Robert C. Martin, "Clean Architecture: A Craftsman's Guide to Software Structure and Design" (2017)
 - [Clean Architecture Summary](https://gist.github.com/ygrenzinger/14812a56b9221c9feca0b3621518635b)

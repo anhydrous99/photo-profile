@@ -1,12 +1,16 @@
-import { eq } from 'drizzle-orm';
-import { db } from '../client';
-import { albums } from '../schema';
-import type { AlbumRepository } from '@/domain/repositories/AlbumRepository';
-import type { Album } from '@/domain/entities/Album';
+import { eq } from "drizzle-orm";
+import { db } from "../client";
+import { albums } from "../schema";
+import type { AlbumRepository } from "@/domain/repositories/AlbumRepository";
+import type { Album } from "@/domain/entities/Album";
 
 export class SQLiteAlbumRepository implements AlbumRepository {
   async findById(id: string): Promise<Album | null> {
-    const result = await db.select().from(albums).where(eq(albums.id, id)).limit(1);
+    const result = await db
+      .select()
+      .from(albums)
+      .where(eq(albums.id, id))
+      .limit(1);
     return result[0] ? this.toDomain(result[0]) : null;
   }
 
@@ -16,7 +20,10 @@ export class SQLiteAlbumRepository implements AlbumRepository {
   }
 
   async findPublished(): Promise<Album[]> {
-    const results = await db.select().from(albums).where(eq(albums.isPublished, true));
+    const results = await db
+      .select()
+      .from(albums)
+      .where(eq(albums.isPublished, true));
     return results.map((row) => this.toDomain(row));
   }
 

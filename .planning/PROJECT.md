@@ -57,11 +57,12 @@ Let the photos speak for themselves — a clean, distraction-free experience whe
 
 ## Key Decisions
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Simple password auth for admin | Single user, no need for full auth system | — Pending |
-| Auto-extract EXIF metadata | User wants camera info displayed automatically | — Pending |
-| Generate thumbnails on upload | 50MP images too large for grid/lightbox direct serving | — Pending |
+| Decision                       | Rationale                                              | Outcome   |
+| ------------------------------ | ------------------------------------------------------ | --------- |
+| Simple password auth for admin | Single user, no need for full auth system              | — Pending |
+| Auto-extract EXIF metadata     | User wants camera info displayed automatically         | — Pending |
+| Generate thumbnails on upload  | 50MP images too large for grid/lightbox direct serving | — Pending |
 
 ---
-*Last updated: 2026-01-24 after initialization*
+
+_Last updated: 2026-01-24 after initialization_

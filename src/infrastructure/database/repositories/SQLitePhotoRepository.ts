@@ -1,12 +1,16 @@
-import { eq } from 'drizzle-orm';
-import { db } from '../client';
-import { photos, photoAlbums } from '../schema';
-import type { PhotoRepository } from '@/domain/repositories/PhotoRepository';
-import type { Photo } from '@/domain/entities/Photo';
+import { eq } from "drizzle-orm";
+import { db } from "../client";
+import { photos, photoAlbums } from "../schema";
+import type { PhotoRepository } from "@/domain/repositories/PhotoRepository";
+import type { Photo } from "@/domain/entities/Photo";
 
 export class SQLitePhotoRepository implements PhotoRepository {
   async findById(id: string): Promise<Photo | null> {
-    const result = await db.select().from(photos).where(eq(photos.id, id)).limit(1);
+    const result = await db
+      .select()
+      .from(photos)
+      .where(eq(photos.id, id))
+      .limit(1);
     return result[0] ? this.toDomain(result[0]) : null;
   }
 

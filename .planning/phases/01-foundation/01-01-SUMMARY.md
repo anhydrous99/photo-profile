@@ -94,7 +94,7 @@ Each task was committed atomically:
 
 ## Decisions Made
 
-- **Kept @/* alias alongside layer aliases:** For backwards compatibility and simpler imports when layer doesn't matter
+- **Kept @/\* alias alongside layer aliases:** For backwards compatibility and simpler imports when layer doesn't matter
 - **Used .gitkeep convention:** Standard approach to track empty directories in git
 
 ## Deviations from Plan
@@ -116,5 +116,6 @@ None - no external service configuration required.
 - Path aliases configured and working for layer imports
 
 ---
-*Phase: 01-foundation*
-*Completed: 2026-01-29*
+
+_Phase: 01-foundation_
+_Completed: 2026-01-29_
