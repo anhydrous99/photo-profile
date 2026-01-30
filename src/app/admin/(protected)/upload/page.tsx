@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { DropZone, UploadQueue } from "@/presentation/components";
 import type { UploadItem } from "@/presentation/components";
 import { uploadFile } from "@/presentation/lib";
@@ -19,9 +19,12 @@ import Link from "next/link";
 export default function UploadPage() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const processingRef = useRef(false);
 
   // Process upload queue sequentially
   const processQueue = useCallback(async (queue: UploadItem[]) => {
+    if (processingRef.current) return; // Prevent double processing
+    processingRef.current = true;
     setIsUploading(true);
 
     for (const item of queue) {
@@ -69,6 +72,7 @@ export default function UploadPage() {
     }
 
     setIsUploading(false);
+    processingRef.current = false;
   }, []);
 
   // Handle files dropped onto zone
@@ -82,14 +86,13 @@ export default function UploadPage() {
         progress: 0,
       }));
 
-      setItems((prev) => {
-        const updated = [...prev, ...newItems];
-        // Start processing if not already uploading
-        if (!isUploading) {
-          processQueue(updated);
-        }
-        return updated;
-      });
+      setItems((prev) => [...prev, ...newItems]);
+
+      // Start processing if not already active
+      if (!isUploading && !processingRef.current) {
+        // Use timeout to ensure state is updated first
+        setTimeout(() => processQueue(newItems), 0);
+      }
     },
     [isUploading, processQueue],
   );
