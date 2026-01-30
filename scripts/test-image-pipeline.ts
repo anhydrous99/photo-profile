@@ -22,7 +22,7 @@ import * as path from "path";
 
 const TEST_PHOTO_ID = `test-pipeline-${Date.now()}`;
 
-// Expected files: 4 sizes (300, 600, 1200, 2400) x 2 formats (webp, jpg)
+// Expected files: 4 sizes (300, 600, 1200, 2400) x 2 formats (webp, avif)
 const EXPECTED_FILES = 8;
 const POLL_INTERVAL = 2000; // 2 seconds
 const TIMEOUT = 30000; // 30 seconds
