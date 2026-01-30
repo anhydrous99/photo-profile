@@ -10,11 +10,11 @@ export const THUMBNAIL_SIZES = [300, 600, 1200, 2400] as const;
 
 /**
  * Quality settings for output formats
- * - JPEG 85 with mozjpeg for good compression with high quality
  * - WebP 82 balances quality and file size for web delivery
+ * - AVIF 80 (more efficient than JPEG, better compression)
  */
-const JPEG_QUALITY = 85;
 const WEBP_QUALITY = 82;
+const AVIF_QUALITY = 80;
 
 /**
  * Get metadata from an image file
@@ -31,15 +31,15 @@ export async function getImageMetadata(
 /**
  * Generate derivative images in multiple sizes and formats
  *
- * Creates WebP and JPEG versions at each thumbnail size smaller than the original.
+ * Creates WebP and AVIF versions at each thumbnail size smaller than the original.
  * Handles:
  * - EXIF orientation auto-correction via rotate()
  * - sRGB color profile preservation via withMetadata()
  * - No upscaling (skips sizes larger than original)
  *
  * Output files:
- * - {width}w.webp - WebP format for modern browsers
- * - {width}w.jpg - JPEG fallback for compatibility
+ * - {width}w.webp - WebP format for broad browser support
+ * - {width}w.avif - AVIF format for best compression
  *
  * @param inputPath - Path to the original image
  * @param outputDir - Directory to write derivative files
@@ -88,17 +88,16 @@ export async function generateDerivatives(
       .toFile(webpPath);
     generatedPaths.push(webpPath);
 
-    // Generate JPEG output
-    const jpegPath = path.join(outputDir, `${width}w.jpg`);
+    // Generate AVIF output
+    const avifPath = path.join(outputDir, `${width}w.avif`);
     await pipeline
       .clone()
-      .jpeg({
-        quality: JPEG_QUALITY,
-        mozjpeg: true, // Better compression via mozjpeg encoder
-        chromaSubsampling: "4:4:4", // Full color for photography quality
+      .avif({
+        quality: AVIF_QUALITY,
+        effort: 4, // Balance speed/compression (0-9, 4 is good middle ground)
       })
-      .toFile(jpegPath);
-    generatedPaths.push(jpegPath);
+      .toFile(avifPath);
+    generatedPaths.push(avifPath);
   }
 
   return generatedPaths;
