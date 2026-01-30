@@ -24,10 +24,14 @@
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",
+    "bullmq": "^5.67.2",
     "drizzle-orm": "^0.45.1",
+    "ioredis": "^5.9.2",
     "next": "16.1.6",
+    "node-addon-api": "^8.5.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "sharp": "^0.34.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -42,6 +46,7 @@
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
+    "node-gyp": "^12.2.0",
     "prettier": "^3.8.1",
     "tailwindcss": "^4",
     "typescript": "^5"
