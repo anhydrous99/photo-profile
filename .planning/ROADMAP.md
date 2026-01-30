@@ -84,8 +84,8 @@ Plans:
 Plans:
 
 - [x] 03-01-PLAN.md — Auth infrastructure (session, password, rate limiting, DAL)
-- [ ] 03-02-PLAN.md — Login page and Server Action
-- [ ] 03-03-PLAN.md — Route protection (proxy.ts and protected layout)
+- [x] 03-02-PLAN.md — Login page and Server Action
+- [x] 03-03-PLAN.md — Route protection (proxy.ts and protected layout)
 
 ### Phase 4: Photo Upload
 
@@ -230,7 +230,7 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | ------------------- | -------------- | ----------- | ---------- |
 | 1. Foundation       | 3/3            | Complete    | 2026-01-29 |
 | 2. Image Pipeline   | 4/4            | Complete    | 2026-01-30 |
-| 3. Admin Auth       | 1/3            | In progress | -          |
+| 3. Admin Auth       | 3/3            | Complete    | 2026-01-30 |
 | 4. Photo Upload     | 0/3            | Not started | -          |
 | 5. Photo Management | 0/3            | Not started | -          |
 | 6. Album Management | 0/2            | Not started | -          |
@@ -240,4 +240,4 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 10. Polish          | 0/3            | Not started | -          |
 
 **Total Plans:** 29
-**Completed:** 8/29 (28%)
+**Completed:** 10/29 (34%)

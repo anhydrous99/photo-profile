@@ -33,16 +33,16 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Admin Authentication
 
-- [ ] **AUTH-01**: Admin panel protected by password
-- [ ] **AUTH-02**: Only authenticated user can access admin features
+- [x] **AUTH-01**: Admin panel protected by password
+- [x] **AUTH-02**: Only authenticated user can access admin features
 
 ### Photo Upload
 
 - [ ] **UPLD-01**: Drag-drop interface for uploading photos
 - [ ] **UPLD-02**: Can upload multiple photos at once (batch)
 - [ ] **UPLD-03**: Upload progress indicator shown
-- [ ] **UPLD-04**: Thumbnails auto-generated on upload (multiple sizes)
-- [ ] **UPLD-05**: WebP/AVIF formats generated for optimization
+- [x] **UPLD-04**: Thumbnails auto-generated on upload (multiple sizes)
+- [x] **UPLD-05**: WebP/AVIF formats generated for optimization
 
 ### Photo Management
 
@@ -102,33 +102,33 @@ Explicitly excluded. Documented to prevent scope creep.
 
 Which phases cover which requirements. Updated during roadmap creation.
 
-| Requirement | Phase    | Status  |
-| ----------- | -------- | ------- |
-| HOME-01     | Phase 9  | Pending |
-| HOME-02     | Phase 9  | Pending |
-| GLRY-01     | Phase 7  | Pending |
-| GLRY-02     | Phase 7  | Pending |
-| GLRY-03     | Phase 10 | Pending |
-| GLRY-04     | Phase 7  | Pending |
-| ALBM-01     | Phase 7  | Pending |
-| ALBM-02     | Phase 7  | Pending |
-| ALBM-03     | Phase 6  | Pending |
-| ALBM-04     | Phase 6  | Pending |
-| ALBM-05     | Phase 6  | Pending |
-| VIEW-01     | Phase 8  | Pending |
-| VIEW-02     | Phase 8  | Pending |
-| VIEW-03     | Phase 8  | Pending |
-| VIEW-04     | Phase 8  | Pending |
-| AUTH-01     | Phase 3  | Pending |
-| AUTH-02     | Phase 3  | Pending |
-| UPLD-01     | Phase 4  | Pending |
-| UPLD-02     | Phase 4  | Pending |
-| UPLD-03     | Phase 4  | Pending |
-| UPLD-04     | Phase 2  | Pending |
-| UPLD-05     | Phase 2  | Pending |
-| MGMT-01     | Phase 5  | Pending |
-| MGMT-02     | Phase 5  | Pending |
-| MGMT-03     | Phase 5  | Pending |
+| Requirement | Phase    | Status   |
+| ----------- | -------- | -------- |
+| HOME-01     | Phase 9  | Pending  |
+| HOME-02     | Phase 9  | Pending  |
+| GLRY-01     | Phase 7  | Pending  |
+| GLRY-02     | Phase 7  | Pending  |
+| GLRY-03     | Phase 10 | Pending  |
+| GLRY-04     | Phase 7  | Pending  |
+| ALBM-01     | Phase 7  | Pending  |
+| ALBM-02     | Phase 7  | Pending  |
+| ALBM-03     | Phase 6  | Pending  |
+| ALBM-04     | Phase 6  | Pending  |
+| ALBM-05     | Phase 6  | Pending  |
+| VIEW-01     | Phase 8  | Pending  |
+| VIEW-02     | Phase 8  | Pending  |
+| VIEW-03     | Phase 8  | Pending  |
+| VIEW-04     | Phase 8  | Pending  |
+| AUTH-01     | Phase 3  | Complete |
+| AUTH-02     | Phase 3  | Complete |
+| UPLD-01     | Phase 4  | Pending  |
+| UPLD-02     | Phase 4  | Pending  |
+| UPLD-03     | Phase 4  | Pending  |
+| UPLD-04     | Phase 2  | Complete |
+| UPLD-05     | Phase 2  | Complete |
+| MGMT-01     | Phase 5  | Pending  |
+| MGMT-02     | Phase 5  | Pending  |
+| MGMT-03     | Phase 5  | Pending  |
 
 **Coverage:**
 
@@ -139,4 +139,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 ---
 
 _Requirements defined: 2026-01-25_
-_Last updated: 2026-01-25 after roadmap creation_
+_Last updated: 2026-01-30 after Phase 3 completion_
