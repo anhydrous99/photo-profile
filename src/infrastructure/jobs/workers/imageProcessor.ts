@@ -43,7 +43,7 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
     // Update progress - starting
     await job.updateProgress(10);
 
-    // Generate all derivatives (WebP + JPEG at each size)
+    // Generate all derivatives (WebP + AVIF at each size)
     const derivatives = await generateDerivatives(originalPath, outputDir);
 
     // Update progress - complete
