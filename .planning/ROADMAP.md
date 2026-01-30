@@ -62,7 +62,7 @@ Plans:
 
 Plans:
 
-- [ ] 02-01-PLAN.md — Dependencies and BullMQ queue configuration
+- [x] 02-01-PLAN.md — Dependencies and BullMQ queue configuration
 - [ ] 02-02-PLAN.md — Sharp image processing service
 - [ ] 02-03-PLAN.md — Worker implementation and startup script
 
@@ -228,7 +228,7 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | Phase               | Plans Complete | Status      | Completed  |
 | ------------------- | -------------- | ----------- | ---------- |
 | 1. Foundation       | 3/3            | Complete    | 2026-01-29 |
-| 2. Image Pipeline   | 0/3            | Not started | -          |
+| 2. Image Pipeline   | 1/3            | In progress | -          |
 | 3. Admin Auth       | 0/3            | Not started | -          |
 | 4. Photo Upload     | 0/3            | Not started | -          |
 | 5. Photo Management | 0/3            | Not started | -          |
