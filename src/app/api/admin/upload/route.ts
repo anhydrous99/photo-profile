@@ -21,15 +21,19 @@ const photoRepository = new SQLitePhotoRepository();
  * Returns: { photoId, status: "processing" }
  */
 export async function POST(request: NextRequest) {
+  console.log("[Upload] POST /api/admin/upload - Request received");
   // 1. Verify session
   const session = await verifySession();
+  console.log("[Upload] Session verified:", !!session);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   // 2. Parse form data
+  console.log("[Upload] Parsing form data...");
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
+  console.log("[Upload] File received:", file?.name, file?.size);
 
   if (!file) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -66,8 +70,16 @@ export async function POST(request: NextRequest) {
   await photoRepository.save(photo);
 
   // 6. Enqueue processing job (gracefully handle Redis unavailable)
+  console.log("[Upload] Enqueueing processing job...");
   try {
-    await enqueueImageProcessing(photoId, filePath);
+    // Add timeout to prevent hanging when Redis is unavailable
+    await Promise.race([
+      enqueueImageProcessing(photoId, filePath),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Job enqueue timeout")), 2000),
+      ),
+    ]);
+    console.log("[Upload] Job enqueued successfully");
   } catch (error) {
     console.warn(
       "[Upload] Failed to enqueue processing job (Redis unavailable):",
@@ -76,5 +88,6 @@ export async function POST(request: NextRequest) {
     // Continue - photo is saved, processing will remain in "processing" status
   }
 
+  console.log("[Upload] Sending response...");
   return NextResponse.json({ photoId, status: "processing" }, { status: 201 });
 }
