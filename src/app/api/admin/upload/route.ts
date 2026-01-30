@@ -65,8 +65,16 @@ export async function POST(request: NextRequest) {
   };
   await photoRepository.save(photo);
 
-  // 6. Enqueue processing job
-  await enqueueImageProcessing(photoId, filePath);
+  // 6. Enqueue processing job (gracefully handle Redis unavailable)
+  try {
+    await enqueueImageProcessing(photoId, filePath);
+  } catch (error) {
+    console.warn(
+      "[Upload] Failed to enqueue processing job (Redis unavailable):",
+      error instanceof Error ? error.message : error,
+    );
+    // Continue - photo is saved, processing will remain in "processing" status
+  }
 
   return NextResponse.json({ photoId, status: "processing" }, { status: 201 });
 }
