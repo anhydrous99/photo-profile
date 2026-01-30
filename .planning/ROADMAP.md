@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Domain entities, database schema, file storage infrastructure
 - [x] **Phase 2: Image Pipeline** - Async job queue, thumbnail generation, format conversion
-- [ ] **Phase 3: Admin Auth** - Password authentication for admin panel access
+- [x] **Phase 3: Admin Auth** - Password authentication for admin panel access
 - [ ] **Phase 4: Photo Upload** - Drag-drop interface with batch upload and progress
 - [ ] **Phase 5: Photo Management** - Descriptions, album assignment, deletion
 - [ ] **Phase 6: Album Management** - Create, rename, delete albums
@@ -99,13 +99,13 @@ Plans:
 3. Upload progress shown for each file
 4. Uploaded photos appear in admin photo list
 5. Image pipeline processes uploads automatically
-   **Plans**: TBD
+   **Plans**: 3 plans
 
 Plans:
 
-- [ ] 04-01: Drag-drop upload component
-- [ ] 04-02: Batch upload with progress tracking
-- [ ] 04-03: Admin photo list view
+- [ ] 04-01-PLAN.md — Upload infrastructure (Route Handler and file storage)
+- [ ] 04-02-PLAN.md — Client components (DropZone and upload function)
+- [ ] 04-03-PLAN.md — Upload page with batch state and admin photo list
 
 ### Phase 5: Photo Management
 
