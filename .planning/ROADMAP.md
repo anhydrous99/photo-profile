@@ -65,6 +65,7 @@ Plans:
 - [x] 02-01-PLAN.md — Dependencies and BullMQ queue configuration
 - [x] 02-02-PLAN.md — Sharp image processing service
 - [x] 02-03-PLAN.md — Worker implementation and startup script
+- [x] 02-04-PLAN.md — Gap closure: AVIF format instead of JPEG
 
 ### Phase 3: Admin Auth
 
@@ -228,7 +229,7 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | Phase               | Plans Complete | Status      | Completed  |
 | ------------------- | -------------- | ----------- | ---------- |
 | 1. Foundation       | 3/3            | Complete    | 2026-01-29 |
-| 2. Image Pipeline   | 3/3            | Complete    | 2026-01-30 |
+| 2. Image Pipeline   | 4/4            | Complete    | 2026-01-30 |
 | 3. Admin Auth       | 0/3            | Not started | -          |
 | 4. Photo Upload     | 0/3            | Not started | -          |
 | 5. Photo Management | 0/3            | Not started | -          |
@@ -238,5 +239,5 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 9. Homepage         | 0/2            | Not started | -          |
 | 10. Polish          | 0/3            | Not started | -          |
 
-**Total Plans:** 28
-**Completed:** 6/28 (21%)
+**Total Plans:** 29
+**Completed:** 7/29 (24%)
