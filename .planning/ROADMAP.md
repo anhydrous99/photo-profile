@@ -53,12 +53,12 @@ Plans:
 **Requirements**: UPLD-04, UPLD-05
 **Success Criteria** (what must be TRUE):
 
-1. Uploading an image triggers async job for processing
+1. Uploading an image triggers async job for processing (deferred to Phase 4)
 2. Multiple thumbnail sizes generated (300px, 600px, 1200px, 2400px)
-3. WebP format generated alongside JPEG
+3. WebP format generated alongside AVIF
 4. Original image preserved separately from derivatives
 5. Processing completes within reasonable time for 50MP images
-   **Plans**: 3 plans
+   **Plans**: 4 plans
 
 Plans:
 
