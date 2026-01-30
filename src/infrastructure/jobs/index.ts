@@ -4,3 +4,5 @@ export {
   type ImageJobData,
   type ImageJobResult,
 } from "./queues";
+
+export { imageWorker } from "./workers/imageProcessor";
