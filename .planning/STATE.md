@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Phase 3 - Admin Auth (complete)
+**Current focus:** Phase 4 - Photo Upload (in progress)
 
 ## Current Position
 
-Phase: 3 of 10 (Admin Auth)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-01-30 - Completed 03-03-PLAN.md
+Phase: 4 of 10 (Photo Upload)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-01-30 - Completed 04-01-PLAN.md
 
-Progress: [#######...] 35%
+Progress: [########..] 38%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: 2 min
-- Total execution time: 20 min
+- Total execution time: 22 min
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: [#######...] 35%
 | 01-foundation     | 3     | 8 min | 2.7 min  |
 | 02-image-pipeline | 4     | 6 min | 1.5 min  |
 | 03-admin-auth     | 3     | 6 min | 2.0 min  |
+| 04-photo-upload   | 1     | 2 min | 2.0 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 02-03 (2 min), 02-04 (1 min), 03-01 (2 min), 03-02 (2 min), 03-03 (2 min)
+- Last 5 plans: 02-04 (1 min), 03-01 (2 min), 03-02 (2 min), 03-03 (2 min), 04-01 (2 min)
 - Trend: Stable
 
 _Updated after each plan completion_
@@ -68,6 +69,9 @@ Recent decisions affecting current work:
 - proxy.ts only checks cookie existence, not JWT validity (lightweight for Edge)
 - Two-layer protection: proxy.ts (exists) -> layout (valid)
 - Unauthenticated /admin/\* returns 404 to hide admin existence
+- Used crypto.randomUUID() for photo IDs (native, no external package)
+- Validate MIME type before saving (JPEG, PNG, WebP, HEIC)
+- File saved as original.{ext} in storage/originals/{photoId}/ directory
 
 ### Pending Todos
 
@@ -79,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-30T05:59:05Z
-Stopped at: Completed 03-03-PLAN.md (Phase 3 complete)
+Last session: 2026-01-30T06:44:21Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
