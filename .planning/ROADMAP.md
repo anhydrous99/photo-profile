@@ -78,14 +78,14 @@ Plans:
 2. Incorrect password shows error message
 3. Correct password creates authenticated session
 4. Authenticated session persists across page navigation
-5. Unauthenticated access to /admin/\* redirects to login
-   **Plans**: TBD
+5. Unauthenticated access to /admin/\* returns 404 (hides admin existence)
+   **Plans**: 3 plans
 
 Plans:
 
-- [ ] 03-01: Auth.js configuration with credentials provider
-- [ ] 03-02: Login page and session handling
-- [ ] 03-03: Protected route middleware
+- [ ] 03-01-PLAN.md — Auth infrastructure (session, password, rate limiting, DAL)
+- [ ] 03-02-PLAN.md — Login page and Server Action
+- [ ] 03-03-PLAN.md — Route protection (proxy.ts and protected layout)
 
 ### Phase 4: Photo Upload
 
