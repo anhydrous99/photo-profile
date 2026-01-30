@@ -58,14 +58,13 @@ Plans:
 3. WebP format generated alongside JPEG
 4. Original image preserved separately from derivatives
 5. Processing completes within reasonable time for 50MP images
-   **Plans**: TBD
+   **Plans**: 3 plans
 
 Plans:
 
-- [ ] 02-01: BullMQ and Redis job queue setup
-- [ ] 02-02: Sharp image processing service
-- [ ] 02-03: Multi-size thumbnail generation
-- [ ] 02-04: WebP/AVIF format conversion
+- [ ] 02-01-PLAN.md — Dependencies and BullMQ queue configuration
+- [ ] 02-02-PLAN.md — Sharp image processing service
+- [ ] 02-03-PLAN.md — Worker implementation and startup script
 
 ### Phase 3: Admin Auth
 
@@ -229,7 +228,7 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | Phase               | Plans Complete | Status      | Completed  |
 | ------------------- | -------------- | ----------- | ---------- |
 | 1. Foundation       | 3/3            | Complete    | 2026-01-29 |
-| 2. Image Pipeline   | 0/4            | Not started | -          |
+| 2. Image Pipeline   | 0/3            | Not started | -          |
 | 3. Admin Auth       | 0/3            | Not started | -          |
 | 4. Photo Upload     | 0/3            | Not started | -          |
 | 5. Photo Management | 0/3            | Not started | -          |
@@ -239,5 +238,5 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 9. Homepage         | 0/2            | Not started | -          |
 | 10. Polish          | 0/3            | Not started | -          |
 
-**Total Plans:** 29
-**Completed:** 3/29 (10%)
+**Total Plans:** 28
+**Completed:** 3/28 (11%)
