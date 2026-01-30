@@ -38,9 +38,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Photo Upload
 
-- [ ] **UPLD-01**: Drag-drop interface for uploading photos
-- [ ] **UPLD-02**: Can upload multiple photos at once (batch)
-- [ ] **UPLD-03**: Upload progress indicator shown
+- [x] **UPLD-01**: Drag-drop interface for uploading photos
+- [x] **UPLD-02**: Can upload multiple photos at once (batch)
+- [x] **UPLD-03**: Upload progress indicator shown
 - [x] **UPLD-04**: Thumbnails auto-generated on upload (multiple sizes)
 - [x] **UPLD-05**: WebP/AVIF formats generated for optimization
 
@@ -121,9 +121,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VIEW-04     | Phase 8  | Pending  |
 | AUTH-01     | Phase 3  | Complete |
 | AUTH-02     | Phase 3  | Complete |
-| UPLD-01     | Phase 4  | Pending  |
-| UPLD-02     | Phase 4  | Pending  |
-| UPLD-03     | Phase 4  | Pending  |
+| UPLD-01     | Phase 4  | Complete |
+| UPLD-02     | Phase 4  | Complete |
+| UPLD-03     | Phase 4  | Complete |
 | UPLD-04     | Phase 2  | Complete |
 | UPLD-05     | Phase 2  | Complete |
 | MGMT-01     | Phase 5  | Pending  |

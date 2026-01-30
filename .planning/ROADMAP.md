@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - Domain entities, database schema, file storage infrastructure
 - [x] **Phase 2: Image Pipeline** - Async job queue, thumbnail generation, format conversion
 - [x] **Phase 3: Admin Auth** - Password authentication for admin panel access
-- [ ] **Phase 4: Photo Upload** - Drag-drop interface with batch upload and progress
+- [x] **Phase 4: Photo Upload** - Drag-drop interface with batch upload and progress
 - [ ] **Phase 5: Photo Management** - Descriptions, album assignment, deletion
 - [ ] **Phase 6: Album Management** - Create, rename, delete albums
 - [ ] **Phase 7: Public Gallery** - Album listing and photo grid with responsive design
@@ -103,9 +103,9 @@ Plans:
 
 Plans:
 
-- [ ] 04-01-PLAN.md — Upload infrastructure (Route Handler and file storage)
-- [ ] 04-02-PLAN.md — Client components (DropZone and upload function)
-- [ ] 04-03-PLAN.md — Upload page with batch state and admin photo list
+- [x] 04-01-PLAN.md — Upload infrastructure (Route Handler and file storage)
+- [x] 04-02-PLAN.md — Client components (DropZone and upload function)
+- [x] 04-03-PLAN.md — Upload page with batch state and admin photo list
 
 ### Phase 5: Photo Management
 
@@ -231,7 +231,7 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 1. Foundation       | 3/3            | Complete    | 2026-01-29 |
 | 2. Image Pipeline   | 4/4            | Complete    | 2026-01-30 |
 | 3. Admin Auth       | 3/3            | Complete    | 2026-01-30 |
-| 4. Photo Upload     | 0/3            | Not started | -          |
+| 4. Photo Upload     | 3/3            | Complete    | 2026-01-30 |
 | 5. Photo Management | 0/3            | Not started | -          |
 | 6. Album Management | 0/2            | Not started | -          |
 | 7. Public Gallery   | 0/3            | Not started | -          |
@@ -240,4 +240,4 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 10. Polish          | 0/3            | Not started | -          |
 
 **Total Plans:** 29
-**Completed:** 10/29 (34%)
+**Completed:** 13/29 (45%)
