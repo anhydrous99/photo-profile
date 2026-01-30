@@ -27,6 +27,8 @@ const loginRateLimiter = new RateLimiterRedis({
 /**
  * Check if IP is rate limited
  * Returns allowed: true if under limit, or retryAfter in seconds if blocked
+ *
+ * If Redis is unavailable (development), allows request and logs warning
  */
 export async function checkRateLimit(
   ip: string,
@@ -35,9 +37,15 @@ export async function checkRateLimit(
     await loginRateLimiter.consume(ip);
     return { allowed: true };
   } catch (rateLimiterRes) {
+    // Redis connection error - allow request but warn
     if (rateLimiterRes instanceof Error) {
-      throw rateLimiterRes;
+      console.warn(
+        "[Rate Limiter] Redis unavailable, rate limiting disabled:",
+        rateLimiterRes.message,
+      );
+      return { allowed: true };
     }
+    // Rate limit exceeded
     const res = rateLimiterRes as RateLimiterRes;
     return {
       allowed: false,
@@ -48,7 +56,16 @@ export async function checkRateLimit(
 
 /**
  * Reset rate limit for IP after successful login
+ *
+ * If Redis is unavailable, silently continues (no-op)
  */
 export async function resetRateLimit(ip: string): Promise<void> {
-  await loginRateLimiter.delete(ip);
+  try {
+    await loginRateLimiter.delete(ip);
+  } catch (error) {
+    // Redis unavailable - silent no-op in development
+    if (error instanceof Error) {
+      console.warn("[Rate Limiter] Redis unavailable, skip reset");
+    }
+  }
 }
