@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 4 of 10 (Photo Upload)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-01-30 - Completed 04-01-PLAN.md
+Last activity: 2026-01-30 - Completed 04-02-PLAN.md
 
-Progress: [########..] 38%
+Progress: [#########.] 41%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: 2 min
-- Total execution time: 22 min
+- Total execution time: 23 min
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [########..] 38%
 | 01-foundation     | 3     | 8 min | 2.7 min  |
 | 02-image-pipeline | 4     | 6 min | 1.5 min  |
 | 03-admin-auth     | 3     | 6 min | 2.0 min  |
-| 04-photo-upload   | 1     | 2 min | 2.0 min  |
+| 04-photo-upload   | 2     | 3 min | 1.5 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 02-04 (1 min), 03-01 (2 min), 03-02 (2 min), 03-03 (2 min), 04-01 (2 min)
+- Last 5 plans: 03-01 (2 min), 03-02 (2 min), 03-03 (2 min), 04-01 (2 min), 04-02 (1 min)
 - Trend: Stable
 
 _Updated after each plan completion_
@@ -72,6 +72,7 @@ Recent decisions affecting current work:
 - Used crypto.randomUUID() for photo IDs (native, no external package)
 - Validate MIME type before saving (JPEG, PNG, WebP, HEIC)
 - File saved as original.{ext} in storage/originals/{photoId}/ directory
+- XHR instead of fetch for upload progress events (fetch lacks upload.onprogress)
 
 ### Pending Todos
 
@@ -83,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-30T06:44:21Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-01-30T06:48:31Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
