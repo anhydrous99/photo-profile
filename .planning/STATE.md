@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Phase 3 - Admin Auth
+**Current focus:** Phase 3 - Admin Auth (complete)
 
 ## Current Position
 
 Phase: 3 of 10 (Admin Auth)
-Plan: 1 of 3 in current phase
-Status: In progress
-Last activity: 2026-01-30 - Completed 03-01-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-01-30 - Completed 03-03-PLAN.md
 
-Progress: [######....] 28%
+Progress: [#######...] 35%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 8
+- Total plans completed: 10
 - Average duration: 2 min
-- Total execution time: 16 min
+- Total execution time: 20 min
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [######....] 28%
 | ----------------- | ----- | ----- | -------- |
 | 01-foundation     | 3     | 8 min | 2.7 min  |
 | 02-image-pipeline | 4     | 6 min | 1.5 min  |
-| 03-admin-auth     | 1     | 2 min | 2.0 min  |
+| 03-admin-auth     | 3     | 6 min | 2.0 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 02-01 (2 min), 02-02 (1 min), 02-03 (2 min), 02-04 (1 min), 03-01 (2 min)
+- Last 5 plans: 02-03 (2 min), 02-04 (1 min), 03-01 (2 min), 03-02 (2 min), 03-03 (2 min)
 - Trend: Stable
 
 _Updated after each plan completion_
@@ -65,6 +65,9 @@ Recent decisions affecting current work:
 - Used bcrypt cost factor 10 for password hashing
 - Rate limiter uses existing Redis via rate-limiter-flexible
 - DAL pattern with React cache() for deduplicated session verification
+- proxy.ts only checks cookie existence, not JWT validity (lightweight for Edge)
+- Two-layer protection: proxy.ts (exists) -> layout (valid)
+- Unauthenticated /admin/\* returns 404 to hide admin existence
 
 ### Pending Todos
 
@@ -76,6 +79,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-30T05:53:34Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-01-30T05:59:05Z
+Stopped at: Completed 03-03-PLAN.md (Phase 3 complete)
 Resume file: None
