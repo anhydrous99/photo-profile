@@ -12,7 +12,8 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "prepare": "husky",
-    "worker": "npx tsx src/infrastructure/jobs/worker.ts"
+    "worker": "npx tsx src/infrastructure/jobs/worker.ts",
+    "test:pipeline": "npx tsx scripts/test-image-pipeline.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
