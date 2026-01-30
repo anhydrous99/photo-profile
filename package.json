@@ -11,7 +11,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "worker": "npx tsx src/infrastructure/jobs/worker.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
