@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Phase 2 - Image Pipeline
+**Current focus:** Phase 3 - Admin Auth
 
 ## Current Position
 
-Phase: 2 of 10 (Image Pipeline)
-Plan: 4 of 4 in current phase
-Status: Phase complete (gap closure done)
-Last activity: 2026-01-30 - Completed 02-04-PLAN.md (gap closure)
+Phase: 3 of 10 (Admin Auth)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-01-30 - Completed 03-01-PLAN.md
 
-Progress: [#####.....] 25%
+Progress: [######....] 28%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: 2 min
-- Total execution time: 14 min
+- Total execution time: 16 min
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: [#####.....] 25%
 | ----------------- | ----- | ----- | -------- |
 | 01-foundation     | 3     | 8 min | 2.7 min  |
 | 02-image-pipeline | 4     | 6 min | 1.5 min  |
+| 03-admin-auth     | 1     | 2 min | 2.0 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-03 (3 min), 02-01 (2 min), 02-02 (1 min), 02-03 (2 min), 02-04 (1 min)
+- Last 5 plans: 02-01 (2 min), 02-02 (1 min), 02-03 (2 min), 02-04 (1 min), 03-01 (2 min)
 - Trend: Stable
 
 _Updated after each plan completion_
@@ -60,6 +61,10 @@ Recent decisions affecting current work:
 - Worker concurrency 2 for memory management with 50MP images
 - Disabled sharp cache for long-running worker process
 - Used tsx for worker TypeScript execution
+- Used jose for JWT (zero-dependency, universal ESM, Edge-compatible)
+- Used bcrypt cost factor 10 for password hashing
+- Rate limiter uses existing Redis via rate-limiter-flexible
+- DAL pattern with React cache() for deduplicated session verification
 
 ### Pending Todos
 
@@ -71,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-30T05:20:44Z
-Stopped at: Completed 02-04-PLAN.md (Phase 2 gap closure complete)
+Last session: 2026-01-30T05:53:34Z
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None
