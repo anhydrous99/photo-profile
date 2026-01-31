@@ -118,13 +118,14 @@ Plans:
 2. Admin can assign photo to one or more albums
 3. Admin can delete photos (with confirmation)
 4. Deleted photos remove all associated files (originals + derivatives)
-   **Plans**: TBD
+   **Plans**: 4 plans
 
 Plans:
 
-- [ ] 05-01: Photo detail editing interface
-- [ ] 05-02: Album assignment functionality
-- [ ] 05-03: Photo deletion with file cleanup
+- [ ] 05-01-PLAN.md — Photo API and file cleanup (PATCH/DELETE endpoints)
+- [ ] 05-02-PLAN.md — Album assignment API (photo-album relationships)
+- [ ] 05-03-PLAN.md — Photo detail page with auto-save and album selector
+- [ ] 05-04-PLAN.md — Batch selection and operations in grid
 
 ### Phase 6: Album Management
 
@@ -232,12 +233,12 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 2. Image Pipeline   | 4/4            | Complete    | 2026-01-30 |
 | 3. Admin Auth       | 3/3            | Complete    | 2026-01-30 |
 | 4. Photo Upload     | 3/3            | Complete    | 2026-01-30 |
-| 5. Photo Management | 0/3            | Not started | -          |
+| 5. Photo Management | 0/4            | Not started | -          |
 | 6. Album Management | 0/2            | Not started | -          |
 | 7. Public Gallery   | 0/3            | Not started | -          |
 | 8. Lightbox         | 0/3            | Not started | -          |
 | 9. Homepage         | 0/2            | Not started | -          |
 | 10. Polish          | 0/3            | Not started | -          |
 
-**Total Plans:** 29
-**Completed:** 13/29 (45%)
+**Total Plans:** 30
+**Completed:** 13/30 (43%)
