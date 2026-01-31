@@ -1,20 +1,28 @@
 import Link from "next/link";
-import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
-import { PhotoGrid } from "@/presentation/components";
+import {
+  SQLitePhotoRepository,
+  SQLiteAlbumRepository,
+} from "@/infrastructure/database/repositories";
+import { AdminDashboardClient } from "./AdminDashboardClient";
 
 const photoRepository = new SQLitePhotoRepository();
+const albumRepository = new SQLiteAlbumRepository();
 
 /**
  * Admin Dashboard
  *
  * Shows:
  * - Link to upload page
- * - Grid of uploaded photos
+ * - Grid of uploaded photos with selection support
+ * - Batch operations (add to album, delete)
  */
 export default async function AdminDashboard() {
-  const photos = await photoRepository.findAll();
+  const [photos, albums] = await Promise.all([
+    photoRepository.findAll(),
+    albumRepository.findAll(),
+  ]);
 
-  // Sort by newest first
+  // Sort photos by newest first
   const sortedPhotos = [...photos].sort(
     (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
   );
@@ -35,7 +43,7 @@ export default async function AdminDashboard() {
         Photos ({photos.length})
       </h2>
 
-      <PhotoGrid photos={sortedPhotos} />
+      <AdminDashboardClient photos={sortedPhotos} albums={albums} />
     </div>
   );
 }
