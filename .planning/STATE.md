@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Phase 6 - Album Management (in progress)
+**Current focus:** Phase 6 - Album Management (complete)
 
 ## Current Position
 
 Phase: 6 of 10 (Album Management)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-01-31 - Completed 06-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-01-31 - Completed 06-02-PLAN.md
 
-Progress: [##################] 60%
+Progress: [####################] 63%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: 4 min
-- Total execution time: 70 min
+- Total execution time: 74 min
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [##################] 60%
 | 03-admin-auth       | 3     | 6 min  | 2.0 min  |
 | 04-photo-upload     | 3     | 36 min | 12.0 min |
 | 05-photo-management | 4     | 11 min | 2.8 min  |
-| 06-album-management | 1     | 3 min  | 3.0 min  |
+| 06-album-management | 2     | 7 min  | 3.5 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 05-01 (2 min), 05-02 (2 min), 05-03 (4 min), 05-04 (3 min), 06-01 (3 min)
+- Last 5 plans: 05-02 (2 min), 05-03 (4 min), 05-04 (3 min), 06-01 (3 min), 06-02 (4 min)
 - Trend: Stable
 
 _Updated after each plan completion_
@@ -89,6 +89,9 @@ Recent decisions affecting current work:
 - Tags stored as comma-separated TEXT (not JSON) for simplicity
 - coverPhotoId FK uses SET NULL on delete to prevent broken references
 - Delete mode passed in request body for album deletion (album-only vs cascade)
+- useSortable hook per album card for individual drag handles with dnd-kit
+- Optimistic reorder with immediate visual feedback and API sync
+- Radio buttons for delete mode selection in album delete modal
 
 ### Pending Todos
 
@@ -100,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-31T19:13:00Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-01-31T19:24:00Z
+Stopped at: Completed 06-02-PLAN.md (Phase 06 complete)
 Resume file: None
