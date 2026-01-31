@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, writeFile, rm } from "fs/promises";
 import { join, extname } from "path";
 import { env } from "@/infrastructure/config/env";
 
@@ -25,4 +25,23 @@ export async function saveOriginalFile(
   await writeFile(filePath, Buffer.from(bytes));
 
   return filePath;
+}
+
+/**
+ * Delete all files associated with a photo
+ *
+ * Removes both originals and processed directories for the given photoId.
+ * Uses recursive delete with force option - won't throw if directories don't exist.
+ *
+ * @param photoId - Unique identifier for the photo
+ */
+export async function deletePhotoFiles(photoId: string): Promise<void> {
+  const originalsDir = join(env.STORAGE_PATH, "originals", photoId);
+  const processedDir = join(env.STORAGE_PATH, "processed", photoId);
+
+  // rm with { recursive: true, force: true } won't throw if directory doesn't exist
+  await Promise.all([
+    rm(originalsDir, { recursive: true, force: true }),
+    rm(processedDir, { recursive: true, force: true }),
+  ]);
 }
