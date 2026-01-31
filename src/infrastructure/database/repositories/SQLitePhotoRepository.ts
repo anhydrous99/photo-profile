@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../client";
 import { photos, photoAlbums } from "../schema";
 import type { PhotoRepository } from "@/domain/repositories/PhotoRepository";
@@ -40,6 +40,29 @@ export class SQLitePhotoRepository implements PhotoRepository {
 
   async delete(id: string): Promise<void> {
     await db.delete(photos).where(eq(photos.id, id));
+  }
+
+  async getAlbumIds(photoId: string): Promise<string[]> {
+    const results = await db
+      .select({ albumId: photoAlbums.albumId })
+      .from(photoAlbums)
+      .where(eq(photoAlbums.photoId, photoId));
+    return results.map((r) => r.albumId);
+  }
+
+  async addToAlbum(photoId: string, albumId: string): Promise<void> {
+    await db
+      .insert(photoAlbums)
+      .values({ photoId, albumId, sortOrder: 0 })
+      .onConflictDoNothing();
+  }
+
+  async removeFromAlbum(photoId: string, albumId: string): Promise<void> {
+    await db
+      .delete(photoAlbums)
+      .where(
+        and(eq(photoAlbums.photoId, photoId), eq(photoAlbums.albumId, albumId)),
+      );
   }
 
   private toDomain(row: typeof photos.$inferSelect): Photo {

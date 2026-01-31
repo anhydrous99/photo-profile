@@ -6,4 +6,9 @@ export interface PhotoRepository {
   findByAlbumId(albumId: string): Promise<Photo[]>;
   save(photo: Photo): Promise<void>;
   delete(id: string): Promise<void>;
+
+  // Album membership methods
+  getAlbumIds(photoId: string): Promise<string[]>;
+  addToAlbum(photoId: string, albumId: string): Promise<void>;
+  removeFromAlbum(photoId: string, albumId: string): Promise<void>;
 }
