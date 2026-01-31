@@ -129,21 +129,22 @@ Plans:
 
 ### Phase 6: Album Management
 
-**Goal**: Admin can organize photos into albums
+**Goal**: Admin can organize photos into albums with drag-drop ordering and category tags
 **Depends on**: Phase 5
 **Requirements**: ALBM-03, ALBM-04, ALBM-05
 **Success Criteria** (what must be TRUE):
 
-1. Admin can create new albums with names
+1. Admin can create new albums with names, descriptions, and tags
 2. Admin can rename existing albums
-3. Admin can delete albums (photos remain, just unassigned)
+3. Admin can delete albums (photos remain, just unassigned) OR delete album with all photos
 4. Album list shows photo count per album
-   **Plans**: TBD
+5. Admin can drag-drop albums to reorder them
+   **Plans**: 2 plans
 
 Plans:
 
-- [ ] 06-01: Album CRUD interface
-- [ ] 06-02: Album list with photo counts
+- [ ] 06-01-PLAN.md — Album API infrastructure (CRUD endpoints, photo counts, reorder, cascade delete)
+- [ ] 06-02-PLAN.md — Album list UI with drag-drop ordering and CRUD modals
 
 ### Phase 7: Public Gallery
 
@@ -234,7 +235,7 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 3. Admin Auth       | 3/3            | Complete    | 2026-01-30 |
 | 4. Photo Upload     | 3/3            | Complete    | 2026-01-30 |
 | 5. Photo Management | 4/4            | Complete    | 2026-01-31 |
-| 6. Album Management | 0/2            | Not started | -          |
+| 6. Album Management | 0/2            | Planned     | -          |
 | 7. Public Gallery   | 0/3            | Not started | -          |
 | 8. Lightbox         | 0/3            | Not started | -          |
 | 9. Homepage         | 0/2            | Not started | -          |
