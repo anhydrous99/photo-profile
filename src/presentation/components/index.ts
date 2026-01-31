@@ -5,3 +5,8 @@ export { PhotoGrid } from "./PhotoGrid";
 export { PhotoDetail } from "./PhotoDetail";
 export { AlbumSelector } from "./AlbumSelector";
 export { BatchActions } from "./BatchActions";
+export { TagsInput } from "./TagsInput";
+export { SortableAlbumCard } from "./SortableAlbumCard";
+export type { AlbumWithCount } from "./SortableAlbumCard";
+export { AlbumCreateModal } from "./AlbumCreateModal";
+export { DeleteAlbumModal } from "./DeleteAlbumModal";
