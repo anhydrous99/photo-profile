@@ -1,9 +1,12 @@
+import "dotenv/config";
+
 import { Worker, Job } from "bullmq";
 import IORedis from "ioredis";
 import path from "path";
 import sharp from "sharp";
 import { env } from "@/infrastructure/config/env";
 import { generateDerivatives } from "@/infrastructure/services/imageService";
+import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
 import { ImageJobData, ImageJobResult } from "../queues";
 
 /**
@@ -67,14 +70,26 @@ imageWorker.on("error", (err) => {
   console.error("[ImageWorker] Error:", err);
 });
 
-imageWorker.on("failed", (job, err) => {
+imageWorker.on("failed", async (job, err) => {
   console.error(`[ImageWorker] Job ${job?.id} failed:`, err.message);
-  // TODO: Update photo status to 'error' in database (Phase 4)
+  if (job?.data.photoId) {
+    const repository = new SQLitePhotoRepository();
+    const photo = await repository.findById(job.data.photoId);
+    if (photo) {
+      photo.status = "error";
+      await repository.save(photo);
+    }
+  }
 });
 
-imageWorker.on("completed", (job, result) => {
+imageWorker.on("completed", async (job, result) => {
   console.log(
     `[ImageWorker] Job ${job.id} completed: ${result.derivatives.length} files`,
   );
-  // TODO: Update photo status to 'ready' in database (Phase 4)
+  const repository = new SQLitePhotoRepository();
+  const photo = await repository.findById(result.photoId);
+  if (photo) {
+    photo.status = "ready";
+    await repository.save(photo);
+  }
 });
