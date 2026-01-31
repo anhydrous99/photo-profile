@@ -158,13 +158,13 @@ Plans:
 3. Thumbnails load quickly (optimized sizes served)
 4. Gallery works on mobile and desktop viewports
 5. Minimalist design keeps focus on photos
-   **Plans**: TBD
+   **Plans**: 3 plans
 
 Plans:
 
-- [ ] 07-01: Album listing page
-- [ ] 07-02: Photo grid component with responsive layout
-- [ ] 07-03: Responsive image serving (srcset)
+- [ ] 07-01-PLAN.md — Image serving API route
+- [ ] 07-02-PLAN.md — Album listing page, Breadcrumb, and photo grid
+- [ ] 07-03-PLAN.md — Visual verification checkpoint
 
 ### Phase 8: Lightbox
 
