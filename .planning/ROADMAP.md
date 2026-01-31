@@ -123,8 +123,8 @@ Plans:
 Plans:
 
 - [x] 05-01-PLAN.md — Photo API and file cleanup (PATCH/DELETE endpoints)
-- [ ] 05-02-PLAN.md — Album assignment API (photo-album relationships)
-- [ ] 05-03-PLAN.md — Photo detail page with auto-save and album selector
+- [x] 05-02-PLAN.md — Album assignment API (photo-album relationships)
+- [x] 05-03-PLAN.md — Photo detail page with auto-save and album selector
 - [ ] 05-04-PLAN.md — Batch selection and operations in grid
 
 ### Phase 6: Album Management
@@ -233,7 +233,7 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 2. Image Pipeline   | 4/4            | Complete    | 2026-01-30 |
 | 3. Admin Auth       | 3/3            | Complete    | 2026-01-30 |
 | 4. Photo Upload     | 3/3            | Complete    | 2026-01-30 |
-| 5. Photo Management | 2/4            | In progress | -          |
+| 5. Photo Management | 3/4            | In progress | -          |
 | 6. Album Management | 0/2            | Not started | -          |
 | 7. Public Gallery   | 0/3            | Not started | -          |
 | 8. Lightbox         | 0/3            | Not started | -          |
@@ -241,4 +241,4 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 10. Polish          | 0/3            | Not started | -          |
 
 **Total Plans:** 30
-**Completed:** 15/30 (50%)
+**Completed:** 16/30 (53%)
