@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 5 of 10 (Photo Management)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-01-31 - Completed 05-01-PLAN.md
+Last activity: 2026-01-31 - Completed 05-02-PLAN.md
 
-Progress: [##############] 47%
+Progress: [###############] 50%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: 4 min
-- Total execution time: 58 min
+- Total execution time: 60 min
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [##############] 47%
 | 02-image-pipeline   | 4     | 6 min  | 1.5 min  |
 | 03-admin-auth       | 3     | 6 min  | 2.0 min  |
 | 04-photo-upload     | 3     | 36 min | 12.0 min |
-| 05-photo-management | 1     | 2 min  | 2.0 min  |
+| 05-photo-management | 2     | 4 min  | 2.0 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 03-03 (2 min), 04-01 (2 min), 04-02 (1 min), 04-03 (33 min), 05-01 (2 min)
+- Last 5 plans: 04-01 (2 min), 04-02 (1 min), 04-03 (33 min), 05-01 (2 min), 05-02 (2 min)
 - Trend: Stable (04-03 included checkpoint wait time)
 
 _Updated after each plan completion_
@@ -78,6 +78,8 @@ Recent decisions affecting current work:
 - Track upload progress via React useState (no external state library)
 - Use rm with recursive+force to gracefully handle missing directories
 - Delete files before database record for data integrity
+- DELETE uses request body for albumId (keeps route structure simple)
+- onConflictDoNothing for idempotent album assignment
 
 ### Pending Todos
 
@@ -89,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-31T18:30:33Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-01-31T18:31:13Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
