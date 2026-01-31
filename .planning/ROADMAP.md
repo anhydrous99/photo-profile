@@ -162,7 +162,7 @@ Plans:
 
 Plans:
 
-- [ ] 07-01-PLAN.md — Image serving API route
+- [x] 07-01-PLAN.md — Image serving API route
 - [ ] 07-02-PLAN.md — Album listing page, Breadcrumb, and photo grid
 - [ ] 07-03-PLAN.md — Visual verification checkpoint
 
@@ -236,10 +236,10 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 4. Photo Upload     | 3/3            | Complete    | 2026-01-30 |
 | 5. Photo Management | 4/4            | Complete    | 2026-01-31 |
 | 6. Album Management | 2/2            | Complete    | 2026-01-31 |
-| 7. Public Gallery   | 0/3            | Not started | -          |
+| 7. Public Gallery   | 1/3            | In progress | -          |
 | 8. Lightbox         | 0/3            | Not started | -          |
 | 9. Homepage         | 0/2            | Not started | -          |
 | 10. Polish          | 0/3            | Not started | -          |
 
 **Total Plans:** 30
-**Completed:** 19/30 (63%)
+**Completed:** 20/30 (67%)
