@@ -1,4 +1,6 @@
-import "dotenv/config";
+// Load environment variables when running standalone worker
+import { config } from "dotenv";
+config();
 
 import { Worker, Job } from "bullmq";
 import IORedis from "ioredis";
