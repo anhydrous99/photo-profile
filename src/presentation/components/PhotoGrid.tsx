@@ -91,14 +91,21 @@ function PhotoCard({
     onSelect?.();
   };
 
-  return (
+  const handleCardClick = () => {
+    // If in selectable mode, use the onClick callback
+    if (selectable && onClick) {
+      onClick();
+    }
+  };
+
+  const cardContent = (
     <div
       className={`group relative overflow-hidden rounded-lg border bg-white cursor-pointer transition-colors ${
         isSelected
           ? "border-blue-500 ring-2 ring-blue-200"
           : "border-gray-200 hover:border-gray-300"
       }`}
-      onClick={onClick}
+      onClick={selectable ? handleCardClick : undefined}
     >
       {/* Selection checkbox overlay - visible on hover or when selected */}
       {selectable && (
@@ -156,6 +163,17 @@ function PhotoCard({
       </div>
     </div>
   );
+
+  // When not selectable, wrap in Link for navigation to detail page
+  if (!selectable) {
+    return (
+      <Link href={`/admin/photos/${photo.id}`} className="block">
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return cardContent;
 }
 
 function StatusBadge({ status }: { status: Photo["status"] }) {
