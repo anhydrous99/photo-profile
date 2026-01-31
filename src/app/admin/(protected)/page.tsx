@@ -31,12 +31,20 @@ export default async function AdminDashboard() {
     <div className="p-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-        <Link
-          href="/admin/upload"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          Upload Photos
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href="/admin/albums"
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Manage Albums
+          </Link>
+          <Link
+            href="/admin/upload"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Upload Photos
+          </Link>
+        </div>
       </div>
 
       <h2 className="mb-4 text-lg font-medium text-gray-700">
