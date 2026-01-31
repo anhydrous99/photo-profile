@@ -1,10 +1,5 @@
 // Load environment variables FIRST, before any other imports
-// Next.js loads .env automatically, but standalone scripts need explicit loading
-import { config } from "dotenv";
-import path from "path";
-
-config({ path: path.resolve(process.cwd(), ".env") });
-config({ path: path.resolve(process.cwd(), ".env.local"), override: true });
+import "./load-env";
 
 import { imageWorker } from "./workers/imageProcessor";
 import { imageQueue } from "./queues";
