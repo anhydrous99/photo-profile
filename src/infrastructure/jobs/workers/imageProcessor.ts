@@ -1,10 +1,14 @@
 // Load environment variables when running standalone worker
+// Next.js loads .env and .env.local automatically, but standalone scripts need explicit loading
 import { config } from "dotenv";
-config();
+import path from "path";
+
+// Load .env files in order (later files override earlier ones)
+config({ path: path.resolve(process.cwd(), ".env") });
+config({ path: path.resolve(process.cwd(), ".env.local"), override: true });
 
 import { Worker, Job } from "bullmq";
 import IORedis from "ioredis";
-import path from "path";
 import sharp from "sharp";
 import { env } from "@/infrastructure/config/env";
 import { generateDerivatives } from "@/infrastructure/services/imageService";
