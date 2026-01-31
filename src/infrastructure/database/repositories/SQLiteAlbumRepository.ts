@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../client";
-import { albums } from "../schema";
+import { albums, photoAlbums } from "../schema";
 import type { AlbumRepository } from "@/domain/repositories/AlbumRepository";
 import type { Album } from "@/domain/entities/Album";
 
@@ -41,11 +41,70 @@ export class SQLiteAlbumRepository implements AlbumRepository {
     await db.delete(albums).where(eq(albums.id, id));
   }
 
+  /**
+   * Get photo count for each album
+   * Returns map of albumId -> count
+   */
+  async getPhotoCounts(): Promise<Map<string, number>> {
+    const results = await db
+      .select({
+        albumId: photoAlbums.albumId,
+        count: sql<number>`count(*)`.as("count"),
+      })
+      .from(photoAlbums)
+      .groupBy(photoAlbums.albumId);
+
+    return new Map(results.map((r) => [r.albumId, r.count]));
+  }
+
+  /**
+   * Update sort orders based on array position
+   * albumIds[0] gets sortOrder 0, albumIds[1] gets sortOrder 1, etc.
+   */
+  async updateSortOrders(albumIds: string[]): Promise<void> {
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < albumIds.length; i++) {
+        await tx
+          .update(albums)
+          .set({ sortOrder: i })
+          .where(eq(albums.id, albumIds[i]));
+      }
+    });
+  }
+
+  /**
+   * Delete album and optionally return photo IDs for cascade deletion
+   * If deletePhotos is true, returns photo IDs that should be deleted
+   * The album deletion itself cascades to remove junction entries
+   */
+  async deleteWithPhotos(
+    albumId: string,
+    deletePhotos: boolean,
+  ): Promise<{ deletedPhotoIds: string[] }> {
+    const deletedPhotoIds: string[] = [];
+
+    if (deletePhotos) {
+      // Get photo IDs in this album before deleting
+      const photoIds = await db
+        .select({ photoId: photoAlbums.photoId })
+        .from(photoAlbums)
+        .where(eq(photoAlbums.albumId, albumId));
+
+      deletedPhotoIds.push(...photoIds.map((p) => p.photoId));
+    }
+
+    // Delete album (cascade removes junction entries)
+    await db.delete(albums).where(eq(albums.id, albumId));
+
+    return { deletedPhotoIds };
+  }
+
   private toDomain(row: typeof albums.$inferSelect): Album {
     return {
       id: row.id,
       title: row.title,
       description: row.description,
+      tags: row.tags,
       coverPhotoId: row.coverPhotoId,
       sortOrder: row.sortOrder,
       isPublished: row.isPublished,
@@ -58,6 +117,7 @@ export class SQLiteAlbumRepository implements AlbumRepository {
       id: album.id,
       title: album.title,
       description: album.description,
+      tags: album.tags,
       coverPhotoId: album.coverPhotoId,
       sortOrder: album.sortOrder,
       isPublished: album.isPublished,

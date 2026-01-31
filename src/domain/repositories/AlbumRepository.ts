@@ -6,4 +6,10 @@ export interface AlbumRepository {
   findPublished(): Promise<Album[]>;
   save(album: Album): Promise<void>;
   delete(id: string): Promise<void>;
+  getPhotoCounts(): Promise<Map<string, number>>;
+  updateSortOrders(albumIds: string[]): Promise<void>;
+  deleteWithPhotos(
+    albumId: string,
+    deletePhotos: boolean,
+  ): Promise<{ deletedPhotoIds: string[] }>;
 }

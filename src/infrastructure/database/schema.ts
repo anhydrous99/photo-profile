@@ -27,7 +27,10 @@ export const albums = sqliteTable("albums", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
-  coverPhotoId: text("cover_photo_id").references(() => photos.id),
+  tags: text("tags"), // comma-separated, e.g. "landscape,nature,2024"
+  coverPhotoId: text("cover_photo_id").references(() => photos.id, {
+    onDelete: "set null",
+  }),
   sortOrder: integer("sort_order").notNull().default(0),
   isPublished: integer("is_published", { mode: "boolean" })
     .notNull()
