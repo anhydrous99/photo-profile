@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Image Pipeline** - Async job queue, thumbnail generation, format conversion
 - [x] **Phase 3: Admin Auth** - Password authentication for admin panel access
 - [x] **Phase 4: Photo Upload** - Drag-drop interface with batch upload and progress
-- [ ] **Phase 5: Photo Management** - Descriptions, album assignment, deletion
+- [x] **Phase 5: Photo Management** - Descriptions, album assignment, deletion
 - [ ] **Phase 6: Album Management** - Create, rename, delete albums
 - [ ] **Phase 7: Public Gallery** - Album listing and photo grid with responsive design
 - [ ] **Phase 8: Lightbox** - Full photo viewing with navigation and keyboard controls
@@ -125,7 +125,7 @@ Plans:
 - [x] 05-01-PLAN.md — Photo API and file cleanup (PATCH/DELETE endpoints)
 - [x] 05-02-PLAN.md — Album assignment API (photo-album relationships)
 - [x] 05-03-PLAN.md — Photo detail page with auto-save and album selector
-- [ ] 05-04-PLAN.md — Batch selection and operations in grid
+- [x] 05-04-PLAN.md — Batch selection and operations in grid
 
 ### Phase 6: Album Management
 
@@ -233,7 +233,7 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 2. Image Pipeline   | 4/4            | Complete    | 2026-01-30 |
 | 3. Admin Auth       | 3/3            | Complete    | 2026-01-30 |
 | 4. Photo Upload     | 3/3            | Complete    | 2026-01-30 |
-| 5. Photo Management | 3/4            | In progress | -          |
+| 5. Photo Management | 4/4            | Complete    | 2026-01-31 |
 | 6. Album Management | 0/2            | Not started | -          |
 | 7. Public Gallery   | 0/3            | Not started | -          |
 | 8. Lightbox         | 0/3            | Not started | -          |
@@ -241,4 +241,4 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 10. Polish          | 0/3            | Not started | -          |
 
 **Total Plans:** 30
-**Completed:** 16/30 (53%)
+**Completed:** 17/30 (57%)

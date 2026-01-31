@@ -82,6 +82,9 @@ Recent decisions affecting current work:
 - onConflictDoNothing for idempotent album assignment
 - Auto-save on blur trigger (not every keystroke) for description editing
 - Optimistic updates for album toggling with rollback on error
+- PhotoGrid backwards compatible with optional selectable prop
+- Promise.all for parallel batch API requests
+- Client wrapper pattern for server/client component split
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-31T18:38:40Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-01-31T18:38:56Z
+Stopped at: Completed 05-04-PLAN.md (Phase 05 complete)
 Resume file: None
