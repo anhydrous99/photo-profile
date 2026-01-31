@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Admin Auth** - Password authentication for admin panel access
 - [x] **Phase 4: Photo Upload** - Drag-drop interface with batch upload and progress
 - [x] **Phase 5: Photo Management** - Descriptions, album assignment, deletion
-- [ ] **Phase 6: Album Management** - Create, rename, delete albums
+- [x] **Phase 6: Album Management** - Create, rename, delete albums
 - [ ] **Phase 7: Public Gallery** - Album listing and photo grid with responsive design
 - [ ] **Phase 8: Lightbox** - Full photo viewing with navigation and keyboard controls
 - [ ] **Phase 9: Homepage** - Random photo display from all albums
@@ -143,8 +143,8 @@ Plans:
 
 Plans:
 
-- [ ] 06-01-PLAN.md — Album API infrastructure (CRUD endpoints, photo counts, reorder, cascade delete)
-- [ ] 06-02-PLAN.md — Album list UI with drag-drop ordering and CRUD modals
+- [x] 06-01-PLAN.md — Album API infrastructure (CRUD endpoints, photo counts, reorder, cascade delete)
+- [x] 06-02-PLAN.md — Album list UI with drag-drop ordering and CRUD modals
 
 ### Phase 7: Public Gallery
 
@@ -235,11 +235,11 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 3. Admin Auth       | 3/3            | Complete    | 2026-01-30 |
 | 4. Photo Upload     | 3/3            | Complete    | 2026-01-30 |
 | 5. Photo Management | 4/4            | Complete    | 2026-01-31 |
-| 6. Album Management | 0/2            | Planned     | -          |
+| 6. Album Management | 2/2            | Complete    | 2026-01-31 |
 | 7. Public Gallery   | 0/3            | Not started | -          |
 | 8. Lightbox         | 0/3            | Not started | -          |
 | 9. Homepage         | 0/2            | Not started | -          |
 | 10. Polish          | 0/3            | Not started | -          |
 
 **Total Plans:** 30
-**Completed:** 17/30 (57%)
+**Completed:** 19/30 (63%)

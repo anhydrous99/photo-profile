@@ -52,9 +52,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Album Management
 
-- [ ] **ALBM-03**: Can create new albums
-- [ ] **ALBM-04**: Can rename albums
-- [ ] **ALBM-05**: Can delete albums
+- [x] **ALBM-03**: Can create new albums
+- [x] **ALBM-04**: Can rename albums
+- [x] **ALBM-05**: Can delete albums
 
 ## v2 Requirements
 
@@ -112,9 +112,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GLRY-04     | Phase 7  | Pending  |
 | ALBM-01     | Phase 7  | Pending  |
 | ALBM-02     | Phase 7  | Pending  |
-| ALBM-03     | Phase 6  | Pending  |
-| ALBM-04     | Phase 6  | Pending  |
-| ALBM-05     | Phase 6  | Pending  |
+| ALBM-03     | Phase 6  | Complete |
+| ALBM-04     | Phase 6  | Complete |
+| ALBM-05     | Phase 6  | Complete |
 | VIEW-01     | Phase 8  | Pending  |
 | VIEW-02     | Phase 8  | Pending  |
 | VIEW-03     | Phase 8  | Pending  |
@@ -139,4 +139,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 ---
 
 _Requirements defined: 2026-01-25_
-_Last updated: 2026-01-31 after Phase 5 completion_
+_Last updated: 2026-01-31 after Phase 6 completion_
