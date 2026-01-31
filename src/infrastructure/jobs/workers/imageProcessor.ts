@@ -86,10 +86,23 @@ imageWorker.on("completed", async (job, result) => {
   console.log(
     `[ImageWorker] Job ${job.id} completed: ${result.derivatives.length} files`,
   );
-  const repository = new SQLitePhotoRepository();
-  const photo = await repository.findById(result.photoId);
-  if (photo) {
-    photo.status = "ready";
-    await repository.save(photo);
+  try {
+    console.log(
+      `[ImageWorker] Updating photo ${result.photoId} status to 'ready'`,
+    );
+    const repository = new SQLitePhotoRepository();
+    const photo = await repository.findById(result.photoId);
+    console.log(`[ImageWorker] Found photo:`, photo);
+    if (photo) {
+      photo.status = "ready";
+      await repository.save(photo);
+      console.log(
+        `[ImageWorker] Successfully updated photo ${result.photoId} to 'ready'`,
+      );
+    } else {
+      console.error(`[ImageWorker] Photo not found: ${result.photoId}`);
+    }
+  } catch (err) {
+    console.error(`[ImageWorker] Error updating status:`, err);
   }
 });
