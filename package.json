@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit",
     "prepare": "husky",
     "worker": "npx tsx src/infrastructure/jobs/worker.ts",
-    "test:pipeline": "npx tsx scripts/test-image-pipeline.ts"
+    "test:pipeline": "npx tsx scripts/test-image-pipeline.ts",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

@@ -100,6 +100,8 @@ None yet.
 ### Blockers/Concerns
 
 - Docker not installed on development machine - Redis service not tested (docker-compose.yml created and ready)
+- Schema migration workflow needs improvement - executor added tags column to schema.ts but didn't update database, causing runtime error. Fixed manually with `ALTER TABLE`. Consider using drizzle-kit generate/migrate instead of push for production.
+- coverPhotoId FK constraint is NO ACTION instead of SET NULL (schema.ts defines SET NULL but existing DB has NO ACTION). Non-blocking but should be fixed in future migration.
 
 ## Session Continuity
 
