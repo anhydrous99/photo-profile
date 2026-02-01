@@ -26,8 +26,10 @@ export function PhotoLightbox({
   onIndexChange,
 }: PhotoLightboxProps) {
   // Transform photo data to YARL slide format
+  // Use 600w as baseline - guaranteed to exist for all photos
+  // (larger sizes may not exist if original was smaller than target)
   const slides = photos.map((photo) => ({
-    src: `/api/images/${photo.id}/2400w.webp`,
+    src: `/api/images/${photo.id}/600w.webp`,
     alt: photo.title || photo.originalFilename,
     title: photo.title || undefined,
     description: photo.description || undefined,
