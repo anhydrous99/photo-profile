@@ -14,15 +14,15 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Gallery
 
-- [ ] **GLRY-01**: Photos displayed in responsive grid layout
-- [ ] **GLRY-02**: Thumbnails load quickly (optimized sizes)
+- [x] **GLRY-01**: Photos displayed in responsive grid layout
+- [x] **GLRY-02**: Thumbnails load quickly (optimized sizes)
 - [ ] **GLRY-03**: Blur placeholder shown while full image loads
-- [ ] **GLRY-04**: Gallery works on mobile and desktop
+- [x] **GLRY-04**: Gallery works on mobile and desktop
 
 ### Albums
 
-- [ ] **ALBM-01**: Album listing page shows all available albums
-- [ ] **ALBM-02**: Clicking album shows grid of photos in that album
+- [x] **ALBM-01**: Album listing page shows all available albums
+- [x] **ALBM-02**: Clicking album shows grid of photos in that album
 
 ### Photo Viewing
 
@@ -106,12 +106,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ----------- | -------- | -------- |
 | HOME-01     | Phase 9  | Pending  |
 | HOME-02     | Phase 9  | Pending  |
-| GLRY-01     | Phase 7  | Pending  |
-| GLRY-02     | Phase 7  | Pending  |
+| GLRY-01     | Phase 7  | Complete |
+| GLRY-02     | Phase 7  | Complete |
 | GLRY-03     | Phase 10 | Pending  |
-| GLRY-04     | Phase 7  | Pending  |
-| ALBM-01     | Phase 7  | Pending  |
-| ALBM-02     | Phase 7  | Pending  |
+| GLRY-04     | Phase 7  | Complete |
+| ALBM-01     | Phase 7  | Complete |
+| ALBM-02     | Phase 7  | Complete |
 | ALBM-03     | Phase 6  | Complete |
 | ALBM-04     | Phase 6  | Complete |
 | ALBM-05     | Phase 6  | Complete |
