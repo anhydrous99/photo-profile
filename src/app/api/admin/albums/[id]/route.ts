@@ -16,6 +16,7 @@ const updateAlbumSchema = z.object({
   description: z.string().max(500).nullable().optional(),
   tags: z.string().max(200).nullable().optional(),
   coverPhotoId: z.string().nullable().optional(),
+  isPublished: z.boolean().optional(),
 });
 
 interface RouteContext {
@@ -66,6 +67,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
   if (result.data.coverPhotoId !== undefined) {
     album.coverPhotoId = result.data.coverPhotoId;
+  }
+  if (result.data.isPublished !== undefined) {
+    album.isPublished = result.data.isPublished;
   }
 
   await albumRepository.save(album);

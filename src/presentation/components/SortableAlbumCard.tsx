@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Album } from "@/domain/entities";
@@ -12,6 +13,7 @@ interface SortableAlbumCardProps {
   album: AlbumWithCount;
   onEdit: () => void;
   onDelete: () => void;
+  onPublishToggle?: (albumId: string, isPublished: boolean) => Promise<void>;
 }
 
 /**
@@ -21,13 +23,20 @@ interface SortableAlbumCardProps {
  * - Drag handle for reordering
  * - Album title, description preview, photo count
  * - Tags display as pills
+ * - Publish toggle with visual indicator
  * - Edit and Delete action buttons
  */
 export function SortableAlbumCard({
   album,
   onEdit,
   onDelete,
+  onPublishToggle,
 }: SortableAlbumCardProps) {
+  const [isToggling, setIsToggling] = useState(false);
+  const [optimisticPublished, setOptimisticPublished] = useState(
+    album.isPublished,
+  );
+
   const {
     attributes,
     listeners,
@@ -36,6 +45,23 @@ export function SortableAlbumCard({
     transition,
     isDragging,
   } = useSortable({ id: album.id });
+
+  const handlePublishToggle = async () => {
+    if (!onPublishToggle || isToggling) return;
+
+    const newValue = !optimisticPublished;
+    setOptimisticPublished(newValue);
+    setIsToggling(true);
+
+    try {
+      await onPublishToggle(album.id, newValue);
+    } catch {
+      // Revert on error
+      setOptimisticPublished(!newValue);
+    } finally {
+      setIsToggling(false);
+    }
+  };
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -102,6 +128,21 @@ export function SortableAlbumCard({
           photo{album.photoCount === 1 ? "" : "s"}
         </div>
       </div>
+
+      {/* Publish toggle */}
+      <button
+        type="button"
+        onClick={handlePublishToggle}
+        disabled={isToggling}
+        className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+          optimisticPublished
+            ? "bg-green-100 text-green-700 hover:bg-green-200"
+            : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+        } ${isToggling ? "opacity-50" : ""}`}
+        aria-label={optimisticPublished ? "Unpublish album" : "Publish album"}
+      >
+        {optimisticPublished ? "Published" : "Draft"}
+      </button>
 
       {/* Actions */}
       <div className="flex flex-shrink-0 gap-2">

@@ -112,6 +112,26 @@ export function AlbumsPageClient({
     setEditAlbum(undefined);
   };
 
+  const handlePublishToggle = async (
+    albumId: string,
+    isPublished: boolean,
+  ): Promise<void> => {
+    const response = await fetch(`/api/admin/albums/${albumId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isPublished }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to update publish status");
+    }
+
+    // Update local state to reflect the change
+    setAlbums((prev) =>
+      prev.map((a) => (a.id === albumId ? { ...a, isPublished } : a)),
+    );
+  };
+
   return (
     <>
       {/* Header */}
@@ -162,6 +182,7 @@ export function AlbumsPageClient({
                   album={album}
                   onEdit={() => handleEditClick(album)}
                   onDelete={() => handleDeleteClick(album)}
+                  onPublishToggle={handlePublishToggle}
                 />
               ))}
             </div>
