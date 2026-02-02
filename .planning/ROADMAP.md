@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Photo Management** - Descriptions, album assignment, deletion
 - [x] **Phase 6: Album Management** - Create, rename, delete albums
 - [x] **Phase 7: Public Gallery** - Album listing and photo grid with responsive design
-- [ ] **Phase 8: Lightbox** - Full photo viewing with navigation and keyboard controls
+- [x] **Phase 8: Lightbox** - Full photo viewing with navigation and keyboard controls
 - [ ] **Phase 9: Homepage** - Random photo display from all albums
 - [ ] **Phase 10: Polish** - Blur placeholders and performance optimization
 
@@ -182,13 +182,13 @@ Plans:
 
 Plans:
 
-- [ ] 08-01-PLAN.md — YARL lightbox integration and album page refactor
-- [ ] 08-02-PLAN.md — Visual verification checkpoint
+- [x] 08-01-PLAN.md — YARL lightbox integration and album page refactor
+- [x] 08-02-PLAN.md — Visual verification checkpoint
 
 ### Phase 9: Homepage
 
 **Goal**: Visitors see curated random selection on landing page
-**Depends on**: Phase 7
+**Depends on**: Phase 8
 **Requirements**: HOME-01, HOME-02
 **Success Criteria** (what must be TRUE):
 
@@ -196,12 +196,12 @@ Plans:
 2. Photo selection randomizes on page refresh
 3. Clicking homepage photo opens lightbox
 4. Design is clean and photo-focused
-   **Plans**: TBD
+   **Plans**: 2 plans
 
 Plans:
 
-- [ ] 09-01: Random photo selection service
-- [ ] 09-02: Homepage layout and design
+- [ ] 09-01-PLAN.md — Homepage implementation (repository method, header, hero+grid layout)
+- [ ] 09-02-PLAN.md — Visual verification checkpoint
 
 ### Phase 10: Polish
 
