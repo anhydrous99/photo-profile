@@ -1,6 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "../client";
-import { photos, photoAlbums } from "../schema";
+import { photos, photoAlbums, albums } from "../schema";
 import type { PhotoRepository } from "@/domain/repositories/PhotoRepository";
 import type { Photo } from "@/domain/entities/Photo";
 
@@ -63,6 +63,20 @@ export class SQLitePhotoRepository implements PhotoRepository {
       .where(
         and(eq(photoAlbums.photoId, photoId), eq(photoAlbums.albumId, albumId)),
       );
+  }
+
+  async findRandomFromPublishedAlbums(limit: number): Promise<Photo[]> {
+    const results = await db
+      .select({ photo: photos })
+      .from(photos)
+      .innerJoin(photoAlbums, eq(photos.id, photoAlbums.photoId))
+      .innerJoin(albums, eq(photoAlbums.albumId, albums.id))
+      .where(and(eq(photos.status, "ready"), eq(albums.isPublished, true)))
+      .groupBy(photos.id)
+      .orderBy(sql`RANDOM()`)
+      .limit(limit);
+
+    return results.map((r) => this.toDomain(r.photo));
   }
 
   private toDomain(row: typeof photos.$inferSelect): Photo {
