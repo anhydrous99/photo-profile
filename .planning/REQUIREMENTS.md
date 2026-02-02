@@ -26,10 +26,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Photo Viewing
 
-- [ ] **VIEW-01**: Clicking photo opens larger view (lightbox)
-- [ ] **VIEW-02**: Can navigate between photos (prev/next) in lightbox
-- [ ] **VIEW-03**: Keyboard navigation (arrow keys, escape to close)
-- [ ] **VIEW-04**: Photo descriptions displayed when viewing
+- [x] **VIEW-01**: Clicking photo opens larger view (lightbox)
+- [x] **VIEW-02**: Can navigate between photos (prev/next) in lightbox
+- [x] **VIEW-03**: Keyboard navigation (arrow keys, escape to close)
+- [x] **VIEW-04**: Photo descriptions displayed when viewing
 
 ### Admin Authentication
 
@@ -115,10 +115,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ALBM-03     | Phase 6  | Complete |
 | ALBM-04     | Phase 6  | Complete |
 | ALBM-05     | Phase 6  | Complete |
-| VIEW-01     | Phase 8  | Pending  |
-| VIEW-02     | Phase 8  | Pending  |
-| VIEW-03     | Phase 8  | Pending  |
-| VIEW-04     | Phase 8  | Pending  |
+| VIEW-01     | Phase 8  | Complete |
+| VIEW-02     | Phase 8  | Complete |
+| VIEW-03     | Phase 8  | Complete |
+| VIEW-04     | Phase 8  | Complete |
 | AUTH-01     | Phase 3  | Complete |
 | AUTH-02     | Phase 3  | Complete |
 | UPLD-01     | Phase 4  | Complete |
