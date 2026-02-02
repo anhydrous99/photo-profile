@@ -49,7 +49,7 @@ export function HomepageClient({ photos }: HomepageClientProps) {
           aria-label={`View ${heroPhoto.title || heroPhoto.originalFilename}`}
         >
           <Image
-            src={`/api/images/${heroPhoto.id}/1200w.webp`}
+            src={`/api/images/${heroPhoto.id}/600w.webp`}
             alt={heroPhoto.title || heroPhoto.originalFilename}
             fill
             sizes="(max-width: 1280px) 100vw, 1152px"
