@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Phase 8 - Lightbox (in progress)
+**Current focus:** Phase 8 - Lightbox (complete)
 
 ## Current Position
 
 Phase: 8 of 10 (Lightbox)
-Plan: 1 of 1 in current phase
+Plan: 2 of 2 in current phase
 Status: Phase complete
-Last activity: 2026-01-31 - Completed 08-01-PLAN.md
+Last activity: 2026-01-31 - Completed 08-02-PLAN.md
 
-Progress: [#########################] 77%
+Progress: [##########################] 80%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 23
+- Total plans completed: 24
 - Average duration: 4 min
-- Total execution time: 81 min
+- Total execution time: 83 min
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: [#########################] 77%
 | 05-photo-management | 4     | 11 min | 2.8 min  |
 | 06-album-management | 2     | 7 min  | 3.5 min  |
 | 07-public-gallery   | 3     | 4 min  | 1.3 min  |
-| 08-lightbox         | 1     | 3 min  | 3.0 min  |
+| 08-lightbox         | 2     | 5 min  | 2.5 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 06-02 (4 min), 07-01 (1 min), 07-02 (2 min), 07-03 (1 min), 08-01 (3 min)
+- Last 5 plans: 07-01 (1 min), 07-02 (2 min), 07-03 (1 min), 08-01 (3 min), 08-02 (2 min)
 - Trend: Stable
 
 _Updated after each plan completion_
@@ -98,6 +98,7 @@ Recent decisions affecting current work:
 - Dynamic import with ssr: false for client-only YARL library
 - Solid black background (rgb(0,0,0)) for lightbox per phase decision
 - X-button-only close behavior (no click-outside, no swipe-down)
+- Use 600w image size for lightbox display (sufficient quality, faster loading)
 
 ### Pending Todos
 
@@ -111,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-31T08:03:00Z
-Stopped at: Completed 08-01-PLAN.md (Phase 8 complete)
+Last session: 2026-01-31T08:10:00Z
+Stopped at: Completed 08-02-PLAN.md (Phase 8 complete)
 Resume file: None
