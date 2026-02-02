@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Phase 8 - Lightbox (complete)
+**Current focus:** Phase 9 - Homepage (in progress)
 
 ## Current Position
 
-Phase: 8 of 10 (Lightbox)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-01 - Completed 08-02-PLAN.md
+Phase: 9 of 10 (Homepage)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-02 - Completed 09-01-PLAN.md
 
-Progress: [##########################] 80%
+Progress: [############################] 83%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 24
+- Total plans completed: 25
 - Average duration: 4 min
-- Total execution time: 83 min
+- Total execution time: 87 min
 
 **By Phase:**
 
@@ -36,10 +36,11 @@ Progress: [##########################] 80%
 | 06-album-management | 2     | 7 min  | 3.5 min  |
 | 07-public-gallery   | 3     | 4 min  | 1.3 min  |
 | 08-lightbox         | 2     | 5 min  | 2.5 min  |
+| 09-homepage         | 1     | 4 min  | 4.0 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 07-01 (1 min), 07-02 (2 min), 07-03 (1 min), 08-01 (3 min), 08-02 (2 min)
+- Last 5 plans: 07-02 (2 min), 07-03 (1 min), 08-01 (3 min), 08-02 (2 min), 09-01 (4 min)
 - Trend: Stable
 
 _Updated after each plan completion_
@@ -99,6 +100,9 @@ Recent decisions affecting current work:
 - Solid black background (rgb(0,0,0)) for lightbox per phase decision
 - X-button-only close behavior (no click-outside, no swipe-down)
 - Use 600w image size for lightbox display (sufficient quality, faster loading)
+- SQL RANDOM() with GROUP BY for random photo selection (deduplicates photos in multiple albums)
+- 1200w for hero images, 600w for grid images
+- force-dynamic for fresh random selection on each request
 
 ### Pending Todos
 
@@ -112,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-01T01:15:00Z
-Stopped at: Completed 08-02-PLAN.md (Phase 8 complete)
+Last session: 2026-02-02T03:10:52Z
+Stopped at: Completed 09-01-PLAN.md
 Resume file: None
