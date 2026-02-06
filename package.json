@@ -15,7 +15,8 @@
     "worker": "npx tsx src/infrastructure/jobs/worker.ts",
     "test:pipeline": "npx tsx scripts/test-image-pipeline.ts",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "exif:backfill": "npx tsx --require dotenv/config scripts/backfill-exif.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
