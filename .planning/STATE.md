@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Milestone v1.1 — Phase 11 (EXIF Metadata Pipeline) Plan 01 complete
+**Current focus:** Milestone v1.1 — Phase 11 (EXIF Metadata Pipeline) Plan 02 complete
 
 ## Current Position
 
 Phase: 11 of 14 (EXIF Metadata Pipeline)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-06 — Completed 11-01-PLAN.md
+Last activity: 2026-02-06 — Completed 11-02-PLAN.md
 
-Progress: ████░░░░░░░░░░░░░░░░░░░░░░░░░░ v1.1 (1/8 plans)
+Progress: ████████░░░░░░░░░░░░░░░░░░░░░░ v1.1 (2/8 plans)
 
 ## Performance Metrics
 
@@ -27,10 +27,10 @@ Progress: ████░░░░░░░░░░░░░░░░░░░�
 
 **v1.1 Velocity:**
 
-- Total plans completed: 1
+- Total plans completed: 2
 - Plans estimated: 8
 - Average duration: 3 min
-- Total execution time: 3 min
+- Total execution time: 5 min
 
 ## Accumulated Context
 
@@ -42,6 +42,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - EXIF stored as JSON TEXT column, not individual columns -- flexible for future field additions
 - exif-reader used for parsing (Sharp maintainer recommended, ships TypeScript types)
 - Privacy fields (GPS, serial numbers, software) never accessed from parsed EXIF object
+- ExifPanel always in DOM with CSS translate-y toggle for smooth bidirectional animation
+- Camera field combines make+model, deduplicating when model includes make prefix
+- Panel persists open state across photo navigation (exifOpen independent of index)
+- Info icon placed before close button in YARL toolbar using toolbar.buttons prop
 
 ### Pending Todos
 
@@ -56,5 +60,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 11-01-PLAN.md
+Stopped at: Completed 11-02-PLAN.md
 Resume file: None
