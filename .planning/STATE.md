@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Milestone v1.1 — defining requirements
+**Current focus:** Milestone v1.1 — Phase 11 (EXIF Metadata Pipeline) ready to plan
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-05 — Milestone v1.1 started
+Phase: 11 of 14 (EXIF Metadata Pipeline)
+Plan: 0 of 3 in current phase
+Status: Ready to plan
+Last activity: 2026-02-05 — Roadmap created for v1.1 milestone
 
-Progress: ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ v1.1
+Progress: ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ v1.1 (0/8 plans)
 
 ## Performance Metrics
 
@@ -23,7 +23,12 @@ Progress: ░░░░░░░░░░░░░░░░░░░░░░░�
 - Total plans completed: 29
 - Average duration: 3 min
 - Total execution time: 99 min
-- Timeline: 12 days (2026-01-24 → 2026-02-05)
+- Timeline: 12 days (2026-01-24 -> 2026-02-05)
+
+**v1.1 Velocity:**
+
+- Total plans completed: 0
+- Plans estimated: 8
 
 ## Accumulated Context
 
@@ -38,10 +43,11 @@ None.
 ### Blockers/Concerns
 
 - Docker not installed on development machine — Redis service not tested (docker-compose.yml created and ready)
-- coverPhotoId FK constraint is NO ACTION instead of SET NULL (schema.ts defines SET NULL but existing DB has NO ACTION). Non-blocking but should be fixed in future migration.
+- coverPhotoId FK constraint is NO ACTION instead of SET NULL — scheduled for fix in Phase 13
+- findByAlbumId() missing ORDER BY sortOrder — scheduled for fix in Phase 13
 
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Milestone v1.1 initialization
+Stopped at: v1.1 roadmap created, ready to plan Phase 11
 Resume file: None

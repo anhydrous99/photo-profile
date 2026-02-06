@@ -64,30 +64,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status  |
 | ----------- | ----- | ------- |
-| EXIF-01     | —     | Pending |
-| EXIF-02     | —     | Pending |
-| EXIF-03     | —     | Pending |
-| EXIF-04     | —     | Pending |
-| LBOX-01     | —     | Pending |
-| LBOX-02     | —     | Pending |
-| LBOX-03     | —     | Pending |
-| LBOX-04     | —     | Pending |
-| ALBM-01     | —     | Pending |
-| ALBM-02     | —     | Pending |
-| ALBM-03     | —     | Pending |
-| ALBM-04     | —     | Pending |
-| SHAR-01     | —     | Pending |
-| SHAR-02     | —     | Pending |
-| SHAR-03     | —     | Pending |
-| SHAR-04     | —     | Pending |
+| EXIF-01     | 11    | Pending |
+| EXIF-02     | 11    | Pending |
+| EXIF-03     | 11    | Pending |
+| EXIF-04     | 11    | Pending |
+| LBOX-01     | 12    | Pending |
+| LBOX-02     | 12    | Pending |
+| LBOX-03     | 12    | Pending |
+| LBOX-04     | 12    | Pending |
+| ALBM-01     | 13    | Pending |
+| ALBM-02     | 13    | Pending |
+| ALBM-03     | 13    | Pending |
+| ALBM-04     | 13    | Pending |
+| SHAR-01     | 14    | Pending |
+| SHAR-02     | 14    | Pending |
+| SHAR-03     | 14    | Pending |
+| SHAR-04     | 14    | Pending |
 
 **Coverage:**
 
 - v1.1 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0
 
 ---
 
 _Requirements defined: 2026-02-05_
-_Last updated: 2026-02-05 after initial definition_
+_Last updated: 2026-02-05 after roadmap creation_
