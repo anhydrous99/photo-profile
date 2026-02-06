@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readFile, stat } from "fs/promises";
+import { readFile, readdir, stat } from "fs/promises";
 import { join } from "path";
 import { env } from "@/infrastructure/config/env";
 
@@ -24,6 +24,59 @@ function isValidFilename(filename: string): boolean {
   return ext in MIME_TYPES;
 }
 
+/**
+ * Find the largest available derivative of the same format.
+ *
+ * When the original image is smaller than some derivative widths,
+ * generateDerivatives() correctly skips those sizes (no upscaling).
+ * The custom image loader doesn't know which sizes exist, so it may
+ * request e.g. 1200w.webp when only 300w.webp and 600w.webp exist.
+ * This function falls back to the largest available file of the same format.
+ */
+async function findLargestDerivative(
+  photoDir: string,
+  ext: string,
+): Promise<string | null> {
+  try {
+    const files = await readdir(photoDir);
+    const matching = files
+      .filter((f) => f.endsWith(ext))
+      .map((f) => {
+        const widthMatch = f.match(/^(\d+)w\./);
+        return widthMatch
+          ? { file: f, width: parseInt(widthMatch[1], 10) }
+          : null;
+      })
+      .filter(
+        (entry): entry is { file: string; width: number } => entry !== null,
+      )
+      .sort((a, b) => b.width - a.width);
+
+    return matching.length > 0 ? matching[0].file : null;
+  } catch {
+    return null;
+  }
+}
+
+async function serveImage(
+  filePath: string,
+  mimeType: string,
+): Promise<NextResponse> {
+  const [fileBuffer, fileStat] = await Promise.all([
+    readFile(filePath),
+    stat(filePath),
+  ]);
+
+  return new NextResponse(fileBuffer, {
+    status: 200,
+    headers: {
+      "Content-Type": mimeType,
+      "Content-Length": fileStat.size.toString(),
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
+  });
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ photoId: string; filename: string }> },
@@ -39,29 +92,26 @@ export async function GET(
 
   const ext = getExtension(filename);
   const mimeType = MIME_TYPES[ext];
-  const filePath = join(env.STORAGE_PATH, "processed", photoId, filename);
+  const photoDir = join(env.STORAGE_PATH, "processed", photoId);
+  const filePath = join(photoDir, filename);
 
   try {
-    const [fileBuffer, fileStat] = await Promise.all([
-      readFile(filePath),
-      stat(filePath),
-    ]);
-
-    return new NextResponse(fileBuffer, {
-      status: 200,
-      headers: {
-        "Content-Type": mimeType,
-        "Content-Length": fileStat.size.toString(),
-        "Cache-Control": "public, max-age=31536000, immutable",
-      },
-    });
+    return await serveImage(filePath, mimeType);
   } catch (error) {
-    // File not found or other read error
+    // File not found - try falling back to largest available derivative
     if (
       error instanceof Error &&
       "code" in error &&
       (error as NodeJS.ErrnoException).code === "ENOENT"
     ) {
+      const fallback = await findLargestDerivative(photoDir, ext);
+      if (fallback) {
+        try {
+          return await serveImage(join(photoDir, fallback), mimeType);
+        } catch {
+          // Fallback also failed, return 404
+        }
+      }
       return new NextResponse("Image not found", { status: 404 });
     }
     // Re-throw unexpected errors
