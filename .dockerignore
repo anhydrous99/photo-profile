@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+data
+storage
+.env
+.env.local
+.planning
+*.md
+.vscode
+.idea
