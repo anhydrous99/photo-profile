@@ -1,315 +1,436 @@
-# Technology Stack
+# Technology Stack: v1.1 Additions
 
-**Project:** Photography Portfolio Website
-**Researched:** 2026-01-24
+**Project:** Photography Portfolio Website -- v1.1 Enhancement Milestone
+**Researched:** 2026-02-05
 **Overall Confidence:** HIGH
 
 ## Executive Summary
 
-This stack prioritizes clean code architecture (Robert C. Martin principles), educational value, and self-hosted simplicity. Next.js 16 provides the foundation with its built-in image optimization (critical for 50MP images), while Sharp handles server-side thumbnail generation. SQLite via Drizzle ORM keeps deployment simple with a single-file database. The architecture follows clean architecture patterns with clear domain boundaries.
+The v1.1 milestone requires surprisingly few new dependencies. The existing stack already covers most needs:
+
+- **YARL (already installed at v3.28.0)** has built-in fullscreen, touch/swipe, and transition plugins -- no new library needed
+- **exifr** was planned in v1.0 research but never installed -- it remains the best choice for EXIF extraction
+- **@dnd-kit (already installed)** handles the photo reordering use case with the same pattern as album reordering
+- **OG images** need no new library -- Next.js `generateMetadata` + the existing image API route covers static OG meta tags; Sharp (already installed) can generate OG images if dynamic generation is desired
+
+**Net new dependencies: 1 (exifr)**. Everything else is configuration of existing libraries.
 
 ---
 
-## Recommended Stack
+## Feature-to-Stack Mapping
 
-### Core Framework
+| Feature                   | Library                                         | Status                            | New Dependency?     |
+| ------------------------- | ----------------------------------------------- | --------------------------------- | ------------------- |
+| EXIF metadata extraction  | exifr ^7.1.3                                    | Not yet installed                 | YES -- only new dep |
+| Fullscreen lightbox       | YARL Fullscreen plugin                          | Installed, unused                 | No                  |
+| Smooth transitions        | YARL core animation config                      | Installed, partially configured   | No                  |
+| Touch/swipe gestures      | YARL core (built-in)                            | Installed, active                 | No                  |
+| Photo reorder (drag-drop) | @dnd-kit/core + @dnd-kit/sortable               | Installed, used for albums        | No                  |
+| Direct photo links        | Next.js URL state + YARL `index` prop           | Framework built-in                | No                  |
+| Album cover selection     | Existing API + UI only                          | Schema already has `coverPhotoId` | No                  |
+| OpenGraph meta tags       | Next.js `generateMetadata` + existing image API | Framework built-in                | No                  |
 
-| Technology     | Version | Purpose                    | Why                                                                                                                                                                                                                                         | Confidence |
-| -------------- | ------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| **Next.js**    | ^16.0.0 | Full-stack React framework | Built-in image optimization critical for photography sites. Turbopack default bundler (2-5x faster builds). App Router with React Server Components for clean architecture separation. Self-hostable via `next start` or standalone output. | HIGH       |
-| **React**      | ^19.2.0 | UI library                 | Ships with Next.js 16. React Compiler (stable) provides automatic memoization. View Transitions for smooth lightbox animations.                                                                                                             | HIGH       |
-| **TypeScript** | ^5.5.0  | Type safety                | Enables clean architecture with strong contracts between layers. Required for Drizzle ORM schema definitions. Next.js 16 requires >=5.1.                                                                                                    | HIGH       |
+---
 
-**Source:** [Next.js 16 Release Blog](https://nextjs.org/blog/next-16), [Next.js 15 Blog](https://nextjs.org/blog/next-15)
+## New Dependencies
 
-### Database
+### exifr -- EXIF Metadata Extraction
 
-| Technology         | Version | Purpose             | Why                                                                                                                                                                              | Confidence |
-| ------------------ | ------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| **SQLite**         | ^3.45.0 | Relational database | Perfect for single-user, self-hosted portfolios. Single-file database = simple backups. Zero configuration. Handles thousands of images easily.                                  | HIGH       |
-| **better-sqlite3** | ^11.0.0 | SQLite driver       | Fastest synchronous SQLite driver for Node.js. Type-safe with TypeScript. Drizzle ORM's recommended SQLite driver.                                                               | HIGH       |
-| **Drizzle ORM**    | ^0.38.0 | Database ORM        | Code-first schema in TypeScript = clean architecture alignment. Zero dependencies, 31KB. SQL-like queries (educational). Serverless-ready. Automatic migrations via Drizzle Kit. | HIGH       |
+| Property      | Value                                                    |
+| ------------- | -------------------------------------------------------- |
+| Package       | `exifr`                                                  |
+| Version       | `^7.1.3` (latest, stable)                                |
+| Purpose       | Parse EXIF from uploaded photos (camera, lens, settings) |
+| Bundle impact | Server-side only (worker process), zero client impact    |
+| Confidence    | HIGH                                                     |
 
-**Rationale for SQLite over PostgreSQL:**
+**Why exifr over alternatives:**
 
-- Personal portfolio = single-user admin, low concurrent writes
-- Self-hosted simplicity (no separate database server)
-- Backup = copy one file
-- Performance excellent for read-heavy photo browsing
-- Thousands of image metadata records is trivial for SQLite
+| Criterion               | exifr                                | ExifReader                     | exif-reader         | Sharp metadata()      |
+| ----------------------- | ------------------------------------ | ------------------------------ | ------------------- | --------------------- |
+| Parse speed (per photo) | ~2.5ms                               | ~9.5ms                         | Not benchmarked     | N/A (raw buffer only) |
+| Parsed output           | YES -- keyed object                  | YES -- keyed object            | YES -- keyed object | NO -- raw Buffer      |
+| Node.js Buffer input    | YES                                  | YES                            | YES                 | Built-in              |
+| HEIC/AVIF support       | YES                                  | YES                            | Limited             | N/A                   |
+| Weekly npm downloads    | ~497K                                | ~91K                           | ~53 projects        | N/A                   |
+| Maintenance             | Stable (no changes needed -- mature) | Active (maintained since 2012) | Sparse              | N/A                   |
+| Zero dependencies       | YES                                  | YES                            | YES                 | N/A                   |
 
-**Source:** [Drizzle ORM Docs](https://orm.drizzle.team/docs/overview), [SQLite vs PostgreSQL Comparison](https://www.selecthub.com/relational-database-solutions/postgresql-vs-sqlite/)
+**Critical decision: exifr vs Sharp's built-in EXIF.** Sharp's `metadata()` returns EXIF as a raw binary `Buffer`, not parsed key-value pairs. You would need a second library (like `exif-reader`) to parse that buffer anyway. Using exifr directly on the file is simpler, faster, and avoids the double-parse.
 
-### Image Processing
+**Why not parse EXIF via Sharp buffer + exif-reader:**
 
-| Technology | Version | Purpose                                 | Why                                                                                                                                                                             | Confidence |
-| ---------- | ------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| **Sharp**  | ^0.34.5 | Thumbnail generation, format conversion | 4-5x faster than ImageMagick. Handles 50MP images efficiently via streaming (small memory footprint). Outputs WebP/AVIF. libvips-based. Automatically bundled with Next.js 15+. | HIGH       |
-| **exifr**  | ^7.1.3  | EXIF metadata extraction                | Fastest EXIF library (~1ms per file). Supports JPEG, HEIC, AVIF, PNG. Extracts GPS, camera settings, lens info. Zero dependencies.                                              | HIGH       |
+- Two-step process (Sharp reads file -> get buffer -> exif-reader parses buffer)
+- exifr reads the file directly, only reading the first few hundred bytes where EXIF lives
+- exifr handles the full pipeline in one call with better performance
 
-**Thumbnail Strategy:**
+**Target EXIF fields for photography portfolio:**
 
-- Generate on upload (not on-demand) for 50MP source files
-- Create: 400px (thumbnail), 1200px (gallery), 2400px (lightbox)
-- Output: WebP with JPEG fallback
-- Store originals in separate `/originals/` directory (not publicly served)
+```typescript
+// Fields to extract and store
+interface PhotoExif {
+  cameraMake: string | null; // "Canon", "Sony", "Nikon"
+  cameraModel: string | null; // "EOS R5", "A7 IV"
+  lensModel: string | null; // "RF 24-70mm F2.8 L IS USM"
+  focalLength: number | null; // 50 (mm)
+  aperture: number | null; // 2.8 (f-number)
+  shutterSpeed: string | null; // "1/250" (formatted from ExposureTime)
+  iso: number | null; // 400
+  dateTaken: Date | null; // DateTimeOriginal
+}
+```
 
-**Source:** [Sharp Documentation](https://sharp.pixelplumbing.com/), [exifr GitHub](https://github.com/MikeKovarik/exifr)
+**Usage pattern -- extract during image processing worker:**
 
-### Authentication
+```typescript
+import exifr from "exifr";
 
-| Technology                | Version     | Purpose              | Why                                                                                                                                                                               | Confidence |
-| ------------------------- | ----------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| **Auth.js (NextAuth v5)** | ^5.0.0-beta | Admin authentication | Works seamlessly with Next.js App Router, Server Components, and middleware. JWT sessions = no extra database tables. Credentials provider sufficient for single-admin portfolio. | HIGH       |
+// In the BullMQ worker, after upload, before/alongside derivative generation
+const exif = await exifr.parse(originalFilePath, {
+  pick: [
+    "Make",
+    "Model",
+    "LensModel",
+    "FocalLength",
+    "FNumber",
+    "ExposureTime",
+    "ISO",
+    "DateTimeOriginal",
+  ],
+});
+```
 
-**Auth Strategy:**
+**Privacy note:** Do NOT extract or store GPS coordinates (`GPSLatitude`, `GPSLongitude`). These expose the photographer's location. The `pick` option in exifr ensures only whitelisted fields are read.
 
-- Single admin user (credentials provider with hashed password)
-- JWT-based sessions (stateless, no session table needed)
-- Middleware protects `/admin/*` routes
-- Environment variables: `AUTH_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`
+**Installation:**
 
-**Source:** [Auth.js Next.js Reference](https://authjs.dev/reference/nextjs), [Next.js Authentication Guide](https://nextjs.org/docs/app/guides/authentication)
+```bash
+npm install exifr
+```
 
-### UI/Styling
+No `@types/exifr` needed -- exifr ships its own TypeScript declarations.
 
-| Technology                     | Version | Purpose                 | Why                                                                                                                                                                   | Confidence |
-| ------------------------------ | ------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| **Tailwind CSS**               | ^4.0.0  | Utility-first CSS       | Better performance than CSS-in-JS (no runtime overhead). PurgeCSS removes unused styles. Teams report 15+ point Lighthouse score improvements vs styled-components.   | HIGH       |
-| **yet-another-react-lightbox** | ^3.21.0 | Photo lightbox/viewer   | React 19 compatible. Responsive images with automatic srcset. Keyboard/touch navigation. Plugin architecture (zoom, thumbnails, video). 4.7KB lite version available. | HIGH       |
-| **react-dropzone**             | ^14.3.0 | Admin drag-drop uploads | Battle-tested. Hook-based API (`useDropzone`). TypeScript support. No external dependencies for file handling.                                                        | MEDIUM     |
+**Source:** [exifr GitHub](https://github.com/MikeKovarik/exifr), [npm trends comparison](https://npmtrends.com/exif-reader-vs-exifr-vs-exifreader), [Sharp metadata docs](https://sharp.pixelplumbing.com/api-input)
 
-**Source:** [Tailwind vs styled-components](https://seekandhit.com/engineering/optimising-style-for-speed-our-journey-from-styled-components-to-tailwind-css/), [yet-another-react-lightbox](https://yet-another-react-lightbox.com/), [react-dropzone GitHub](https://github.com/react-dropzone/react-dropzone)
+---
 
-### State Management
+## Existing Dependencies: Configuration Changes
 
-| Technology  | Version | Purpose      | Why                                                                                                                                        | Confidence |
-| ----------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| **Zustand** | ^5.0.0  | Client state | Minimal API, 3KB bundle. No providers needed. Perfect for photo viewer state (current photo, zoom level, lightbox open). DevTools support. | MEDIUM     |
+### YARL Plugins (yet-another-react-lightbox v3.28.0)
 
-**Rationale:** Photo portfolio has minimal client state. React Server Components handle most data. Zustand only for UI state (lightbox, admin form state). Could also work with just React `useState` if simpler.
+The project already imports YARL at v3.28.0. The current `PhotoLightbox.tsx` uses only the `Captions` plugin. Three additional built-in plugins need to be activated for v1.1 -- all ship with the already-installed package.
 
-**Source:** [Zustand Comparison](https://zustand.docs.pmnd.rs/getting-started/comparison), [State Management 2025](https://dev.to/hijazi313/state-management-in-2025-when-to-use-context-redux-zustand-or-jotai-2d2k)
+#### Fullscreen Plugin
 
-### File Upload Handling
+| Property       | Value                                                |
+| -------------- | ---------------------------------------------------- |
+| Import         | `yet-another-react-lightbox/plugins/fullscreen`      |
+| Purpose        | Full-screen lightbox mode via browser Fullscreen API |
+| New dependency | NO -- bundled with YARL                              |
+| Confidence     | HIGH (verified from installed package types)         |
 
-| Technology | Version | Purpose                | Why                                                                                                                               | Confidence |
-| ---------- | ------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| **busboy** | ^1.6.0  | Streaming file uploads | Memory-efficient for large 50MP files. Streams to disk instead of loading entire file into memory. Works with Next.js API routes. | MEDIUM     |
+**How it works:** Uses the browser's Fullscreen API. Adds a fullscreen toggle button to the toolbar. On unsupported environments (Safari iOS, iframes), the button is automatically hidden.
 
-**Upload Configuration Required:**
+**Configuration:**
 
-```javascript
-// next.config.ts
-export default {
-  experimental: {
-    serverActions: {
-      bodySizeLimit: "100mb", // For 50MP JPEGs
-    },
+```typescript
+import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
+
+<Lightbox
+  plugins={[Captions, Fullscreen]}
+  fullscreen={{ auto: false }} // user triggers manually
+/>
+```
+
+**Props verified from installed types:**
+
+- `fullscreen.auto` (boolean) -- auto-enter fullscreen on open
+- `fullscreen.ref` (ForwardedRef) -- external control
+- `on.enterFullscreen` / `on.exitFullscreen` -- lifecycle callbacks
+
+#### Touch/Swipe Navigation (Built-in Core)
+
+| Property       | Value                                       |
+| -------------- | ------------------------------------------- |
+| Import         | N/A -- core feature, no plugin needed       |
+| Purpose        | Swipe left/right to navigate, pull to close |
+| New dependency | NO                                          |
+| Confidence     | HIGH (verified from YARL documentation)     |
+
+**Current state:** The existing `PhotoLightbox.tsx` already has swipe navigation working (it is a core YARL feature). The `controller` settings manage gesture behavior:
+
+```typescript
+// Currently configured (intentionally restrictive for v1.0):
+controller={{
+  closeOnBackdropClick: false,
+  closeOnPullDown: false,
+  closeOnPullUp: false,
+}}
+```
+
+**v1.1 changes:** Consider enabling `closeOnPullDown: true` for mobile-friendly dismiss gesture. Swipe left/right for photo navigation is already active by default (controlled by `disableSwipeNavigation`, which defaults to `false`).
+
+No new code needed for swipe -- just configuration adjustments.
+
+#### Smooth Transitions (Built-in Core)
+
+| Property       | Value                                    |
+| -------------- | ---------------------------------------- |
+| Import         | N/A -- core feature via `animation` prop |
+| Purpose        | Smooth slide transitions between photos  |
+| New dependency | NO                                       |
+| Confidence     | HIGH (verified from installed types)     |
+
+**Current state:** Already configured in `PhotoLightbox.tsx`:
+
+```typescript
+animation={{
+  fade: 200,
+  swipe: 300,
+}}
+```
+
+**v1.1 tuning options available:**
+
+- `animation.fade` -- fade-in/fade-out duration (ms)
+- `animation.swipe` -- swipe transition duration (ms)
+- `animation.navigation` -- keyboard/button navigation duration (ms, overrides swipe)
+- `animation.easing.fade` -- timing function for fade (default: "ease")
+- `animation.easing.swipe` -- timing function for swipe (default: "ease-out")
+- `animation.easing.navigation` -- timing function for nav (default: "ease-in-out")
+
+Recommended v1.1 settings for smoother feel:
+
+```typescript
+animation={{
+  fade: 250,
+  swipe: 400,
+  navigation: 350,
+  easing: {
+    fade: "ease",
+    swipe: "cubic-bezier(0.25, 0.1, 0.25, 1)",
+    navigation: "ease-in-out",
   },
-};
+}}
 ```
 
-**Source:** [Next.js Large File Uploads](https://dev.to/grimshinigami/how-to-handle-large-filefiles-streams-in-nextjs-13-using-busboymulter-25gb)
+### @dnd-kit -- Photo Reordering Within Albums
 
----
+| Property       | Value                                                 |
+| -------------- | ----------------------------------------------------- |
+| Packages       | `@dnd-kit/core` (6.3.1), `@dnd-kit/sortable` (10.0.0) |
+| Purpose        | Drag-to-reorder photos within an album (admin)        |
+| New dependency | NO -- already installed and used for album reordering |
+| Confidence     | HIGH (pattern already proven in codebase)             |
 
-## Alternatives Considered
+**Current usage:** `AlbumsPageClient.tsx` uses `DndContext` + `SortableContext` + `verticalListSortingStrategy` for album card reordering. `SortableAlbumCard.tsx` uses `useSortable` hook.
 
-| Category             | Recommended                | Alternative         | Why Not Alternative                                                                                                                                                      |
-| -------------------- | -------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Framework**        | Next.js 16                 | Astro               | Astro better for static sites. Photo portfolio benefits from Next.js API routes for uploads, dynamic albums, server components.                                          |
-| **Framework**        | Next.js 16                 | Remix               | Less mature image optimization. Smaller ecosystem. Next.js has more photography portfolio examples.                                                                      |
-| **Database**         | SQLite + Drizzle           | PostgreSQL + Prisma | Over-engineered for single-user portfolio. Adds deployment complexity. PostgreSQL better when concurrent admin access needed.                                            |
-| **ORM**              | Drizzle                    | Prisma              | Drizzle's code-first approach aligns with clean architecture (schema IS TypeScript code). Smaller bundle. No code generation step. Educational: see SQL being generated. |
-| **ORM**              | Drizzle                    | TypeORM             | TypeORM is decorator-based, harder to test. Less TypeScript-native. Drizzle more modern.                                                                                 |
-| **Image Processing** | Sharp                      | Jimp                | Jimp 20x slower in benchmarks. Sharp handles 50MP images efficiently via streaming.                                                                                      |
-| **Image Processing** | Sharp                      | ImageMagick         | Sharp 4-5x faster. Native Node.js binding. No external binary dependency.                                                                                                |
-| **EXIF**             | exifr                      | exiftool-vendored   | exiftool-vendored requires ExifTool binary. exifr is pure JS, faster for read-only use case.                                                                             |
-| **EXIF**             | exifr                      | ExifReader          | Both excellent. exifr slightly faster, smaller. Either would work.                                                                                                       |
-| **Lightbox**         | yet-another-react-lightbox | lightgallery        | lightgallery is paid for commercial use. YARL is MIT licensed, React-native, excellent responsive image support.                                                         |
-| **Lightbox**         | yet-another-react-lightbox | PhotoSwipe          | PhotoSwipe excellent but more complex. YARL simpler for React integration.                                                                                               |
-| **Styling**          | Tailwind CSS               | styled-components   | Runtime CSS-in-JS adds 10-15ms render time. Tailwind compiles to static CSS.                                                                                             |
-| **Styling**          | Tailwind CSS               | CSS Modules         | Either works. Tailwind has better ecosystem for photo galleries (aspect-ratio, grid utilities).                                                                          |
-| **Auth**             | Auth.js                    | Clerk               | Clerk is excellent but external service. Self-hosted requirement favors Auth.js.                                                                                         |
-| **Auth**             | Auth.js                    | Custom JWT          | Auth.js handles edge cases (CSRF, token rotation). Don't reinvent auth.                                                                                                  |
-| **State**            | Zustand                    | Redux               | Redux overkill for photo viewer state. Zustand simpler, smaller.                                                                                                         |
-| **State**            | Zustand                    | Jotai               | Either works. Zustand slightly better for global store pattern. Jotai better for highly granular state.                                                                  |
+**v1.1 reuse:** The exact same pattern applies to photo reordering within an album. The only differences:
 
----
+- Use a grid layout strategy instead of vertical list (photos displayed as thumbnails in a grid)
+- Import `rectSortingStrategy` instead of `verticalListSortingStrategy` for grid sorting
+- Create a `SortablePhotoCard` component analogous to `SortableAlbumCard`
 
-## What NOT to Use
+**Grid sorting strategy (already available):**
 
-| Technology                | Why Avoid                                                        |
-| ------------------------- | ---------------------------------------------------------------- |
-| **React Image Lightbox**  | Deprecated. Unmaintained since 2022.                             |
-| **Simple React Lightbox** | Deprecated. Use yet-another-react-lightbox instead.              |
-| **Multer**                | Memory-based by default. Use busboy with streams for 50MP files. |
-| **next/legacy/image**     | Deprecated in Next.js 16. Use `next/image`.                      |
-| **node-exif**             | Older, less maintained. exifr faster and more format support.    |
-| **express-fileupload**    | Loads entire file to memory. Bad for 50MP images.                |
-| **MongoDB**               | Wrong tool for relational photo/album data. Use SQLite.          |
-| **Firebase**              | External dependency. Self-hosted requirement.                    |
-| **Cloudinary/Imgix**      | External services. Self-hosted requirement for image processing. |
+```typescript
+import { rectSortingStrategy } from "@dnd-kit/sortable";
 
----
-
-## Clean Architecture Alignment
-
-This stack supports Robert C. Martin's Clean Architecture principles:
-
-### Layer Separation
-
-```
-src/
-  domain/           # Entities, business rules (no framework dependencies)
-    entities/       # Photo, Album, User types
-    repositories/   # Repository interfaces
-    usecases/       # Application business rules
-
-  infrastructure/   # External concerns (frameworks, DB, file system)
-    database/       # Drizzle schema, repository implementations
-    storage/        # Sharp image processing, file operations
-    auth/           # Auth.js configuration
-
-  presentation/     # UI layer (React components, Next.js routes)
-    app/            # Next.js App Router pages
-    components/     # React components
-    hooks/          # Custom hooks
+<SortableContext
+  items={photos.map(p => p.id)}
+  strategy={rectSortingStrategy}  // For grid layout
+>
 ```
 
-### Why This Stack Supports Clean Architecture
+The `photo_albums` junction table already has a `sortOrder` column, so the database schema is ready.
 
-1. **Drizzle ORM:** Schema-as-TypeScript means domain types can be derived from database schema, or vice versa. No magic decorators obscuring the domain model.
+No new packages, no version changes needed.
 
-2. **TypeScript:** Enforces contracts between layers. Interfaces define repository boundaries. Domain doesn't import infrastructure.
+### Next.js -- Direct Photo Links and OpenGraph
 
-3. **Next.js API Routes:** Use cases called from route handlers. Presentation layer thin, just wiring.
+| Property       | Value                                    |
+| -------------- | ---------------------------------------- |
+| Framework      | Next.js 16.1.6 (already installed)       |
+| Purpose        | URL-based photo deep links, OG meta tags |
+| New dependency | NO                                       |
+| Confidence     | HIGH                                     |
 
-4. **Sharp/exifr:** Infrastructure services easily mockable. Define `ImageProcessor` interface, implement with Sharp.
+#### Direct Photo Links (URL opens lightbox)
 
-5. **SQLite:** Simple enough to reason about. No ORM magic hiding SQL. Educational: see actual queries.
+**Approach:** Use URL search params or hash to encode the current photo index/ID. When a user shares a URL like `/albums/abc123?photo=photo456`, the page opens with the lightbox showing that photo.
+
+Implementation is pure application logic -- no new library needed:
+
+- Read `searchParams` in the Server Component or via `useSearchParams()` client-side
+- Pass the initial `index` to `<PhotoLightbox index={initialIndex} />`
+- Update the URL on `onIndexChange` using `router.replace()` or `history.replaceState()`
+
+#### OpenGraph Meta Tags
+
+**Approach:** Use Next.js `generateMetadata` function (App Router built-in) to set OG tags dynamically per page.
+
+Two sub-approaches for the `og:image`:
+
+**Option A (Recommended): Point OG image to existing image API route.**
+
+```typescript
+// In page.tsx or layout.tsx
+export async function generateMetadata({ params }): Promise<Metadata> {
+  const album = await getAlbum(params.id);
+  const coverPhoto = album.coverPhotoId;
+  return {
+    openGraph: {
+      title: album.title,
+      description: album.description,
+      images: [
+        {
+          url: `/api/images/${coverPhoto}/1200w.webp`,
+          width: 1200,
+          type: "image/webp",
+        },
+      ],
+    },
+  };
+}
+```
+
+This reuses the existing image serving infrastructure -- the processed 1200w derivatives are already generated and served with immutable caching. No new image generation pipeline needed.
+
+**Option B (If branded OG images desired): Use `next/og` ImageResponse.**
+
+This would generate images with text overlays (album title, site branding) using the Satori engine. This requires more work but produces branded social cards.
+
+```typescript
+// app/albums/[id]/opengraph-image.tsx
+import { ImageResponse } from "next/og";
+
+export default async function Image({ params }) {
+  // Fetch album data, generate branded card
+  return new ImageResponse(/* JSX */);
+}
+```
+
+**Recommendation:** Start with Option A. It is zero-dependency, uses existing infrastructure, and produces better results for a photography portfolio (showing the actual photo is more compelling than a branded text card). Option B can be added later if social media previews need branding.
+
+**Source:** [Next.js Metadata Docs](https://nextjs.org/docs/app/getting-started/metadata-and-og-images), [Next.js generateMetadata API](https://nextjs.org/docs/app/api-reference/functions/generate-metadata)
 
 ---
 
-## Installation
+## Schema Changes Required
+
+The `photos` table needs new columns for EXIF metadata. No new tables needed.
+
+```sql
+ALTER TABLE photos ADD COLUMN camera_make TEXT;
+ALTER TABLE photos ADD COLUMN camera_model TEXT;
+ALTER TABLE photos ADD COLUMN lens_model TEXT;
+ALTER TABLE photos ADD COLUMN focal_length REAL;
+ALTER TABLE photos ADD COLUMN aperture REAL;
+ALTER TABLE photos ADD COLUMN shutter_speed TEXT;
+ALTER TABLE photos ADD COLUMN iso INTEGER;
+ALTER TABLE photos ADD COLUMN date_taken INTEGER;  -- timestamp_ms, like other date columns
+```
+
+**Important:** Based on the v1.0 lesson learned (documented in MEMORY.md), use `ALTER TABLE` directly for migrations, not `db:push`. The `db:push` command caused runtime errors in Phase 6 of v1.0.
+
+The Drizzle schema in `infrastructure/database/schema.ts` will also need updating:
+
+```typescript
+export const photos = sqliteTable("photos", {
+  // ... existing columns ...
+  cameraMake: text("camera_make"),
+  cameraModel: text("camera_model"),
+  lensModel: text("lens_model"),
+  focalLength: real("focal_length"),
+  aperture: real("aperture"),
+  shutterSpeed: text("shutter_speed"),
+  iso: integer("iso"),
+  dateTaken: integer("date_taken", { mode: "timestamp_ms" }),
+});
+```
+
+The `Photo` domain entity will need matching fields. All new fields are nullable since not all images contain EXIF data (screenshots, scans, edited exports).
+
+---
+
+## What NOT to Add
+
+| Library/Approach         | Why Not                                                                                                                                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@hello-pangea/dnd`      | Project already uses `@dnd-kit`. No reason to add a second DnD library.                                                                                                                                 |
+| `framer-motion`          | YARL already handles lightbox animations. Adding framer-motion for transitions would conflict with YARL's internal animation system and bloat the bundle.                                               |
+| `react-swipeable`        | YARL has built-in swipe/touch gesture support. Adding a second gesture library would create conflicts.                                                                                                  |
+| `@vercel/og` or `satori` | `next/og` (built into Next.js) already wraps Satori. No separate install needed if dynamic OG images are desired.                                                                                       |
+| `sharp` for OG images    | Sharp is already installed for image processing. If needed for OG image generation, it can be reused without a new dependency. However, the recommended approach (Option A) needs no generation at all. |
+| `exif-reader`            | Only useful as a companion to Sharp's raw EXIF buffer. exifr reads files directly and is faster -- no need for the two-step approach.                                                                   |
+| `zustand`                | Was considered in v1.0 research but never installed. Lightbox state (current photo index, URL sync) can be managed with React `useState` + URL params. No global store needed.                          |
+| `photoswipe`             | YARL is already installed and working. Switching lightbox libraries for v1.1 would be a major rewrite for marginal benefit.                                                                             |
+
+---
+
+## Installation Summary
 
 ```bash
-# Initialize project
-npx create-next-app@latest photo-portfolio --typescript --tailwind --app --turbopack
-
-# Core dependencies
-npm install drizzle-orm better-sqlite3 sharp exifr next-auth@beta zustand yet-another-react-lightbox react-dropzone busboy
-
-# Dev dependencies
-npm install -D drizzle-kit @types/better-sqlite3 @types/busboy
-
-# Tailwind CSS (already installed by create-next-app)
+# Only ONE new dependency
+npm install exifr
 ```
 
-### Environment Variables
-
-```bash
-# .env.local
-
-# Auth
-AUTH_SECRET="generate-with-openssl-rand-base64-32"
-ADMIN_USERNAME="admin"
-ADMIN_PASSWORD_HASH="bcrypt-hash-of-password"
-
-# Database
-DATABASE_PATH="./data/portfolio.db"
-
-# Storage
-UPLOAD_DIR="./uploads"
-ORIGINALS_DIR="./originals"
-THUMBNAILS_DIR="./public/images"
-
-# Site
-NEXT_PUBLIC_SITE_URL="https://photos.example.com"
-```
-
-### Database Setup
-
-```bash
-# Generate migration from schema
-npx drizzle-kit generate
-
-# Apply migration
-npx drizzle-kit migrate
-
-# Or for development: push schema directly
-npx drizzle-kit push
-```
+That is it. All other v1.1 features use existing dependencies with configuration changes.
 
 ---
 
-## Version Compatibility Matrix
+## Integration Points with Existing Stack
 
-| Package        | Minimum Node.js | Minimum TypeScript | Notes                       |
-| -------------- | --------------- | ------------------ | --------------------------- |
-| Next.js 16     | 20.9.0          | 5.1.0              | Node 18 no longer supported |
-| Sharp 0.34     | 18.17.0         | -                  | Works with Node 20+         |
-| Drizzle ORM    | 18.0.0          | 5.0.0              |                             |
-| better-sqlite3 | 18.0.0          | -                  |                             |
-| Auth.js v5     | 18.0.0          | 5.0.0              |                             |
-
-**Recommended Node.js:** 22.x LTS (for best performance with Turbopack)
+| v1.1 Feature    | Touches                                         | Integration Strategy                                                              |
+| --------------- | ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| EXIF extraction | BullMQ worker, Photo entity, DB schema          | Extract in worker alongside derivative generation. Store in photos table.         |
+| EXIF display    | PhotoLightbox, Captions plugin, API routes      | Add EXIF to photo API response. Display via YARL Captions or custom slide footer. |
+| Fullscreen      | PhotoLightbox component                         | Add Fullscreen to plugins array. One line change.                                 |
+| Transitions     | PhotoLightbox component                         | Tune existing animation prop. Config change only.                                 |
+| Touch gestures  | PhotoLightbox component                         | Adjust controller settings. Config change only.                                   |
+| Photo reorder   | New admin page/component, photo_albums table    | Clone album reorder pattern. Use existing sortOrder column.                       |
+| Deep links      | Gallery pages, PhotoLightbox                    | URL searchParams -> lightbox index. Framework feature.                            |
+| Album covers    | Album admin page, albums table                  | Schema already has coverPhotoId. Just needs UI for selection.                     |
+| OG meta tags    | Page-level generateMetadata, existing image API | generateMetadata returns image URL pointing to existing derivatives.              |
 
 ---
 
 ## Confidence Assessment
 
-| Component                  | Confidence | Reasoning                                                     |
-| -------------------------- | ---------- | ------------------------------------------------------------- |
-| Next.js 16                 | HIGH       | Official docs verified, release notes reviewed                |
-| Sharp                      | HIGH       | Official docs verified, v0.34.5 confirmed                     |
-| Drizzle + SQLite           | HIGH       | Official docs verified, well-documented pattern               |
-| exifr                      | HIGH       | GitHub README verified, npm package confirmed                 |
-| Auth.js                    | HIGH       | Official docs verified, Next.js recommended                   |
-| Tailwind CSS               | HIGH       | Standard practice, well-documented                            |
-| yet-another-react-lightbox | MEDIUM     | Popular but version/maintenance less verified                 |
-| react-dropzone             | MEDIUM     | Actively maintained, but didn't verify exact version          |
-| Zustand                    | MEDIUM     | Standard choice, but minimal state needs might not require it |
-| busboy                     | MEDIUM     | Standard for streaming uploads, but patterns less verified    |
+| Component                    | Confidence | Reasoning                                                                                               |
+| ---------------------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
+| exifr                        | HIGH       | Verified via GitHub README, npm trends, installed types. Planned in v1.0, still best choice.            |
+| YARL Fullscreen plugin       | HIGH       | Verified from installed package.json exports and TypeScript declarations.                               |
+| YARL touch/swipe             | HIGH       | Verified from installed types (ControllerSettings) and official documentation. Already working in v1.0. |
+| YARL transitions             | HIGH       | Verified from installed types (AnimationSettings). Already partially configured.                        |
+| @dnd-kit photo reorder       | HIGH       | Exact same pattern already proven in album reorder (AlbumsPageClient.tsx).                              |
+| Next.js generateMetadata     | HIGH       | Standard Next.js App Router feature, well-documented.                                                   |
+| Next.js URL-based deep links | HIGH       | Standard web pattern, searchParams already available in framework.                                      |
+| Schema migration for EXIF    | HIGH       | Approach validated in v1.0 (ALTER TABLE). Column types straightforward.                                 |
 
 ---
 
 ## Sources
 
+### Verified from Installed Packages (HIGH confidence)
+
+- YARL v3.28.0 package.json: exports for fullscreen, captions, counter, download, share, slideshow, thumbnails, zoom, inline, video plugins
+- YARL types.d.ts: AnimationSettings (fade, swipe, navigation, easing), ControllerSettings (swipe/gesture options)
+- YARL plugins/fullscreen/index.d.ts: auto mode, ref control, enter/exit callbacks
+- @dnd-kit/core v6.3.1 and @dnd-kit/sortable v10.0.0: installed and working in AlbumsPageClient.tsx
+- Database schema: photos table (ready for EXIF columns), photo_albums.sortOrder (ready for photo reorder)
+
 ### Official Documentation (HIGH confidence)
 
-- [Next.js 16 Blog](https://nextjs.org/blog/next-16)
-- [Next.js 15 Blog](https://nextjs.org/blog/next-15)
-- [Next.js Image Optimization](https://nextjs.org/docs/app/getting-started/images)
-- [Next.js Authentication Guide](https://nextjs.org/docs/app/guides/authentication)
-- [Sharp Documentation](https://sharp.pixelplumbing.com/)
-- [Drizzle ORM Overview](https://orm.drizzle.team/docs/overview)
-- [Drizzle SQLite Guide](https://orm.drizzle.team/docs/get-started-sqlite)
-- [Auth.js Next.js Reference](https://authjs.dev/reference/nextjs)
-- [exifr GitHub](https://github.com/MikeKovarik/exifr)
+- [Sharp metadata API](https://sharp.pixelplumbing.com/api-input/) -- returns raw EXIF buffer, not parsed
+- [exifr GitHub](https://github.com/MikeKovarik/exifr) -- Buffer input, parsed output, field picking
+- [YARL Documentation](https://yet-another-react-lightbox.com/documentation) -- touch/swipe/animation built-in
+- [YARL Fullscreen Plugin](https://yet-another-react-lightbox.com/plugins/fullscreen) -- browser Fullscreen API
+- [YARL Plugins Overview](https://yet-another-react-lightbox.com/plugins) -- 10 bundled plugins
+- [Next.js Metadata and OG Images](https://nextjs.org/docs/app/getting-started/metadata-and-og-images) -- generateMetadata approach
+- [Next.js opengraph-image Convention](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/opengraph-image) -- file-based and dynamic
 
-### Comparison Articles (MEDIUM confidence)
+### Ecosystem Research (MEDIUM confidence)
 
-- [Prisma vs Drizzle 2026](https://medium.com/@thebelcoder/prisma-vs-drizzle-orm-in-2026-what-you-really-need-to-know-9598cf4eaa7c)
-- [SQLite vs PostgreSQL](https://www.selecthub.com/relational-database-solutions/postgresql-vs-sqlite/)
-- [Styled-components to Tailwind Migration](https://seekandhit.com/engineering/optimising-style-for-speed-our-journey-from-styled-components-to-tailwind-css/)
-- [Zustand vs Jotai](https://zustand.docs.pmnd.rs/getting-started/comparison)
-- [Top Authentication Solutions 2026](https://workos.com/blog/top-authentication-solutions-nextjs-2026)
-
-### Community Resources (MEDIUM confidence)
-
-- [yet-another-react-lightbox](https://yet-another-react-lightbox.com/)
-- [react-dropzone GitHub](https://github.com/react-dropzone/react-dropzone)
-- [React Lightbox Comparison](https://blog.logrocket.com/comparing-the-top-3-react-lightbox-libraries/)
-- [Clean Architecture Node.js](https://dev.to/evangunawan/clean-architecture-in-nodejs-an-approach-with-typescript-and-dependency-injection-16o)
-- [Next.js Large File Uploads](https://dev.to/grimshinigami/how-to-handle-large-filefiles-streams-in-nextjs-13-using-busboymulter-25gb)
-
----
-
-## Open Questions for Phase Research
-
-1. **Thumbnail sizing:** What exact dimensions optimize for common viewport sizes while minimizing storage?
-2. **Blurhash integration:** Should placeholders use blurhash or CSS blur? Need to verify Next.js 16 blur placeholder behavior.
-3. **Album ordering:** Drag-drop reordering in admin - is `@hello-pangea/dnd` or `dnd-kit` better for this?
-4. **EXIF privacy:** Which fields to display publicly vs. hide (GPS coordinates)?
+- [npm trends: exifr vs exifreader vs exif-reader](https://npmtrends.com/exif-reader-vs-exifr-vs-exifreader) -- exifr leads in downloads
+- [dnd-kit documentation](https://docs.dndkit.com/presets/sortable) -- sortable presets including grid strategy
