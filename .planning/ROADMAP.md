@@ -214,13 +214,13 @@ Plans:
 2. Page load performance acceptable (thumbnails < 2 seconds)
 3. No visual layout shift when images load
 4. Production build works in Docker container
-   **Plans**: TBD
+   **Plans**: 3 plans
 
 Plans:
 
-- [ ] 10-01: Blur placeholder generation and display
-- [ ] 10-02: Performance optimization audit
-- [ ] 10-03: Docker deployment configuration
+- [ ] 10-01-PLAN.md — Blur placeholder generation infrastructure (schema, worker pipeline, backfill)
+- [ ] 10-02-PLAN.md — Frontend display with FadeImage component, custom loader, and performance optimization
+- [ ] 10-03-PLAN.md — Docker deployment configuration (Dockerfile, docker-compose)
 
 ## Progress
 
