@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Album Management** - Create, rename, delete albums
 - [x] **Phase 7: Public Gallery** - Album listing and photo grid with responsive design
 - [x] **Phase 8: Lightbox** - Full photo viewing with navigation and keyboard controls
-- [ ] **Phase 9: Homepage** - Random photo display from all albums
+- [x] **Phase 9: Homepage** - Random photo display from all albums
 - [ ] **Phase 10: Polish** - Blur placeholders and performance optimization
 
 ## Phase Details
@@ -200,8 +200,8 @@ Plans:
 
 Plans:
 
-- [ ] 09-01-PLAN.md — Homepage implementation (repository method, header, hero+grid layout)
-- [ ] 09-02-PLAN.md — Visual verification checkpoint
+- [x] 09-01-PLAN.md — Homepage implementation (repository method, header, hero+grid layout)
+- [x] 09-02-PLAN.md — Visual verification checkpoint
 
 ### Phase 10: Polish
 
@@ -237,8 +237,8 @@ Phases execute in numeric order: 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10
 | 6. Album Management | 2/2            | Complete    | 2026-01-31 |
 | 7. Public Gallery   | 3/3            | Complete    | 2026-01-31 |
 | 8. Lightbox         | 2/2            | Complete    | 2026-02-01 |
-| 9. Homepage         | 0/2            | Not started | -          |
+| 9. Homepage         | 2/2            | Complete    | 2026-02-05 |
 | 10. Polish          | 0/3            | Not started | -          |
 
 **Total Plans:** 29
-**Completed:** 24/29 (83%)
+**Completed:** 26/29 (90%)
