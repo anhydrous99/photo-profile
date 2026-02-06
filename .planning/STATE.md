@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Milestone v1.1 — Phase 11 (EXIF Metadata Pipeline) ready to plan
+**Current focus:** Milestone v1.1 — Phase 11 (EXIF Metadata Pipeline) Plan 01 complete
 
 ## Current Position
 
 Phase: 11 of 14 (EXIF Metadata Pipeline)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-05 — Roadmap created for v1.1 milestone
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-06 — Completed 11-01-PLAN.md
 
-Progress: ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ v1.1 (0/8 plans)
+Progress: ████░░░░░░░░░░░░░░░░░░░░░░░░░░ v1.1 (1/8 plans)
 
 ## Performance Metrics
 
@@ -27,14 +27,21 @@ Progress: ░░░░░░░░░░░░░░░░░░░░░░░�
 
 **v1.1 Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 1
 - Plans estimated: 8
+- Average duration: 3 min
+- Total execution time: 3 min
 
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
+
+- ExifData interface defined in domain layer (domain/entities/Photo.ts) for Clean Architecture purity
+- EXIF stored as JSON TEXT column, not individual columns -- flexible for future field additions
+- exif-reader used for parsing (Sharp maintainer recommended, ships TypeScript types)
+- Privacy fields (GPS, serial numbers, software) never accessed from parsed EXIF object
 
 ### Pending Todos
 
@@ -48,6 +55,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-05
-Stopped at: v1.1 roadmap created, ready to plan Phase 11
+Last session: 2026-02-06
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None
