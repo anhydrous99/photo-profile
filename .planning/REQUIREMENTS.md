@@ -9,14 +9,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Homepage
 
-- [ ] **HOME-01**: Homepage displays random photos from all albums
-- [ ] **HOME-02**: Random selection changes on page refresh
+- [x] **HOME-01**: Homepage displays random photos from all albums
+- [x] **HOME-02**: Random selection changes on page refresh
 
 ### Gallery
 
 - [x] **GLRY-01**: Photos displayed in responsive grid layout
 - [x] **GLRY-02**: Thumbnails load quickly (optimized sizes)
-- [ ] **GLRY-03**: Blur placeholder shown while full image loads
+- [x] **GLRY-03**: Blur placeholder shown while full image loads
 - [x] **GLRY-04**: Gallery works on mobile and desktop
 
 ### Albums
@@ -46,9 +46,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Photo Management
 
-- [ ] **MGMT-01**: Can add description to photos
-- [ ] **MGMT-02**: Can assign photos to albums
-- [ ] **MGMT-03**: Can delete photos
+- [x] **MGMT-01**: Can add description to photos
+- [x] **MGMT-02**: Can assign photos to albums
+- [x] **MGMT-03**: Can delete photos
 
 ### Album Management
 
@@ -104,11 +104,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase    | Status   |
 | ----------- | -------- | -------- |
-| HOME-01     | Phase 9  | Pending  |
-| HOME-02     | Phase 9  | Pending  |
+| HOME-01     | Phase 9  | Complete |
+| HOME-02     | Phase 9  | Complete |
 | GLRY-01     | Phase 7  | Complete |
 | GLRY-02     | Phase 7  | Complete |
-| GLRY-03     | Phase 10 | Pending  |
+| GLRY-03     | Phase 10 | Complete |
 | GLRY-04     | Phase 7  | Complete |
 | ALBM-01     | Phase 7  | Complete |
 | ALBM-02     | Phase 7  | Complete |
@@ -139,4 +139,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 ---
 
 _Requirements defined: 2026-01-25_
-_Last updated: 2026-01-31 after Phase 6 completion_
+_Last updated: 2026-02-05 after Phase 10 completion (all v1 requirements complete)_
