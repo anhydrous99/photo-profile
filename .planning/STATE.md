@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Phase 10 - Polish (ready to plan)
+**Current focus:** Phase 10 - Polish (in progress)
 
 ## Current Position
 
-Phase: 9 of 10 (Homepage)
-Plan: 2 of 2 in current phase
-Status: Complete
-Last activity: 2026-02-05 - Completed Phase 9 (Homepage)
+Phase: 10 of 10 (Polish)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-05 - Completed 10-01-PLAN.md
 
-Progress: [#############################] 90%
+Progress: [###########################░░] 93%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 26
+- Total plans completed: 27
 - Average duration: 3 min
-- Total execution time: 88 min
+- Total execution time: 91 min
 
 **By Phase:**
 
@@ -37,10 +37,11 @@ Progress: [#############################] 90%
 | 07-public-gallery   | 3     | 4 min  | 1.3 min  |
 | 08-lightbox         | 2     | 5 min  | 2.5 min  |
 | 09-homepage         | 2     | 5 min  | 2.5 min  |
+| 10-polish           | 1     | 3 min  | 3.0 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 07-03 (1 min), 08-01 (3 min), 08-02 (2 min), 09-01 (4 min), 09-02 (1 min)
+- Last 5 plans: 08-01 (3 min), 08-02 (2 min), 09-01 (4 min), 09-02 (1 min), 10-01 (3 min)
 - Trend: Stable
 
 _Updated after each plan completion_
@@ -104,6 +105,9 @@ Recent decisions affecting current work:
 - 1200w for hero images, 600w for grid images
 - force-dynamic for fresh random selection on each request
 - Homepage approved as-is - no design changes needed
+- 10px WebP at quality 20 for LQIP blur placeholders (~130 bytes per image)
+- Backfill uses 300w.webp derivative as source (faster than original)
+- ALTER TABLE for schema migration (validated pattern from STATE.md lesson)
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-05T01:02:52Z
-Stopped at: Completed Phase 9 (Homepage)
+Last session: 2026-02-06T01:46:17Z
+Stopped at: Completed 10-01-PLAN.md
 Resume file: None
