@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Phase 10 - Polish (in progress)
+**Current focus:** Phase 10 - Polish (complete)
 
 ## Current Position
 
 Phase: 10 of 10 (Polish)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-05 - Completed 10-02-PLAN.md
+Plan: 3 of 3 in current phase
+Status: PROJECT COMPLETE
+Last activity: 2026-02-05 - Completed 10-03-PLAN.md
 
-Progress: [############################░] 96%
+Progress: [##############################] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 28
+- Total plans completed: 29
 - Average duration: 3 min
-- Total execution time: 98 min
+- Total execution time: 99 min
 
 **By Phase:**
 
@@ -37,11 +37,11 @@ Progress: [############################░] 96%
 | 07-public-gallery   | 3     | 4 min  | 1.3 min  |
 | 08-lightbox         | 2     | 5 min  | 2.5 min  |
 | 09-homepage         | 2     | 5 min  | 2.5 min  |
-| 10-polish           | 2     | 10 min | 5.0 min  |
+| 10-polish           | 3     | 11 min | 3.7 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 08-02 (2 min), 09-01 (4 min), 09-02 (1 min), 10-01 (3 min), 10-02 (7 min)
+- Last 5 plans: 09-01 (4 min), 09-02 (1 min), 10-01 (3 min), 10-02 (7 min), 10-03 (1 min)
 - Trend: Stable
 
 _Updated after each plan completion_
@@ -112,6 +112,11 @@ Recent decisions affecting current work:
 - FadeImage uses CSS opacity transition for controlled ~300ms fade-in (not built-in placeholder=blur)
 - preload prop replaces deprecated priority prop for hero images
 - Standalone output in next.config.ts for Docker deployment readiness
+- node:22-slim (not Alpine) for native module compatibility in Docker
+- Build tools only in deps stage, full node_modules in runner for tsx worker
+- Dummy env vars for build-time Zod validation bypass in Dockerfile
+- Host .env variables passed via ${} interpolation in docker-compose
+- Removed deprecated version key from docker-compose.yml
 
 ### Pending Todos
 
@@ -125,6 +130,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-06T01:57:14Z
-Stopped at: Completed 10-02-PLAN.md
+Last session: 2026-02-06T02:01:42Z
+Stopped at: Completed 10-03-PLAN.md - PROJECT COMPLETE
 Resume file: None
