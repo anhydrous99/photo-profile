@@ -12,6 +12,7 @@ export const photos = sqliteTable("photos", {
   title: text("title"),
   description: text("description"),
   originalFilename: text("original_filename").notNull(),
+  blurDataUrl: text("blur_data_url"),
   status: text("status", { enum: ["processing", "ready", "error"] })
     .notNull()
     .default("processing"),

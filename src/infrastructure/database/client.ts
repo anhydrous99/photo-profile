@@ -24,6 +24,7 @@ export function initializeDatabase() {
           title TEXT,
           description TEXT,
           original_filename TEXT NOT NULL,
+          blur_data_url TEXT,
           status TEXT NOT NULL DEFAULT 'processing' CHECK(status IN ('processing', 'ready', 'error')),
           created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
           updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
