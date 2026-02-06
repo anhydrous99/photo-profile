@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v1.1 — defining requirements
 
 ## Current Position
 
-Phase: v1.0 complete — awaiting next milestone
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-05 — v1.0 milestone complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-05 — Milestone v1.1 started
 
-Progress: [##############################] v1.0 shipped
+Progress: ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ v1.1
 
 ## Performance Metrics
 
@@ -43,5 +43,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: v1.0 milestone archived
+Stopped at: Milestone v1.1 initialization
 Resume file: None

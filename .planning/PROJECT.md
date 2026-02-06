@@ -26,16 +26,27 @@ Let the photos speak for themselves — a clean, distraction-free experience whe
 - Blur placeholders during image loading — v1.0
 - Clean code following Robert C. Martin principles — v1.0
 
-### Active
+### Active (v1.1)
 
-- [ ] EXIF metadata auto-extracted and displayed (camera, ISO, aperture, etc.)
+- [ ] EXIF metadata auto-extracted and displayed (camera, lens, focal length, aperture, shutter speed, ISO) in lightbox
 - [ ] Smooth transitions between photos in lightbox
 - [ ] Touch gestures (swipe) for mobile navigation
 - [ ] Full-screen mode for lightbox
 - [ ] Album cover image selection
 - [ ] Drag to reorder photos within album
-- [ ] Direct links to specific photos
+- [ ] Direct links to specific photos (URL opens lightbox directly)
 - [ ] OpenGraph meta tags for social sharing
+
+## Current Milestone: v1.1 Enhancement
+
+**Goal:** Enrich the viewing experience with EXIF metadata, polished lightbox interactions, and better shareability.
+
+**Target features:**
+
+- EXIF metadata extraction and display
+- Lightbox polish (smooth transitions, touch gestures, fullscreen)
+- Album management improvements (cover selection, photo reordering)
+- Shareability (direct photo links, OpenGraph tags)
 
 ### Out of Scope
 
@@ -69,20 +80,20 @@ Known tech debt:
 
 ## Key Decisions
 
-| Decision                       | Rationale                                              | Outcome     |
-| ------------------------------ | ------------------------------------------------------ | ----------- |
-| Simple password auth for admin | Single user, no need for full auth system              | Good        |
-| Auto-extract EXIF metadata     | User wants camera info displayed automatically         | Deferred v2 |
-| Generate thumbnails on upload  | 50MP images too large for grid/lightbox direct serving | Good        |
-| SQLite + Drizzle ORM           | Simple, file-based, no external database server needed | Good        |
-| BullMQ + Redis for job queue   | Async image processing, retry handling, concurrency    | Good        |
-| Sharp for image processing     | WebP + AVIF at 4 sizes, high quality downscaling       | Good        |
-| JWT sessions via jose          | Zero-dependency, Edge-compatible, no session store     | Good        |
-| YARL for lightbox              | Feature-rich, accessible, maintained                   | Good        |
-| LQIP blur placeholders         | ~130 byte base64, smooth CSS fade-in loading           | Good        |
-| Standalone Next.js for Docker  | Self-contained output, no node_modules in production   | Good        |
-| Clean Architecture layers      | Separation of concerns, testable, educational          | Good        |
+| Decision                       | Rationale                                              | Outcome |
+| ------------------------------ | ------------------------------------------------------ | ------- |
+| Simple password auth for admin | Single user, no need for full auth system              | Good    |
+| Auto-extract EXIF metadata     | User wants camera info displayed automatically         | v1.1    |
+| Generate thumbnails on upload  | 50MP images too large for grid/lightbox direct serving | Good    |
+| SQLite + Drizzle ORM           | Simple, file-based, no external database server needed | Good    |
+| BullMQ + Redis for job queue   | Async image processing, retry handling, concurrency    | Good    |
+| Sharp for image processing     | WebP + AVIF at 4 sizes, high quality downscaling       | Good    |
+| JWT sessions via jose          | Zero-dependency, Edge-compatible, no session store     | Good    |
+| YARL for lightbox              | Feature-rich, accessible, maintained                   | Good    |
+| LQIP blur placeholders         | ~130 byte base64, smooth CSS fade-in loading           | Good    |
+| Standalone Next.js for Docker  | Self-contained output, no node_modules in production   | Good    |
+| Clean Architecture layers      | Separation of concerns, testable, educational          | Good    |
 
 ---
 
-_Last updated: 2026-02-05 after v1.0 milestone_
+_Last updated: 2026-02-05 after v1.1 milestone started_
