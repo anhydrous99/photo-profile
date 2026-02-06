@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Milestone v1.1 — Phase 11 (EXIF Metadata Pipeline) Plan 02 complete
+**Current focus:** Milestone v1.1 — Phase 11 (EXIF Metadata Pipeline) complete
 
 ## Current Position
 
 Phase: 11 of 14 (EXIF Metadata Pipeline)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-06 — Completed 11-02-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-06 — Completed 11-03-PLAN.md
 
-Progress: ████████░░░░░░░░░░░░░░░░░░░░░░ v1.1 (2/8 plans)
+Progress: ████████████░░░░░░░░░░░░░░░░░░ v1.1 (3/8 plans)
 
 ## Performance Metrics
 
@@ -27,10 +27,10 @@ Progress: ████████░░░░░░░░░░░░░░░�
 
 **v1.1 Velocity:**
 
-- Total plans completed: 2
+- Total plans completed: 3
 - Plans estimated: 8
-- Average duration: 3 min
-- Total execution time: 5 min
+- Average duration: 2 min
+- Total execution time: 7 min
 
 ## Accumulated Context
 
@@ -46,6 +46,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Camera field combines make+model, deduplicating when model includes make prefix
 - Panel persists open state across photo navigation (exifOpen independent of index)
 - Info icon placed before close button in YARL toolbar using toolbar.buttons prop
+- Used --require dotenv/config for standalone CLI scripts to solve ESM hoisting issue
+- Store empty JSON ({}) for photos with no EXIF data to ensure true backfill idempotency
 
 ### Pending Todos
 
@@ -60,5 +62,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 11-02-PLAN.md
+Stopped at: Completed 11-03-PLAN.md (Phase 11 complete)
 Resume file: None
