@@ -1,6 +1,7 @@
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
 import { env } from "@/infrastructure/config/env";
+import type { ExifData } from "@/domain/entities/Photo";
 
 /**
  * Job data for image processing tasks
@@ -17,6 +18,7 @@ export interface ImageJobResult {
   photoId: string;
   derivatives: string[];
   blurDataUrl: string;
+  exifData: ExifData | null;
 }
 
 /**

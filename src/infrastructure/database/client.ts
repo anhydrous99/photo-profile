@@ -71,6 +71,16 @@ export function initializeDatabase() {
         CREATE INDEX IF NOT EXISTS photo_albums_album_idx ON photo_albums(album_id)
       `,
     );
+
+    // Migration: Add exif_data column (Phase 11)
+    const tableInfo = sqlite
+      .prepare("PRAGMA table_info(photos)")
+      .all() as Array<{ name: string }>;
+    const hasExifData = tableInfo.some((col) => col.name === "exif_data");
+    if (!hasExifData) {
+      sqlite.prepare("ALTER TABLE photos ADD COLUMN exif_data TEXT").run();
+      console.log("[DB] Added exif_data column to photos table");
+    }
   } catch (error) {
     console.error("Failed to initialize database schema:", error);
     throw new Error("Database initialization failed");

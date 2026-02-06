@@ -8,6 +8,7 @@ import {
   generateDerivatives,
   generateBlurPlaceholder,
 } from "@/infrastructure/services/imageService";
+import { extractExifData } from "@/infrastructure/services/exifService";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
 import { ImageJobData, ImageJobResult } from "../queues";
 
@@ -52,6 +53,12 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
     const derivatives = await generateDerivatives(originalPath, outputDir);
 
     // Update progress - derivatives done
+    await job.updateProgress(80);
+
+    // Extract EXIF metadata from original image
+    const exifData = await extractExifData(originalPath);
+
+    // Update progress - EXIF done
     await job.updateProgress(90);
 
     // Generate blur placeholder from original image
@@ -61,10 +68,10 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
     await job.updateProgress(100);
 
     console.log(
-      `[ImageWorker] Generated ${derivatives.length} files + blur placeholder for photo ${photoId}`,
+      `[ImageWorker] Generated ${derivatives.length} files + blur placeholder + EXIF for photo ${photoId}`,
     );
 
-    return { photoId, derivatives, blurDataUrl };
+    return { photoId, derivatives, blurDataUrl, exifData };
   },
   {
     connection,
@@ -104,9 +111,10 @@ imageWorker.on("completed", async (job, result) => {
     if (photo) {
       photo.status = "ready";
       photo.blurDataUrl = result.blurDataUrl;
+      photo.exifData = result.exifData;
       await repository.save(photo);
       console.log(
-        `[ImageWorker] Successfully updated photo ${result.photoId} to 'ready' with blur placeholder`,
+        `[ImageWorker] Successfully updated photo ${result.photoId} to 'ready' with blur placeholder and EXIF`,
       );
     } else {
       console.error(`[ImageWorker] Photo not found: ${result.photoId}`);
