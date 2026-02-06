@@ -9,10 +9,10 @@ Requirements for the v1.1 Enhancement milestone. Each maps to roadmap phases.
 
 ### EXIF Metadata
 
-- [ ] **EXIF-01**: EXIF data (camera, lens, focal length, aperture, shutter speed, ISO, date taken) is auto-extracted during upload processing
-- [ ] **EXIF-02**: EXIF data is displayed in the lightbox view
-- [ ] **EXIF-03**: GPS coordinates and camera serial number are excluded from extraction for privacy
-- [ ] **EXIF-04**: Existing photos have EXIF data backfilled from originals
+- [x] **EXIF-01**: EXIF data (camera, lens, focal length, aperture, shutter speed, ISO, date taken) is auto-extracted during upload processing
+- [x] **EXIF-02**: EXIF data is displayed in the lightbox view
+- [x] **EXIF-03**: GPS coordinates and camera serial number are excluded from extraction for privacy
+- [x] **EXIF-04**: Existing photos have EXIF data backfilled from originals
 
 ### Lightbox Polish
 
@@ -62,24 +62,24 @@ Explicitly excluded. Documented to prevent scope creep.
 
 Which phases cover which requirements. Updated during roadmap creation.
 
-| Requirement | Phase | Status  |
-| ----------- | ----- | ------- |
-| EXIF-01     | 11    | Pending |
-| EXIF-02     | 11    | Pending |
-| EXIF-03     | 11    | Pending |
-| EXIF-04     | 11    | Pending |
-| LBOX-01     | 12    | Pending |
-| LBOX-02     | 12    | Pending |
-| LBOX-03     | 12    | Pending |
-| LBOX-04     | 12    | Pending |
-| ALBM-01     | 13    | Pending |
-| ALBM-02     | 13    | Pending |
-| ALBM-03     | 13    | Pending |
-| ALBM-04     | 13    | Pending |
-| SHAR-01     | 14    | Pending |
-| SHAR-02     | 14    | Pending |
-| SHAR-03     | 14    | Pending |
-| SHAR-04     | 14    | Pending |
+| Requirement | Phase | Status   |
+| ----------- | ----- | -------- |
+| EXIF-01     | 11    | Complete |
+| EXIF-02     | 11    | Complete |
+| EXIF-03     | 11    | Complete |
+| EXIF-04     | 11    | Complete |
+| LBOX-01     | 12    | Pending  |
+| LBOX-02     | 12    | Pending  |
+| LBOX-03     | 12    | Pending  |
+| LBOX-04     | 12    | Pending  |
+| ALBM-01     | 13    | Pending  |
+| ALBM-02     | 13    | Pending  |
+| ALBM-03     | 13    | Pending  |
+| ALBM-04     | 13    | Pending  |
+| SHAR-01     | 14    | Pending  |
+| SHAR-02     | 14    | Pending  |
+| SHAR-03     | 14    | Pending  |
+| SHAR-04     | 14    | Pending  |
 
 **Coverage:**
 
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 ---
 
 _Requirements defined: 2026-02-05_
-_Last updated: 2026-02-05 after roadmap creation_
+_Last updated: 2026-02-06 after Phase 11 completion_
