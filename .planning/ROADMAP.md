@@ -37,19 +37,19 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Goal**: Visitors see camera and shooting details for every photo without the admin doing any manual data entry
 **Depends on**: Nothing (first phase of v1.1)
 **Requirements**: EXIF-01, EXIF-02, EXIF-03, EXIF-04
+**Plans:** 3 plans
 **Success Criteria** (what must be TRUE):
 
 1. Uploading a new photo automatically extracts and stores camera, lens, focal length, aperture, shutter speed, ISO, and date taken
 2. GPS coordinates and camera serial numbers are never stored or displayed, even when present in the original file
 3. Opening a photo in the lightbox shows its EXIF metadata (camera, lens, settings) in a non-intrusive display
 4. Running the backfill process populates EXIF data for all previously uploaded photos that have originals on disk
-   **Plans**: TBD
 
 Plans:
 
-- [ ] 11-01: TBD
-- [ ] 11-02: TBD
-- [ ] 11-03: TBD
+- [ ] 11-01-PLAN.md — Backend: ExifData type, extraction service, schema migration, worker integration
+- [ ] 11-02-PLAN.md — Frontend: EXIF panel in lightbox with toolbar toggle, data flow through pages
+- [ ] 11-03-PLAN.md — Backfill: CLI script to populate EXIF for existing photos
 
 ### Phase 12: Lightbox Polish
 
@@ -117,7 +117,7 @@ Phases 12 and 13 are independent and could execute in parallel. Phase 14 depends
 
 | Phase                      | Milestone | Plans Complete | Status      | Completed |
 | -------------------------- | --------- | -------------- | ----------- | --------- |
-| 11. EXIF Metadata Pipeline | v1.1      | 0/3            | Not started | -         |
+| 11. EXIF Metadata Pipeline | v1.1      | 0/3            | Planned     | -         |
 | 12. Lightbox Polish        | v1.1      | 0/1            | Not started | -         |
 | 13. Album Management       | v1.1      | 0/2            | Not started | -         |
 | 14. Shareability           | v1.1      | 0/2            | Not started | -         |
