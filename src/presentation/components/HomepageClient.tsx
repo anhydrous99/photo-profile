@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import type { ExifData } from "@/domain/entities/Photo";
 import { FadeImage } from "./FadeImage";
 
 // Dynamic import - lightbox bundle only loads when user clicks
@@ -16,6 +17,7 @@ export interface PhotoData {
   description: string | null;
   originalFilename: string;
   blurDataUrl: string | null;
+  exifData?: ExifData | null;
 }
 
 interface HomepageClientProps {

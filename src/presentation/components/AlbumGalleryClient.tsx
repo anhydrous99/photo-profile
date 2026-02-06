@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import type { ExifData } from "@/domain/entities/Photo";
 import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 import { FadeImage } from "./FadeImage";
 
@@ -17,6 +18,7 @@ export interface PhotoData {
   description: string | null;
   originalFilename: string;
   blurDataUrl: string | null;
+  exifData?: ExifData | null;
 }
 
 interface AlbumGalleryClientProps {
