@@ -1,8 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import { useState } from "react";
+import { FadeImage } from "./FadeImage";
 
 // Dynamic import - lightbox bundle only loads when user clicks
 const PhotoLightbox = dynamic(
@@ -15,6 +15,7 @@ export interface PhotoData {
   title: string | null;
   description: string | null;
   originalFilename: string;
+  blurDataUrl: string | null;
 }
 
 interface HomepageClientProps {
@@ -48,13 +49,12 @@ export function HomepageClient({ photos }: HomepageClientProps) {
           className="relative aspect-[3/2] w-full cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           aria-label={`View ${heroPhoto.title || heroPhoto.originalFilename}`}
         >
-          <Image
-            src={`/api/images/${heroPhoto.id}/600w.webp`}
+          <FadeImage
+            photoId={heroPhoto.id}
             alt={heroPhoto.title || heroPhoto.originalFilename}
-            fill
+            blurDataUrl={heroPhoto.blurDataUrl}
             sizes="(max-width: 1280px) 100vw, 1152px"
-            className="object-cover"
-            priority
+            preload
           />
         </button>
       </section>
@@ -70,12 +70,11 @@ export function HomepageClient({ photos }: HomepageClientProps) {
               className="relative aspect-square cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               aria-label={`View ${photo.title || photo.originalFilename}`}
             >
-              <Image
-                src={`/api/images/${photo.id}/600w.webp`}
+              <FadeImage
+                photoId={photo.id}
                 alt={photo.title || photo.originalFilename}
-                fill
+                blurDataUrl={photo.blurDataUrl}
                 sizes="(max-width: 768px) 50vw, 33vw"
-                className="object-cover"
               />
             </button>
           ))}

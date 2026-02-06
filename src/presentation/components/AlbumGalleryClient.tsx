@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import { useState } from "react";
 import { Breadcrumb } from "@/presentation/components/Breadcrumb";
+import { FadeImage } from "./FadeImage";
 
 // Dynamic import - lightbox bundle only loads when user clicks
 const PhotoLightbox = dynamic(
@@ -16,6 +16,7 @@ export interface PhotoData {
   title: string | null;
   description: string | null;
   originalFilename: string;
+  blurDataUrl: string | null;
 }
 
 interface AlbumGalleryClientProps {
@@ -72,13 +73,14 @@ export function AlbumGalleryClient({ album, photos }: AlbumGalleryClientProps) {
               className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               aria-label={`View ${photo.title || photo.originalFilename}`}
             >
-              <Image
-                src={`/api/images/${photo.id}/600w.webp`}
-                alt={photo.title || photo.originalFilename}
-                fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
-              />
+              <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
+                <FadeImage
+                  photoId={photo.id}
+                  alt={photo.title || photo.originalFilename}
+                  blurDataUrl={photo.blurDataUrl}
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                />
+              </div>
             </button>
           ))}
         </div>

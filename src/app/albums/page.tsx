@@ -75,7 +75,7 @@ export default async function AlbumsPage() {
               <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg">
                 {coverPhotoId ? (
                   <Image
-                    src={`/api/images/${coverPhotoId}/300w.webp`}
+                    src={`/api/images/${coverPhotoId}`}
                     alt={album.title}
                     fill
                     sizes="80px"
