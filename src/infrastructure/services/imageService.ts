@@ -102,3 +102,24 @@ export async function generateDerivatives(
 
   return generatedPaths;
 }
+
+/**
+ * Generate a tiny blur placeholder (LQIP) for an image
+ *
+ * Creates a ~10px wide WebP thumbnail encoded as a base64 data URL.
+ * The result is typically 100-200 bytes, suitable for inlining in HTML
+ * as a placeholder while the full image loads.
+ *
+ * @param inputPath - Path to the source image (original or derivative)
+ * @returns Base64 data URL string (data:image/webp;base64,...)
+ */
+export async function generateBlurPlaceholder(
+  inputPath: string,
+): Promise<string> {
+  const buffer = await sharp(inputPath)
+    .rotate()
+    .resize(10, null, { fit: "inside" })
+    .webp({ quality: 20 })
+    .toBuffer();
+  return `data:image/webp;base64,${buffer.toString("base64")}`;
+}

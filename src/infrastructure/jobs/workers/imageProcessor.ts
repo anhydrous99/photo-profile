@@ -4,7 +4,10 @@ import path from "path";
 import IORedis from "ioredis";
 import sharp from "sharp";
 import { env } from "@/infrastructure/config/env";
-import { generateDerivatives } from "@/infrastructure/services/imageService";
+import {
+  generateDerivatives,
+  generateBlurPlaceholder,
+} from "@/infrastructure/services/imageService";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
 import { ImageJobData, ImageJobResult } from "../queues";
 
@@ -48,14 +51,20 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
     // Generate all derivatives (WebP + AVIF at each size)
     const derivatives = await generateDerivatives(originalPath, outputDir);
 
+    // Update progress - derivatives done
+    await job.updateProgress(90);
+
+    // Generate blur placeholder from original image
+    const blurDataUrl = await generateBlurPlaceholder(originalPath);
+
     // Update progress - complete
     await job.updateProgress(100);
 
     console.log(
-      `[ImageWorker] Generated ${derivatives.length} files for photo ${photoId}`,
+      `[ImageWorker] Generated ${derivatives.length} files + blur placeholder for photo ${photoId}`,
     );
 
-    return { photoId, derivatives };
+    return { photoId, derivatives, blurDataUrl };
   },
   {
     connection,
@@ -94,9 +103,10 @@ imageWorker.on("completed", async (job, result) => {
     console.log(`[ImageWorker] Found photo:`, photo);
     if (photo) {
       photo.status = "ready";
+      photo.blurDataUrl = result.blurDataUrl;
       await repository.save(photo);
       console.log(
-        `[ImageWorker] Successfully updated photo ${result.photoId} to 'ready'`,
+        `[ImageWorker] Successfully updated photo ${result.photoId} to 'ready' with blur placeholder`,
       );
     } else {
       console.error(`[ImageWorker] Photo not found: ${result.photoId}`);

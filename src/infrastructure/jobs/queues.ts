@@ -16,6 +16,7 @@ export interface ImageJobData {
 export interface ImageJobResult {
   photoId: string;
   derivatives: string[];
+  blurDataUrl: string;
 }
 
 /**
