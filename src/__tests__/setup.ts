@@ -42,18 +42,20 @@ vi.mock("next/cache", () => ({
 }));
 
 // 5. ioredis: Mock Redis constructor to prevent TCP connection attempts
-vi.mock("ioredis", () => ({
-  default: vi.fn(() => ({
-    connect: vi.fn(),
-    disconnect: vi.fn(),
-    quit: vi.fn(),
-    on: vi.fn(),
-    get: vi.fn(),
-    set: vi.fn(),
-    del: vi.fn(),
-    status: "ready",
-  })),
-}));
+//    Uses regular function (not arrow) so it can be called with `new`
+vi.mock("ioredis", () => {
+  const MockRedis = vi.fn(function (this: Record<string, unknown>) {
+    this.connect = vi.fn();
+    this.disconnect = vi.fn();
+    this.quit = vi.fn();
+    this.on = vi.fn();
+    this.get = vi.fn();
+    this.set = vi.fn();
+    this.del = vi.fn();
+    this.status = "ready";
+  });
+  return { default: MockRedis };
+});
 
 // 6. react: Preserve all real exports, override cache with pass-through
 vi.mock("react", async (importOriginal) => {
@@ -65,14 +67,16 @@ vi.mock("react", async (importOriginal) => {
 });
 
 // 7. bullmq: Mock Queue and Worker to prevent Redis operations
-vi.mock("bullmq", () => ({
-  Queue: vi.fn(() => ({
-    add: vi.fn(),
-    close: vi.fn(),
-    on: vi.fn(),
-  })),
-  Worker: vi.fn(() => ({
-    on: vi.fn(),
-    close: vi.fn(),
-  })),
-}));
+//    Uses regular functions (not arrows) so they can be called with `new`
+vi.mock("bullmq", () => {
+  const MockQueue = vi.fn(function (this: Record<string, unknown>) {
+    this.add = vi.fn();
+    this.close = vi.fn();
+    this.on = vi.fn();
+  });
+  const MockWorker = vi.fn(function (this: Record<string, unknown>) {
+    this.on = vi.fn();
+    this.close = vi.fn();
+  });
+  return { Queue: MockQueue, Worker: MockWorker };
+});

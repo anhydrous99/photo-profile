@@ -90,7 +90,26 @@ export function createTestDb() {
     DROP TABLE _albums_old;
   `);
 
-  // 8. Enable foreign key enforcement
+  // 8. Rebuild photo_albums to fix stale FK reference to _albums_old
+  //    (SQLite does not update FK references in other tables when
+  //     foreign_keys is OFF during ALTER TABLE RENAME)
+  sqlite.exec(`
+    DROP INDEX IF EXISTS photo_albums_photo_idx;
+    DROP INDEX IF EXISTS photo_albums_album_idx;
+    ALTER TABLE photo_albums RENAME TO _photo_albums_old;
+    CREATE TABLE photo_albums (
+      photo_id TEXT NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
+      album_id TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (photo_id, album_id)
+    );
+    INSERT INTO photo_albums SELECT photo_id, album_id, sort_order FROM _photo_albums_old;
+    DROP TABLE _photo_albums_old;
+    CREATE INDEX photo_albums_photo_idx ON photo_albums(photo_id);
+    CREATE INDEX photo_albums_album_idx ON photo_albums(album_id);
+  `);
+
+  // 9. Enable foreign key enforcement
   sqlite.pragma("foreign_keys = ON");
 
   const db = drizzle({ client: sqlite, schema });
