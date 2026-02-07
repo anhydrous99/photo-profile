@@ -31,6 +31,7 @@
 **Goal**: Developers can write and run tests against the full infrastructure layer without module-level crashes, Redis hangs, or schema drift
 **Depends on**: Nothing (first phase of milestone)
 **Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
+**Plans:** 2 plans
 **Success Criteria** (what must be TRUE):
 
 1. Running `npx vitest run` completes without hanging or crashing on module-level imports (server-only, next/headers, IORedis all mocked)
@@ -38,12 +39,11 @@
 3. A test file can import image processing code and use fixture images for Sharp/EXIF assertions without needing real large photos
 4. Running `npx vitest run --coverage` produces a V8 coverage report for the infrastructure layer
 5. At least one smoke test per mock category (Next.js APIs, Redis, database) passes to prove the setup works
-   **Plans**: TBD
 
 Plans:
 
-- [ ] 15-01: Vitest setup mocks and test database helper
-- [ ] 15-02: Test fixtures, coverage config, and smoke tests
+- [ ] 15-01-PLAN.md -- Vitest setup mocks and test database helper
+- [ ] 15-02-PLAN.md -- Test fixtures, coverage config, and smoke tests
 
 #### Phase 16: Error Boundaries & API Hardening
 
