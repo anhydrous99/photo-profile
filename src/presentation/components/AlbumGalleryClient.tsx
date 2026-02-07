@@ -30,18 +30,43 @@ interface AlbumGalleryClientProps {
     description: string | null;
   };
   photos: PhotoData[];
+  initialPhotoSlug?: string;
 }
 
-export function AlbumGalleryClient({ album, photos }: AlbumGalleryClientProps) {
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
+function getSlug(photoId: string): string {
+  return photoId.slice(0, 8);
+}
+
+export function AlbumGalleryClient({
+  album,
+  photos,
+  initialPhotoSlug,
+}: AlbumGalleryClientProps) {
+  const [lightboxIndex, setLightboxIndex] = useState(() => {
+    if (!initialPhotoSlug) return 0;
+    const idx = photos.findIndex((p) => p.id.startsWith(initialPhotoSlug));
+    return idx >= 0 ? idx : 0;
+  });
+  const [lightboxOpen, setLightboxOpen] = useState(() => {
+    if (!initialPhotoSlug) return false;
+    return photos.some((p) => p.id.startsWith(initialPhotoSlug));
+  });
 
   const handlePhotoClick = (index: number) => {
     setLightboxIndex(index);
     setLightboxOpen(true);
+    const slug = getSlug(photos[index].id);
+    window.history.replaceState(null, "", `/albums/${album.id}/photo/${slug}`);
+  };
+
+  const handleIndexChange = (newIndex: number) => {
+    setLightboxIndex(newIndex);
+    const slug = getSlug(photos[newIndex].id);
+    window.history.replaceState(null, "", `/albums/${album.id}/photo/${slug}`);
   };
 
   const handleLightboxClose = () => {
+    window.history.replaceState(null, "", `/albums/${album.id}`);
     setLightboxOpen(false);
   };
 
@@ -96,7 +121,7 @@ export function AlbumGalleryClient({ album, photos }: AlbumGalleryClientProps) {
           photos={photos}
           index={lightboxIndex}
           onClose={handleLightboxClose}
-          onIndexChange={setLightboxIndex}
+          onIndexChange={handleIndexChange}
         />
       )}
     </main>
