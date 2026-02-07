@@ -7,6 +7,9 @@ import type { Photo } from "@/domain/entities";
 
 const photoRepository = new SQLitePhotoRepository();
 
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+const MULTIPART_OVERHEAD = 1 * 1024 * 1024; // 1MB
+
 /**
  * POST /api/admin/upload
  *
@@ -21,67 +24,106 @@ const photoRepository = new SQLitePhotoRepository();
  * Returns: { photoId, status: "processing" }
  */
 export async function POST(request: NextRequest) {
-  // 1. Verify session
-  const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    // 1. Verify session
+    const session = await verifySession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  // 2. Parse form data
-  const formData = await request.formData();
-  const file = formData.get("file") as File | null;
+    // 2. Early reject oversized uploads before reading into memory
+    const contentLength = parseInt(
+      request.headers.get("content-length") || "0",
+      10,
+    );
+    if (contentLength > MAX_FILE_SIZE + MULTIPART_OVERHEAD) {
+      return NextResponse.json(
+        { error: "File exceeds 25MB limit" },
+        { status: 413 },
+      );
+    }
 
-  if (!file) {
-    return NextResponse.json({ error: "No file provided" }, { status: 400 });
-  }
+    // 3. Parse form data
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
 
-  // Validate file type
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/heic"];
-  if (!allowedTypes.includes(file.type)) {
+    if (!file) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    // Validate file size after parsing
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: "File exceeds 25MB limit" },
+        { status: 413 },
+      );
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/heic",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        {
+          error: `Invalid file type: ${file.type}. Allowed: JPEG, PNG, WebP, HEIC`,
+        },
+        { status: 400 },
+      );
+    }
+
+    // 4. Generate photo ID
+    const photoId = crypto.randomUUID();
+
+    // 5. Save file to disk
+    const filePath = await saveOriginalFile(photoId, file);
+
+    // 6. Create photo record
+    const now = new Date();
+    const photo: Photo = {
+      id: photoId,
+      title: null,
+      description: null,
+      originalFilename: file.name,
+      blurDataUrl: null,
+      exifData: null,
+      width: null,
+      height: null,
+      status: "processing",
+      createdAt: now,
+      updatedAt: now,
+    };
+    await photoRepository.save(photo);
+
+    // 7. Enqueue processing job (gracefully handle Redis unavailable)
+    try {
+      // Add timeout to prevent hanging when Redis is unavailable
+      await Promise.race([
+        enqueueImageProcessing(photoId, filePath),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Job enqueue timeout")), 2000),
+        ),
+      ]);
+    } catch (enqueueError) {
+      console.error(
+        `[Upload] Failed to enqueue processing for photo ${photoId}:`,
+        enqueueError instanceof Error ? enqueueError.message : enqueueError,
+      );
+      // Photo saved with "processing" status - will need manual requeue when Redis is available
+    }
+
     return NextResponse.json(
-      {
-        error: `Invalid file type: ${file.type}. Allowed: JPEG, PNG, WebP, HEIC`,
-      },
-      { status: 400 },
+      { photoId, status: "processing" },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("[API] POST /api/admin/upload:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
-
-  // 3. Generate photo ID
-  const photoId = crypto.randomUUID();
-
-  // 4. Save file to disk
-  const filePath = await saveOriginalFile(photoId, file);
-
-  // 5. Create photo record
-  const now = new Date();
-  const photo: Photo = {
-    id: photoId,
-    title: null,
-    description: null,
-    originalFilename: file.name,
-    blurDataUrl: null,
-    exifData: null,
-    width: null,
-    height: null,
-    status: "processing",
-    createdAt: now,
-    updatedAt: now,
-  };
-  await photoRepository.save(photo);
-
-  // 6. Enqueue processing job (gracefully handle Redis unavailable)
-  try {
-    // Add timeout to prevent hanging when Redis is unavailable
-    await Promise.race([
-      enqueueImageProcessing(photoId, filePath),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Job enqueue timeout")), 2000),
-      ),
-    ]);
-  } catch (error) {
-    // Redis unavailable - photo will remain in "processing" status
-    // This is expected in development without Docker
-  }
-
-  return NextResponse.json({ photoId, status: "processing" }, { status: 201 });
 }

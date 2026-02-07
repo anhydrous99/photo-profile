@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
+import { z } from "zod";
 
 const photoRepository = new SQLitePhotoRepository();
+
+const albumIdSchema = z.object({
+  albumId: z.string().min(1),
+});
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -17,15 +22,23 @@ export async function GET(
   _request: NextRequest,
   { params }: RouteParams,
 ): Promise<NextResponse> {
-  const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await verifySession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: photoId } = await params;
+    const albumIds = await photoRepository.getAlbumIds(photoId);
+
+    return NextResponse.json({ albumIds });
+  } catch (error) {
+    console.error("[API] GET /api/admin/photos/[id]/albums:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
-
-  const { id: photoId } = await params;
-  const albumIds = await photoRepository.getAlbumIds(photoId);
-
-  return NextResponse.json({ albumIds });
 }
 
 /**
@@ -38,28 +51,44 @@ export async function POST(
   request: NextRequest,
   { params }: RouteParams,
 ): Promise<NextResponse> {
-  const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await verifySession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: photoId } = await params;
+
+    // Verify photo exists
+    const photo = await photoRepository.findById(photoId);
+    if (!photo) {
+      return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+    }
+
+    // Parse and validate request body
+    const body = await request.json();
+    const result = albumIdSchema.safeParse(body);
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: z.flattenError(result.error).fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+
+    await photoRepository.addToAlbum(photoId, result.data.albumId);
+
+    return NextResponse.json({ success: true }, { status: 201 });
+  } catch (error) {
+    console.error("[API] POST /api/admin/photos/[id]/albums:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
-
-  const { id: photoId } = await params;
-
-  // Verify photo exists
-  const photo = await photoRepository.findById(photoId);
-  if (!photo) {
-    return NextResponse.json({ error: "Photo not found" }, { status: 404 });
-  }
-
-  // Parse request body
-  const body = (await request.json()) as { albumId?: string };
-  if (!body.albumId || typeof body.albumId !== "string") {
-    return NextResponse.json({ error: "albumId is required" }, { status: 400 });
-  }
-
-  await photoRepository.addToAlbum(photoId, body.albumId);
-
-  return NextResponse.json({ success: true }, { status: 201 });
 }
 
 /**
@@ -72,20 +101,36 @@ export async function DELETE(
   request: NextRequest,
   { params }: RouteParams,
 ): Promise<NextResponse> {
-  const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await verifySession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: photoId } = await params;
+
+    // Parse and validate request body
+    const body = await request.json();
+    const result = albumIdSchema.safeParse(body);
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: z.flattenError(result.error).fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+
+    await photoRepository.removeFromAlbum(photoId, result.data.albumId);
+
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    console.error("[API] DELETE /api/admin/photos/[id]/albums:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
-
-  const { id: photoId } = await params;
-
-  // Parse request body
-  const body = (await request.json()) as { albumId?: string };
-  if (!body.albumId || typeof body.albumId !== "string") {
-    return NextResponse.json({ error: "albumId is required" }, { status: 400 });
-  }
-
-  await photoRepository.removeFromAlbum(photoId, body.albumId);
-
-  return new NextResponse(null, { status: 204 });
 }
