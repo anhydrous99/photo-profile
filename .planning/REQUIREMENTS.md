@@ -1,7 +1,7 @@
 # Requirements: Photo Portfolio v1.2 Quality & Hardening
 
 **Defined:** 2026-02-06
-**Core Value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
+**Core Value:** Let the photos speak for themselves -- a clean, distraction-free experience where the photography is the focus
 
 ## v1 Requirements
 
@@ -55,7 +55,7 @@ Requirements for v1.2 milestone. Each maps to roadmap phases.
 ### Tech Debt
 
 - [ ] **DEBT-01**: FK constraint on albums.coverPhotoId verified to have ON DELETE SET NULL (fix if missing)
-- [ ] **DEBT-02**: Schema drift reconciled — Drizzle schema matches actual database tables (tags column, etc.)
+- [ ] **DEBT-02**: Schema drift reconciled -- Drizzle schema matches actual database tables (tags column, etc.)
 - [ ] **DEBT-03**: Stale comments fixed (imageProcessor.ts JPEG reference, any other misleading comments)
 
 ## v2 Requirements
@@ -81,9 +81,9 @@ Explicitly excluded. Documented to prevent scope creep.
 | Feature                            | Reason                                                                                 |
 | ---------------------------------- | -------------------------------------------------------------------------------------- |
 | 100% test coverage target          | Focus on high-value infrastructure tests, not coverage metrics                         |
-| Sentry/Datadog integration         | Self-hosted single-admin app — structured logging sufficient                           |
+| Sentry/Datadog integration         | Self-hosted single-admin app -- structured logging sufficient                          |
 | Comprehensive E2E suite            | 3-5 smoke tests deferred to v2; high setup cost, low ROI until unit tests exist        |
-| Component-level React testing      | Presentation layer deferred — test infrastructure and API layers first                 |
+| Component-level React testing      | Presentation layer deferred -- test infrastructure and API layers first                |
 | Database migration framework       | Fix FK constraint with targeted ALTER TABLE; defer migration tooling                   |
 | Application service layer refactor | Empty layer is acceptable at current complexity; add services when duplication emerges |
 | Rate limiting on all API routes    | Login rate limiting exists; admin routes require auth; low threat model                |
@@ -94,47 +94,47 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status  |
 | ----------- | ----- | ------- |
-| TEST-01     | TBD   | Pending |
-| TEST-02     | TBD   | Pending |
-| TEST-03     | TBD   | Pending |
-| TEST-04     | TBD   | Pending |
-| TEST-05     | TBD   | Pending |
-| UNIT-01     | TBD   | Pending |
-| UNIT-02     | TBD   | Pending |
-| UNIT-03     | TBD   | Pending |
-| UNIT-04     | TBD   | Pending |
-| UNIT-05     | TBD   | Pending |
-| ERR-01      | TBD   | Pending |
-| ERR-02      | TBD   | Pending |
-| ERR-03      | TBD   | Pending |
-| ERR-04      | TBD   | Pending |
-| ERR-05      | TBD   | Pending |
-| ERR-06      | TBD   | Pending |
-| ERR-07      | TBD   | Pending |
-| ERR-08      | TBD   | Pending |
-| ERR-09      | TBD   | Pending |
-| ERR-10      | TBD   | Pending |
-| ERR-11      | TBD   | Pending |
-| WORK-01     | TBD   | Pending |
-| WORK-02     | TBD   | Pending |
-| WORK-03     | TBD   | Pending |
-| WORK-04     | TBD   | Pending |
-| PERF-01     | TBD   | Pending |
-| PERF-02     | TBD   | Pending |
-| PERF-03     | TBD   | Pending |
-| PERF-04     | TBD   | Pending |
-| PERF-05     | TBD   | Pending |
-| DEBT-01     | TBD   | Pending |
-| DEBT-02     | TBD   | Pending |
-| DEBT-03     | TBD   | Pending |
+| TEST-01     | 15    | Pending |
+| TEST-02     | 15    | Pending |
+| TEST-03     | 15    | Pending |
+| TEST-04     | 15    | Pending |
+| TEST-05     | 15    | Pending |
+| UNIT-01     | 17    | Pending |
+| UNIT-02     | 17    | Pending |
+| UNIT-03     | 17    | Pending |
+| UNIT-04     | 17    | Pending |
+| UNIT-05     | 17    | Pending |
+| ERR-01      | 16    | Pending |
+| ERR-02      | 16    | Pending |
+| ERR-03      | 16    | Pending |
+| ERR-04      | 16    | Pending |
+| ERR-05      | 16    | Pending |
+| ERR-06      | 16    | Pending |
+| ERR-07      | 16    | Pending |
+| ERR-08      | 16    | Pending |
+| ERR-09      | 16    | Pending |
+| ERR-10      | 16    | Pending |
+| ERR-11      | 16    | Pending |
+| WORK-01     | 18    | Pending |
+| WORK-02     | 18    | Pending |
+| WORK-03     | 18    | Pending |
+| WORK-04     | 18    | Pending |
+| PERF-01     | 19    | Pending |
+| PERF-02     | 19    | Pending |
+| PERF-03     | 19    | Pending |
+| PERF-04     | 19    | Pending |
+| PERF-05     | 19    | Pending |
+| DEBT-01     | 18    | Pending |
+| DEBT-02     | 18    | Pending |
+| DEBT-03     | 18    | Pending |
 
 **Coverage:**
 
 - v1 requirements: 33 total
-- Mapped to phases: 0
-- Unmapped: 33 (pending roadmap creation)
+- Mapped to phases: 33
+- Unmapped: 0
 
 ---
 
 _Requirements defined: 2026-02-06_
-_Last updated: 2026-02-06 after initial definition_
+_Last updated: 2026-02-06 after roadmap creation_

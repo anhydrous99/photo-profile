@@ -4,6 +4,7 @@
 
 - v1.0 MVP - Phases 1-10 (shipped 2026-02-05)
 - v1.1 Enhancement - Phases 11-14 (shipped 2026-02-06)
+- v1.2 Quality & Hardening - Phases 15-19 (in progress)
 
 ## Phases
 
@@ -20,3 +21,119 @@
 11 plans across 4 phases. All complete. See .planning/milestones/v1.1-ROADMAP.md for details.
 
 </details>
+
+### v1.2 Quality & Hardening (In Progress)
+
+**Milestone Goal:** Make the portfolio solid, tested, and resilient -- unit tests for core logic, error handling across all surfaces, worker recovery, performance optimization, and tech debt cleanup.
+
+#### Phase 15: Testing Infrastructure
+
+**Goal**: Developers can write and run tests against the full infrastructure layer without module-level crashes, Redis hangs, or schema drift
+**Depends on**: Nothing (first phase of milestone)
+**Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
+**Success Criteria** (what must be TRUE):
+
+1. Running `npx vitest run` completes without hanging or crashing on module-level imports (server-only, next/headers, IORedis all mocked)
+2. A test file can import any repository and execute queries against an in-memory SQLite database whose schema matches production (including ALTER TABLE migrations)
+3. A test file can import image processing code and use fixture images for Sharp/EXIF assertions without needing real large photos
+4. Running `npx vitest run --coverage` produces a V8 coverage report for the infrastructure layer
+5. At least one smoke test per mock category (Next.js APIs, Redis, database) passes to prove the setup works
+   **Plans**: TBD
+
+Plans:
+
+- [ ] 15-01: Vitest setup mocks and test database helper
+- [ ] 15-02: Test fixtures, coverage config, and smoke tests
+
+#### Phase 16: Error Boundaries & API Hardening
+
+**Goal**: Users never see a white screen crash, a raw framework 404, or an inconsistent API error -- every failure surface has a designed recovery path
+**Depends on**: Nothing (standalone, no test dependency)
+**Requirements**: ERR-01, ERR-02, ERR-03, ERR-04, ERR-05, ERR-06, ERR-07, ERR-08, ERR-09, ERR-10, ERR-11
+**Success Criteria** (what must be TRUE):
+
+1. When any public page throws an unhandled error, a styled error page appears with a retry button instead of a white screen
+2. When a user navigates to a nonexistent URL, a styled 404 page appears with navigation back to the gallery
+3. When navigating between route segments, a loading indicator appears instead of a blank flash
+4. Every API route validates input with Zod and returns a consistent `{ error: string }` JSON response on failure (no raw stack traces, no inconsistent shapes)
+5. Uploading a file that exceeds the size limit is rejected before reading into memory, and Redis/queue failures during upload are logged instead of silently swallowed
+   **Plans**: TBD
+
+Plans:
+
+- [ ] 16-01: Error boundaries and loading states (error.tsx, global-error.tsx, not-found.tsx, loading.tsx)
+- [ ] 16-02: API hardening (Zod validation, error wrappers, consistent responses, upload safeguards)
+- [ ] 16-03: Data layer safety (JSON.parse try/catch in toDomain, upload error logging)
+
+#### Phase 17: Unit & Integration Testing
+
+**Goal**: Core infrastructure has automated test coverage proving repositories, image processing, auth, and API routes work correctly
+**Depends on**: Phase 15 (test infrastructure required), Phase 16 (error handling patterns to test against)
+**Requirements**: UNIT-01, UNIT-02, UNIT-03, UNIT-04, UNIT-05
+**Success Criteria** (what must be TRUE):
+
+1. Repository tests create, read, update, and delete photos and albums in an in-memory SQLite database and all assertions pass
+2. Repository tests verify toDomain/toDatabase round-trip serialization handles edge cases (null EXIF, Unicode filenames, zero dimensions) without data loss or crashes
+3. Image service tests verify derivative generation produces expected output formats and sizes using fixture images
+4. Auth tests verify JWT session creation returns a valid token, verification accepts valid tokens and rejects expired/tampered ones
+5. API route tests verify that invalid input returns 400, unauthenticated requests return 401/404, and valid requests return expected data
+   **Plans**: TBD
+
+Plans:
+
+- [ ] 17-01: Repository integration tests (CRUD, serialization, edge cases)
+- [ ] 17-02: Service and auth unit tests (image processing, JWT lifecycle)
+- [ ] 17-03: API route integration tests (validation, auth, responses)
+
+#### Phase 18: Worker Resilience & Tech Debt
+
+**Goal**: Photos never get permanently stuck in "processing" status, and known schema/code debt is resolved
+**Depends on**: Phase 15 (test infrastructure for worker tests)
+**Requirements**: WORK-01, WORK-02, WORK-03, WORK-04, DEBT-01, DEBT-02, DEBT-03
+**Success Criteria** (what must be TRUE):
+
+1. Admin can filter the photo list to see only photos in "processing" or "error" status
+2. Admin can trigger reprocessing of a failed photo from the admin panel, and the photo re-enters the processing pipeline
+3. Photos stuck in "processing" status beyond a configurable time threshold are automatically detected and flagged
+4. Worker DB status updates are resilient to failures (either inside the processor function for BullMQ retry coverage, or with explicit retry logic)
+5. The albums.coverPhotoId foreign key has ON DELETE SET NULL behavior, the Drizzle schema matches the actual database, and stale/misleading code comments are fixed
+   **Plans**: TBD
+
+Plans:
+
+- [ ] 18-01: Worker resilience (processor refactor, stale detection, retry)
+- [ ] 18-02: Admin UI for stuck/failed photos (filtering, reprocess action)
+- [ ] 18-03: Tech debt cleanup (FK constraint, schema drift, stale comments)
+
+#### Phase 19: Performance & Production
+
+**Goal**: Performance is measured with baselines, targeted optimizations are applied where data justifies them, and production observability is in place
+**Depends on**: Nothing (independent, but benefits from all prior phases being stable)
+**Requirements**: PERF-01, PERF-02, PERF-03, PERF-04, PERF-05
+**Success Criteria** (what must be TRUE):
+
+1. Lighthouse scores and API response times are measured and recorded as baselines for public pages before any optimization
+2. Bundle analysis is configured and a baseline bundle composition is recorded, identifying the largest chunks
+3. GET /api/health returns 200 when the database and storage are accessible, and a non-200 status when either is unavailable
+4. Application logging uses a structured utility with log levels and JSON output instead of raw console.log calls
+5. At least one targeted optimization (informed by measurement data) is applied and its impact is measured against the baseline
+   **Plans**: TBD
+
+Plans:
+
+- [ ] 19-01: Performance baselines and bundle analysis
+- [ ] 19-02: Health check endpoint and structured logging
+- [ ] 19-03: Targeted optimizations based on measurement data
+
+## Progress
+
+**Execution Order:**
+Phases 15 and 16 can execute in parallel (no dependency). Phase 17 depends on both 15 and 16. Phase 18 depends on 15. Phase 19 is independent.
+
+| Phase                                | Milestone | Plans Complete | Status      | Completed |
+| ------------------------------------ | --------- | -------------- | ----------- | --------- |
+| 15. Testing Infrastructure           | v1.2      | 0/2            | Not started | -         |
+| 16. Error Boundaries & API Hardening | v1.2      | 0/3            | Not started | -         |
+| 17. Unit & Integration Testing       | v1.2      | 0/3            | Not started | -         |
+| 18. Worker Resilience & Tech Debt    | v1.2      | 0/3            | Not started | -         |
+| 19. Performance & Production         | v1.2      | 0/3            | Not started | -         |
