@@ -50,6 +50,7 @@ Plans:
 **Goal**: Users never see a white screen crash, a raw framework 404, or an inconsistent API error -- every failure surface has a designed recovery path
 **Depends on**: Nothing (standalone, no test dependency)
 **Requirements**: ERR-01, ERR-02, ERR-03, ERR-04, ERR-05, ERR-06, ERR-07, ERR-08, ERR-09, ERR-10, ERR-11
+**Plans:** 3 plans
 **Success Criteria** (what must be TRUE):
 
 1. When any public page throws an unhandled error, a styled error page appears with a retry button instead of a white screen
@@ -57,13 +58,12 @@ Plans:
 3. When navigating between route segments, a loading indicator appears instead of a blank flash
 4. Every API route validates input with Zod and returns a consistent `{ error: string }` JSON response on failure (no raw stack traces, no inconsistent shapes)
 5. Uploading a file that exceeds the size limit is rejected before reading into memory, and Redis/queue failures during upload are logged instead of silently swallowed
-   **Plans**: TBD
 
 Plans:
 
-- [ ] 16-01: Error boundaries and loading states (error.tsx, global-error.tsx, not-found.tsx, loading.tsx)
-- [ ] 16-02: API hardening (Zod validation, error wrappers, consistent responses, upload safeguards)
-- [ ] 16-03: Data layer safety (JSON.parse try/catch in toDomain, upload error logging)
+- [ ] 16-01-PLAN.md -- Error boundaries and loading states (error.tsx, global-error.tsx, not-found.tsx, loading.tsx)
+- [ ] 16-02-PLAN.md -- API hardening (Zod validation, try/catch wrappers, consistent responses, upload safeguards)
+- [ ] 16-03-PLAN.md -- Data layer safety and upload UX (JSON.parse try/catch, DropZone 25MB limit, rejection toasts)
 
 #### Phase 17: Unit & Integration Testing
 
