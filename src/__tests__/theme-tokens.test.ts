@@ -21,17 +21,40 @@ describe("Theme Tokens", () => {
       );
     });
 
-    it("should have color-scheme property (when implemented)", () => {
-      // This test will pass once Task 1 adds color-scheme to :root
-      const hasColorScheme = /color-scheme:\s*light\s+dark/.test(cssContent);
-      // For now, we just verify the structure exists
-      expect(cssContent).toContain(":root");
-      expect(cssContent).toContain("@media");
+    it("should have color-scheme property on html", () => {
+      expect(cssContent).toMatch(/color-scheme:\s*light\s+dark/);
     });
   });
 
   describe("Light Theme Tokens", () => {
-    const expectedLightTokens = ["--background", "--foreground"];
+    const expectedLightTokens = [
+      "--background",
+      "--foreground",
+      "--surface",
+      "--surface-secondary",
+      "--surface-hover",
+      "--surface-inset",
+      "--text-primary",
+      "--text-secondary",
+      "--text-tertiary",
+      "--border",
+      "--border-strong",
+      "--accent",
+      "--accent-hover",
+      "--accent-surface",
+      "--accent-text",
+      "--status-success-bg",
+      "--status-success-text",
+      "--status-warning-bg",
+      "--status-warning-text",
+      "--status-error-bg",
+      "--status-error-text",
+      "--status-error-surface",
+      "--status-error-surface-text",
+      "--ring-offset",
+      "--button-primary-bg",
+      "--button-primary-text",
+    ];
 
     expectedLightTokens.forEach((token) => {
       it(`should define ${token} in :root`, () => {
@@ -44,7 +67,34 @@ describe("Theme Tokens", () => {
   });
 
   describe("Dark Theme Tokens", () => {
-    const expectedDarkTokens = ["--background", "--foreground"];
+    const expectedDarkTokens = [
+      "--background",
+      "--foreground",
+      "--surface",
+      "--surface-secondary",
+      "--surface-hover",
+      "--surface-inset",
+      "--text-primary",
+      "--text-secondary",
+      "--text-tertiary",
+      "--border",
+      "--border-strong",
+      "--accent",
+      "--accent-hover",
+      "--accent-surface",
+      "--accent-text",
+      "--status-success-bg",
+      "--status-success-text",
+      "--status-warning-bg",
+      "--status-warning-text",
+      "--status-error-bg",
+      "--status-error-text",
+      "--status-error-surface",
+      "--status-error-surface-text",
+      "--ring-offset",
+      "--button-primary-bg",
+      "--button-primary-text",
+    ];
 
     expectedDarkTokens.forEach((token) => {
       it(`should define ${token} in dark mode`, () => {

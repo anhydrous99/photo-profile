@@ -1,22 +1,143 @@
 @import "tailwindcss";
 
+/* ─── Light Theme (default) ─── */
 :root {
+  /* Base */
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Surfaces */
+  --surface: #ffffff;
+  --surface-secondary: #f5f5f5;
+  --surface-hover: #ebebeb;
+  --surface-inset: #e5e5e5;
+
+  /* Text */
+  --text-primary: #171717;
+  --text-secondary: #525252;
+  --text-tertiary: #a3a3a3;
+
+  /* Borders */
+  --border: #e5e5e5;
+  --border-strong: #d4d4d4;
+
+  /* Accent / Interactive */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-surface: #eff6ff;
+  --accent-text: #1e40af;
+
+  /* Status — Success */
+  --status-success-bg: #dcfce7;
+  --status-success-text: #166534;
+
+  /* Status — Warning */
+  --status-warning-bg: #fef9c3;
+  --status-warning-text: #854d0e;
+
+  /* Status — Error */
+  --status-error-bg: #fee2e2;
+  --status-error-text: #991b1b;
+  --status-error-surface: #fef2f2;
+  --status-error-surface-text: #b91c1c;
+
+  /* Misc */
+  --ring-offset: #ffffff;
+  --button-primary-bg: #171717;
+  --button-primary-text: #ffffff;
 }
 
+/* ─── Tailwind v4 @theme mapping ─── */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-inset: var(--surface-inset);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-surface: var(--accent-surface);
+  --color-accent-text: var(--accent-text);
+
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-text: var(--status-success-text);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-text: var(--status-warning-text);
+  --color-status-error-bg: var(--status-error-bg);
+  --color-status-error-text: var(--status-error-text);
+  --color-status-error-surface: var(--status-error-surface);
+  --color-status-error-surface-text: var(--status-error-surface-text);
+
+  --color-ring-offset: var(--ring-offset);
+  --color-button-primary-bg: var(--button-primary-bg);
+  --color-button-primary-text: var(--button-primary-text);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+/* ─── Dark Theme ─── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    /* Base */
+    --background: #1e1e1e;
     --foreground: #ededed;
+
+    /* Surfaces */
+    --surface: #1e1e1e;
+    --surface-secondary: #2a2a2a;
+    --surface-hover: #333333;
+    --surface-inset: #171717;
+
+    /* Text */
+    --text-primary: #ededed;
+    --text-secondary: #a3a3a3;
+    --text-tertiary: #737373;
+
+    /* Borders */
+    --border: #333333;
+    --border-strong: #525252;
+
+    /* Accent / Interactive */
+    --accent: #60a5fa;
+    --accent-hover: #93c5fd;
+    --accent-surface: #172554;
+    --accent-text: #93c5fd;
+
+    /* Status — Success */
+    --status-success-bg: #052e16;
+    --status-success-text: #86efac;
+
+    /* Status — Warning */
+    --status-warning-bg: #422006;
+    --status-warning-text: #fde68a;
+
+    /* Status — Error */
+    --status-error-bg: #450a0a;
+    --status-error-text: #fca5a5;
+    --status-error-surface: #2d0808;
+    --status-error-surface-text: #fca5a5;
+
+    /* Misc */
+    --ring-offset: #1e1e1e;
+    --button-primary-bg: #ededed;
+    --button-primary-text: #1e1e1e;
   }
+}
+
+/* ─── Color scheme hint ─── */
+html {
+  color-scheme: light dark;
 }
 
 body {
