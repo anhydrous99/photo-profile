@@ -65,19 +65,23 @@ export function DropZone({
         ${disabled ? "cursor-not-allowed opacity-50" : ""}
         ${
           isDragActive
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 hover:border-gray-400"
+            ? "border-accent bg-accent-surface"
+            : "border-border hover:border-border-strong"
         }
       `}
     >
       <input {...getInputProps()} />
       {isDragActive ? (
-        <p className="text-xl text-blue-600">Drop photos here...</p>
+        <p className="text-xl text-accent">Drop photos here...</p>
       ) : (
         <>
-          <p className="text-xl text-gray-600">Drag and drop photos here</p>
-          <p className="mt-2 text-sm text-gray-400">or click to select files</p>
-          <p className="mt-4 text-xs text-gray-400">
+          <p className="text-xl text-text-secondary">
+            Drag and drop photos here
+          </p>
+          <p className="mt-2 text-sm text-text-tertiary">
+            or click to select files
+          </p>
+          <p className="mt-4 text-xs text-text-tertiary">
             JPEG, PNG, WebP, HEIC up to 100MB each
           </p>
         </>

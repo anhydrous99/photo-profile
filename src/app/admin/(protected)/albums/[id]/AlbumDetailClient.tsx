@@ -137,12 +137,12 @@ export function AlbumDetailClient({
         <div>
           <Link
             href="/admin/albums"
-            className="text-sm text-gray-500 hover:text-gray-700"
+            className="text-sm text-text-secondary hover:text-text-primary"
           >
             &larr; Back to Albums
           </Link>
           <h1 className="mt-1 text-2xl font-bold">{album.title}</h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-text-secondary">
             {photos.length} photo{photos.length === 1 ? "" : "s"}
           </p>
         </div>
@@ -150,7 +150,7 @@ export function AlbumDetailClient({
 
       {/* Status messages */}
       {isSaving && (
-        <div className="mb-4 rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-700">
+        <div className="mb-4 rounded-lg bg-accent-surface px-4 py-2 text-sm text-accent-text">
           Saving...
         </div>
       )}
@@ -162,8 +162,8 @@ export function AlbumDetailClient({
 
       {/* Photo grid */}
       {photos.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
-          <p className="text-gray-500">
+        <div className="rounded-lg border border-dashed border-border p-12 text-center">
+          <p className="text-text-secondary">
             No photos in this album. Add photos from the photo library.
           </p>
         </div>
@@ -194,7 +194,7 @@ export function AlbumDetailClient({
           <DragOverlay>
             {activePhoto ? (
               <div className="rounded-lg opacity-80 shadow-xl">
-                <div className="aspect-square overflow-hidden rounded-lg border border-gray-200">
+                <div className="aspect-square overflow-hidden rounded-lg border border-border">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={`/api/images/${activePhoto.id}/300w.webp`}

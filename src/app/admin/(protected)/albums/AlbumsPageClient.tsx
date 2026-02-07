@@ -144,7 +144,7 @@ export function AlbumsPageClient({
         <button
           type="button"
           onClick={() => setIsCreateModalOpen(true)}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           Create Album
         </button>
@@ -152,7 +152,7 @@ export function AlbumsPageClient({
 
       {/* Status messages */}
       {isSaving && (
-        <div className="mb-4 rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-700">
+        <div className="mb-4 rounded-lg bg-accent-surface px-4 py-2 text-sm text-accent-text">
           Saving order...
         </div>
       )}
@@ -164,8 +164,8 @@ export function AlbumsPageClient({
 
       {/* Album list */}
       {albums.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
-          <p className="text-gray-500">
+        <div className="rounded-lg border border-dashed border-border p-12 text-center">
+          <p className="text-text-secondary">
             No albums yet. Create your first album.
           </p>
         </div>

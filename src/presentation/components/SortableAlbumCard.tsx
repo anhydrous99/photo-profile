@@ -77,14 +77,14 @@ export function SortableAlbumCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-4 rounded-lg border bg-white p-4 ${
-        isDragging ? "border-blue-300 shadow-lg" : "border-gray-200"
+      className={`flex items-center gap-4 rounded-lg border bg-surface p-4 ${
+        isDragging ? "border-blue-300 shadow-lg" : "border-border"
       }`}
     >
       {/* Drag handle */}
       <button
         type="button"
-        className="cursor-grab touch-none text-gray-400 hover:text-gray-600"
+        className="cursor-grab touch-none text-text-tertiary hover:text-text-secondary"
         {...attributes}
         {...listeners}
         aria-label="Drag to reorder"
@@ -101,9 +101,11 @@ export function SortableAlbumCard({
 
       {/* Album info */}
       <div className="min-w-0 flex-1">
-        <h3 className="truncate font-medium text-gray-900">{album.title}</h3>
+        <h3 className="truncate font-medium text-text-primary">
+          {album.title}
+        </h3>
         {album.description && (
-          <p className="mt-1 line-clamp-2 text-sm text-gray-500">
+          <p className="mt-1 line-clamp-2 text-sm text-text-secondary">
             {album.description}
           </p>
         )}
@@ -112,7 +114,7 @@ export function SortableAlbumCard({
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+                className="rounded-full bg-surface-secondary px-2 py-0.5 text-xs text-text-secondary"
               >
                 {tag}
               </span>
@@ -123,10 +125,10 @@ export function SortableAlbumCard({
 
       {/* Photo count */}
       <div className="flex-shrink-0 text-center">
-        <div className="text-2xl font-semibold text-gray-700">
+        <div className="text-2xl font-semibold text-text-primary">
           {album.photoCount}
         </div>
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-text-secondary">
           photo{album.photoCount === 1 ? "" : "s"}
         </div>
       </div>
@@ -139,7 +141,7 @@ export function SortableAlbumCard({
         className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
           optimisticPublished
             ? "bg-green-100 text-green-700 hover:bg-green-200"
-            : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+            : "bg-surface-secondary text-text-secondary hover:bg-gray-200"
         } ${isToggling ? "opacity-50" : ""}`}
         aria-label={optimisticPublished ? "Unpublish album" : "Publish album"}
       >
@@ -160,7 +162,7 @@ export function SortableAlbumCard({
         <button
           type="button"
           onClick={onEdit}
-          className="rounded-md px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50"
+          className="rounded-md px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent-surface"
         >
           Edit
         </button>

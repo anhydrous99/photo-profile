@@ -41,7 +41,7 @@ export default async function PhotoDetailPage({ params }: PageProps) {
       {/* Back link */}
       <Link
         href="/admin"
-        className="mb-6 inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+        className="mb-6 inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary"
       >
         <svg
           className="h-4 w-4"
@@ -63,7 +63,7 @@ export default async function PhotoDetailPage({ params }: PageProps) {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Photo detail - takes 2 columns on large screens */}
         <div className="lg:col-span-2">
-          <div className="rounded-lg border border-gray-200 bg-white p-6">
+          <div className="rounded-lg border border-border bg-surface p-6">
             <PhotoDetail
               photo={photo}
               albums={albums}

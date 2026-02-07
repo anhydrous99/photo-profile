@@ -103,9 +103,9 @@ export function BatchActions({
   };
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+    <div className="mb-4 flex flex-wrap items-center gap-4 rounded-lg border border-blue-200 bg-accent-surface p-3">
       {/* Selection count */}
-      <span className="font-medium text-blue-800">
+      <span className="font-medium text-accent-text">
         {selectedIds.size} photo{selectedIds.size === 1 ? "" : "s"} selected
       </span>
 
@@ -115,7 +115,7 @@ export function BatchActions({
           value={selectedAlbumId}
           onChange={(e) => setSelectedAlbumId(e.target.value)}
           disabled={isProcessing || albums.length === 0}
-          className="rounded border border-gray-300 px-2 py-1 text-sm disabled:opacity-50"
+          className="rounded border border-border px-2 py-1 text-sm disabled:opacity-50"
         >
           <option value="">Select album...</option>
           {albums.map((album) => (
@@ -128,7 +128,7 @@ export function BatchActions({
           type="button"
           onClick={handleBatchAddToAlbum}
           disabled={isProcessing || !selectedAlbumId}
-          className="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded bg-accent px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {isProcessing ? "Adding..." : "Add to Album"}
         </button>

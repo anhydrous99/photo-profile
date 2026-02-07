@@ -88,8 +88,8 @@ export function PhotoDetail({ photo }: PhotoDetailProps) {
   return (
     <div className="space-y-6">
       {/* Photo Preview Placeholder */}
-      <div className="flex h-64 items-center justify-center rounded-lg bg-gray-100">
-        <span className="text-gray-400">
+      <div className="flex h-64 items-center justify-center rounded-lg bg-surface-secondary">
+        <span className="text-text-tertiary">
           {photo.status === "processing" ? "Processing..." : "No preview"}
         </span>
       </div>
@@ -97,25 +97,25 @@ export function PhotoDetail({ photo }: PhotoDetailProps) {
       {/* Photo Info */}
       <div className="space-y-4">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-text-primary">
             {photo.originalFilename}
           </h2>
           <div className="mt-1 flex items-center gap-3">
             <StatusBadge status={photo.status} />
-            <span className="text-sm text-gray-500">ID: {photo.id}</span>
+            <span className="text-sm text-text-secondary">ID: {photo.id}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-gray-500">Created:</span>
-            <span className="ml-2 text-gray-900">
+            <span className="text-text-secondary">Created:</span>
+            <span className="ml-2 text-text-primary">
               {formatDate(photo.createdAt)}
             </span>
           </div>
           <div>
-            <span className="text-gray-500">Updated:</span>
-            <span className="ml-2 text-gray-900">
+            <span className="text-text-secondary">Updated:</span>
+            <span className="ml-2 text-text-primary">
               {formatDate(photo.updatedAt)}
             </span>
           </div>
@@ -127,7 +127,7 @@ export function PhotoDetail({ photo }: PhotoDetailProps) {
         <div className="mb-1 flex items-center justify-between">
           <label
             htmlFor="description"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-text-primary"
           >
             Description
           </label>
@@ -136,7 +136,7 @@ export function PhotoDetail({ photo }: PhotoDetailProps) {
         <textarea
           id="description"
           rows={4}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
           placeholder="Add a description for this photo..."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -145,7 +145,7 @@ export function PhotoDetail({ photo }: PhotoDetailProps) {
       </div>
 
       {/* Delete Button */}
-      <div className="border-t border-gray-200 pt-6">
+      <div className="border-t border-border pt-6">
         <button
           onClick={handleDelete}
           disabled={isDeleting}
@@ -182,7 +182,7 @@ function SaveIndicator({
   if (status === "idle") return null;
 
   const styles = {
-    saving: "text-gray-500",
+    saving: "text-text-secondary",
     saved: "text-green-600",
     error: "text-red-600",
   };

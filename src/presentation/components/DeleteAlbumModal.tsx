@@ -67,11 +67,11 @@ export function DeleteAlbumModal({
       />
 
       {/* Modal */}
-      <div className="relative mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="mb-2 text-lg font-semibold text-gray-900">
+      <div className="relative mx-4 w-full max-w-md rounded-lg bg-surface p-6 shadow-xl">
+        <h2 className="mb-2 text-lg font-semibold text-text-primary">
           Delete Album
         </h2>
-        <p className="mb-4 text-sm text-gray-600">
+        <p className="mb-4 text-sm text-text-secondary">
           Delete &quot;{album.title}&quot;
           {photoCount > 0 && (
             <>
@@ -83,33 +83,35 @@ export function DeleteAlbumModal({
 
         {/* Delete mode selection */}
         <div className="mb-4 space-y-3">
-          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3 hover:bg-gray-50">
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 hover:bg-surface-secondary">
             <input
               type="radio"
               name="deleteMode"
               checked={!deletePhotos}
               onChange={() => setDeletePhotos(false)}
-              className="mt-0.5 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="mt-0.5 h-4 w-4 border-border text-accent focus:ring-accent"
             />
             <div>
-              <div className="font-medium text-gray-900">Album only</div>
-              <div className="text-sm text-gray-500">
+              <div className="font-medium text-text-primary">Album only</div>
+              <div className="text-sm text-text-secondary">
                 Delete the album but keep all photos in the library
               </div>
             </div>
           </label>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3 hover:bg-gray-50">
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 hover:bg-surface-secondary">
             <input
               type="radio"
               name="deleteMode"
               checked={deletePhotos}
               onChange={() => setDeletePhotos(true)}
-              className="mt-0.5 h-4 w-4 border-gray-300 text-red-600 focus:ring-red-500"
+              className="mt-0.5 h-4 w-4 border-border text-red-600 focus:ring-red-500"
             />
             <div>
-              <div className="font-medium text-gray-900">Album and photos</div>
-              <div className="text-sm text-gray-500">
+              <div className="font-medium text-text-primary">
+                Album and photos
+              </div>
+              <div className="text-sm text-text-secondary">
                 Delete the album and permanently remove all {photoCount} photo
                 {photoCount === 1 ? "" : "s"} from the library
               </div>
@@ -138,7 +140,7 @@ export function DeleteAlbumModal({
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-secondary disabled:opacity-50"
           >
             Cancel
           </button>

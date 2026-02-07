@@ -84,9 +84,9 @@ export function AlbumSelector({
   // Empty state - no albums exist
   if (albums.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-gray-300 p-6">
-        <h3 className="text-sm font-medium text-gray-900">Albums</h3>
-        <p className="mt-2 text-sm text-gray-500">
+      <div className="rounded-lg border border-dashed border-border p-6">
+        <h3 className="text-sm font-medium text-text-primary">Albums</h3>
+        <p className="mt-2 text-sm text-text-secondary">
           No albums yet. Create albums in Album Management.
         </p>
       </div>
@@ -94,8 +94,8 @@ export function AlbumSelector({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
-      <h3 className="mb-3 text-sm font-medium text-gray-900">Albums</h3>
+    <div className="rounded-lg border border-border bg-surface p-4">
+      <h3 className="mb-3 text-sm font-medium text-text-primary">Albums</h3>
 
       {error && (
         <div className="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -110,15 +110,15 @@ export function AlbumSelector({
           return (
             <label
               key={album.id}
-              className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-gray-50"
+              className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-surface-secondary"
             >
               <input
                 type="checkbox"
                 checked={isSelected}
                 onChange={() => handleToggle(album.id, isSelected)}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
               />
-              <span className="text-sm text-gray-700">{album.title}</span>
+              <span className="text-sm text-text-primary">{album.title}</span>
             </label>
           );
         })}

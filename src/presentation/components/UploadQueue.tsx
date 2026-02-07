@@ -38,7 +38,7 @@ export function UploadQueue({ items, onRetry }: UploadQueueProps) {
 
   return (
     <div className="mt-8 space-y-3">
-      <h2 className="text-lg font-medium text-gray-700">Upload Queue</h2>
+      <h2 className="text-lg font-medium text-text-primary">Upload Queue</h2>
       <div className="space-y-2">
         {items.map((item) => (
           <UploadItemRow key={item.id} item={item} onRetry={onRetry} />
@@ -56,13 +56,13 @@ function UploadItemRow({
   onRetry?: (id: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-3">
+    <div className="flex items-center gap-4 rounded-lg border border-border bg-surface p-3">
       {/* Filename */}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-gray-700">
+        <p className="truncate text-sm font-medium text-text-primary">
           {item.file.name}
         </p>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-text-tertiary">
           {formatFileSize(item.file.size)}
         </p>
       </div>
@@ -70,18 +70,20 @@ function UploadItemRow({
       {/* Status indicator */}
       <div className="w-32">
         {item.status === "pending" && (
-          <span className="text-sm text-gray-400">Waiting...</span>
+          <span className="text-sm text-text-tertiary">Waiting...</span>
         )}
 
         {item.status === "uploading" && (
           <div className="space-y-1">
             <div className="h-2 overflow-hidden rounded-full bg-gray-200">
               <div
-                className="h-full bg-blue-500 transition-all duration-200"
+                className="h-full bg-accent transition-all duration-200"
                 style={{ width: `${item.progress}%` }}
               />
             </div>
-            <span className="text-xs text-gray-500">{item.progress}%</span>
+            <span className="text-xs text-text-secondary">
+              {item.progress}%
+            </span>
           </div>
         )}
 
@@ -95,7 +97,7 @@ function UploadItemRow({
             {onRetry && (
               <button
                 onClick={() => onRetry(item.id)}
-                className="text-xs text-blue-600 hover:underline"
+                className="text-xs text-accent hover:underline"
               >
                 Retry
               </button>

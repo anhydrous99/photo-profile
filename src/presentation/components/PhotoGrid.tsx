@@ -32,11 +32,11 @@ export function PhotoGrid({
 }: PhotoGridProps) {
   if (photos.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
-        <p className="text-gray-500">No photos uploaded yet.</p>
+      <div className="rounded-lg border border-dashed border-border p-12 text-center">
+        <p className="text-text-secondary">No photos uploaded yet.</p>
         <Link
           href="/admin/upload"
-          className="mt-2 inline-block text-blue-600 hover:underline"
+          className="mt-2 inline-block text-accent hover:underline"
         >
           Upload your first photo
         </Link>
@@ -100,10 +100,10 @@ function PhotoCard({
 
   const cardContent = (
     <div
-      className={`group relative overflow-hidden rounded-lg border bg-white cursor-pointer transition-colors ${
+      className={`group relative overflow-hidden rounded-lg border bg-surface cursor-pointer transition-colors ${
         isSelected
-          ? "border-blue-500 ring-2 ring-blue-200"
-          : "border-gray-200 hover:border-gray-300"
+          ? "border-accent ring-2 ring-blue-200"
+          : "border-border hover:border-border"
       }`}
       onClick={selectable ? handleCardClick : undefined}
     >
@@ -119,8 +119,8 @@ function PhotoCard({
             onClick={handleCheckboxClick}
             className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
               isSelected
-                ? "border-blue-500 bg-blue-500 text-white"
-                : "border-gray-400 bg-white/90 hover:border-blue-400"
+                ? "border-accent bg-accent text-white"
+                : "border-border-strong bg-surface/90 hover:border-blue-400"
             }`}
             aria-label={isSelected ? "Deselect photo" : "Select photo"}
           >
@@ -144,19 +144,19 @@ function PhotoCard({
       )}
 
       {/* Placeholder for thumbnail - will be added in Phase 7 */}
-      <div className="flex h-32 items-center justify-center bg-gray-100">
-        <span className="text-sm text-gray-400">
+      <div className="flex h-32 items-center justify-center bg-surface-secondary">
+        <span className="text-sm text-text-tertiary">
           {photo.status === "processing" ? "Processing..." : "No preview"}
         </span>
       </div>
 
       <div className="p-3">
-        <p className="truncate text-sm font-medium text-gray-700">
+        <p className="truncate text-sm font-medium text-text-primary">
           {photo.originalFilename}
         </p>
         <div className="mt-1 flex items-center justify-between">
           <StatusBadge status={photo.status} />
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-text-tertiary">
             {formatDate(photo.createdAt)}
           </span>
         </div>

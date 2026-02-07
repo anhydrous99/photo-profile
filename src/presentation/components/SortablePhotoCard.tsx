@@ -46,14 +46,14 @@ export function SortablePhotoCard({
     <div ref={setNodeRef} style={style} className="relative">
       {/* Cover badge */}
       {isCover && (
-        <div className="absolute top-2 left-2 z-10 rounded bg-blue-600 px-2 py-0.5 text-xs font-medium text-white">
+        <div className="absolute top-2 left-2 z-10 rounded bg-accent px-2 py-0.5 text-xs font-medium text-white">
           Cover
         </div>
       )}
 
       {/* Draggable photo area */}
       <div {...attributes} {...listeners} className="cursor-grab">
-        <div className="aspect-square overflow-hidden rounded-lg border border-gray-200">
+        <div className="aspect-square overflow-hidden rounded-lg border border-border">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/api/images/${photo.id}/300w.webp`}
@@ -64,18 +64,18 @@ export function SortablePhotoCard({
       </div>
 
       {/* Filename label */}
-      <p className="mt-1 truncate text-xs text-gray-600">
+      <p className="mt-1 truncate text-xs text-text-secondary">
         {photo.title || photo.originalFilename}
       </p>
 
       {/* Set as cover / Current cover indicator */}
       {isCover ? (
-        <p className="text-xs font-medium text-blue-600">Current cover</p>
+        <p className="text-xs font-medium text-accent">Current cover</p>
       ) : (
         <button
           type="button"
           onClick={() => onSetCover(photo.id)}
-          className="text-xs text-gray-500 hover:text-blue-600"
+          className="text-xs text-text-secondary hover:text-accent"
         >
           Set as cover
         </button>

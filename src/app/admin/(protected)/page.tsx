@@ -34,20 +34,20 @@ export default async function AdminDashboard() {
         <div className="flex gap-3">
           <Link
             href="/admin/albums"
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover"
           >
             Manage Albums
           </Link>
           <Link
             href="/admin/upload"
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             Upload Photos
           </Link>
         </div>
       </div>
 
-      <h2 className="mb-4 text-lg font-medium text-gray-700">
+      <h2 className="mb-4 text-lg font-medium text-text-primary">
         Photos ({photos.length})
       </h2>
 
