@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Milestone v1.1 — Phase 12 (Lightbox Polish) complete
+**Current focus:** Milestone v1.1 — Phase 13 (Album Management) in progress
 
 ## Current Position
 
-Phase: 12 of 14 (Lightbox Polish)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-06 — Completed 12-03-PLAN.md
+Phase: 13 of 14 (Album Management)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-06 — Completed 13-01-PLAN.md
 
-Progress: ██████████████████████░░░░░░░░ v1.1 (6/8 plans)
+Progress: ███████████████████████░░░░░░░ v1.1 (7/8 plans)
 
 ## Performance Metrics
 
@@ -27,10 +27,10 @@ Progress: ██████████████████████░�
 
 **v1.1 Velocity:**
 
-- Total plans completed: 6
+- Total plans completed: 7
 - Plans estimated: 8
 - Average duration: 3 min
-- Total execution time: 16 min
+- Total execution time: 19 min
 
 ## Accumulated Context
 
@@ -56,6 +56,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - maxZoomPixelRatio: 1 prevents zooming beyond native resolution
 - EXIF panel hidden when zoomed in via derived effectiveExifVisible state
 - ExifPanel z-index must exceed YARL portal z-index (9999) — fixed to z-[10000]
+- SQLite table recreation for FK constraint fix (ALTER CONSTRAINT not supported in SQLite)
+- PRAGMA foreign_keys = ON enabled in initializeDatabase() for FK enforcement
+- addToAlbum uses MAX(sort_order) + 1 so new photos appear at end of album
 
 ### Pending Todos
 
@@ -64,11 +67,9 @@ None.
 ### Blockers/Concerns
 
 - Docker not installed on development machine — Redis service not tested (docker-compose.yml created and ready)
-- coverPhotoId FK constraint is NO ACTION instead of SET NULL — scheduled for fix in Phase 13
-- findByAlbumId() missing ORDER BY sortOrder — scheduled for fix in Phase 13
 
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 12-03-PLAN.md (Phase 12 complete)
+Stopped at: Completed 13-01-PLAN.md
 Resume file: None
