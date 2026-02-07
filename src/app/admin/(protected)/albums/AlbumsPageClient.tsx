@@ -157,7 +157,7 @@ export function AlbumsPageClient({
         </div>
       )}
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
+        <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-status-error-surface-text">
           {error}
         </div>
       )}

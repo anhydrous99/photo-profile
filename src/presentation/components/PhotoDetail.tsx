@@ -160,9 +160,9 @@ export function PhotoDetail({ photo }: PhotoDetailProps) {
 
 function StatusBadge({ status }: { status: Photo["status"] }) {
   const styles = {
-    processing: "bg-yellow-100 text-yellow-800",
-    ready: "bg-green-100 text-green-800",
-    error: "bg-red-100 text-red-800",
+    processing: "bg-status-warning-bg text-status-warning-text",
+    ready: "bg-status-success-bg text-status-success-text",
+    error: "bg-status-error-bg text-status-error-text",
   };
 
   return (
@@ -183,8 +183,8 @@ function SaveIndicator({
 
   const styles = {
     saving: "text-text-secondary",
-    saved: "text-green-600",
-    error: "text-red-600",
+    saved: "text-status-success-text",
+    error: "text-status-error-text",
   };
 
   const labels = {
