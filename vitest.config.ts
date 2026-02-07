@@ -15,6 +15,16 @@ export default defineConfig({
       REDIS_URL: "redis://localhost:6379",
     },
     setupFiles: ["./src/__tests__/setup.ts"],
+    coverage: {
+      provider: "v8",
+      include: ["src/infrastructure/**/*.ts"],
+      exclude: [
+        "src/infrastructure/jobs/worker.ts",
+        "src/infrastructure/jobs/load-env.ts",
+      ],
+      reporter: ["text", "html", "json"],
+      reportsDirectory: "./coverage",
+    },
   },
   resolve: {
     alias: {
