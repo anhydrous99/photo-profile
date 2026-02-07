@@ -15,4 +15,7 @@ export interface PhotoRepository {
 
   // Random photo retrieval
   findRandomFromPublishedAlbums(limit: number): Promise<Photo[]>;
+
+  // Slug-based lookup (first 8 chars of UUID)
+  findBySlugPrefix(slug: string): Promise<Photo | null>;
 }

@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, like, sql } from "drizzle-orm";
 import { db } from "../client";
 import { photos, photoAlbums, albums } from "../schema";
 import type { PhotoRepository } from "@/domain/repositories/PhotoRepository";
@@ -90,6 +90,15 @@ export class SQLitePhotoRepository implements PhotoRepository {
           );
       }
     });
+  }
+
+  async findBySlugPrefix(slug: string): Promise<Photo | null> {
+    const result = await db
+      .select()
+      .from(photos)
+      .where(like(photos.id, `${slug}%`))
+      .limit(1);
+    return result[0] ? this.toDomain(result[0]) : null;
   }
 
   async findRandomFromPublishedAlbums(limit: number): Promise<Photo[]> {
