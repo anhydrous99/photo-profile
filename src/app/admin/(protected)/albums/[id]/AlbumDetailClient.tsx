@@ -197,7 +197,7 @@ export function AlbumDetailClient({
                 <div className="aspect-square overflow-hidden rounded-lg border border-gray-200">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={`/api/images/${activePhoto.id}`}
+                    src={`/api/images/${activePhoto.id}/300w.webp`}
                     alt={activePhoto.title || activePhoto.originalFilename}
                     className="h-full w-full object-cover"
                   />

@@ -56,7 +56,7 @@ export function SortablePhotoCard({
         <div className="aspect-square overflow-hidden rounded-lg border border-gray-200">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/api/images/${photo.id}`}
+            src={`/api/images/${photo.id}/300w.webp`}
             alt={photo.title || photo.originalFilename}
             className="h-full w-full object-cover"
           />
