@@ -16,7 +16,8 @@
     "test:pipeline": "npx tsx scripts/test-image-pipeline.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "exif:backfill": "npx tsx --require dotenv/config scripts/backfill-exif.ts"
+    "exif:backfill": "npx tsx --require dotenv/config scripts/backfill-exif.ts",
+    "dimensions:backfill": "npx tsx --require dotenv/config scripts/backfill-dimensions.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
