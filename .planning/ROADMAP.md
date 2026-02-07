@@ -26,7 +26,7 @@
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 11: EXIF Metadata Pipeline** - Extract, store, display, and backfill camera metadata from photos
-- [ ] **Phase 12: Lightbox Polish** - Responsive images, touch gestures, zoom, and fullscreen in the lightbox
+- [x] **Phase 12: Lightbox Polish** - Responsive images, touch gestures, zoom, and fullscreen in the lightbox
 - [ ] **Phase 13: Album Management** - Cover photo selection and drag-to-reorder photos within albums
 - [ ] **Phase 14: Shareability** - Direct photo links and OpenGraph meta tags for social sharing
 
@@ -67,9 +67,9 @@ Plans:
 
 Plans:
 
-- [ ] 12-01-PLAN.md — Backend: Add width/height to Photo entity, schema, worker, and data pipeline
-- [ ] 12-02-PLAN.md — Frontend: Enable Zoom, Fullscreen, srcSet, gestures in lightbox + dimensions backfill script
-- [ ] 12-03-PLAN.md — Verification: Human testing of all lightbox polish features
+- [x] 12-01-PLAN.md — Backend: Add width/height to Photo entity, schema, worker, and data pipeline
+- [x] 12-02-PLAN.md — Frontend: Enable Zoom, Fullscreen, srcSet, gestures in lightbox + dimensions backfill script
+- [x] 12-03-PLAN.md — Verification: Human testing of all lightbox polish features
 
 ### Phase 13: Album Management
 
@@ -121,6 +121,6 @@ Phases 12 and 13 are independent and could execute in parallel. Phase 14 depends
 | Phase                      | Milestone | Plans Complete | Status      | Completed  |
 | -------------------------- | --------- | -------------- | ----------- | ---------- |
 | 11. EXIF Metadata Pipeline | v1.1      | 3/3            | ✓ Complete  | 2026-02-06 |
-| 12. Lightbox Polish        | v1.1      | 0/3            | Not started | -          |
+| 12. Lightbox Polish        | v1.1      | 3/3            | ✓ Complete  | 2026-02-06 |
 | 13. Album Management       | v1.1      | 0/2            | Not started | -          |
 | 14. Shareability           | v1.1      | 0/2            | Not started | -          |

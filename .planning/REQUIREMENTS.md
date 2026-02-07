@@ -16,10 +16,10 @@ Requirements for the v1.1 Enhancement milestone. Each maps to roadmap phases.
 
 ### Lightbox Polish
 
-- [ ] **LBOX-01**: Lightbox serves responsive images via srcSet matching viewer's screen size
-- [ ] **LBOX-02**: Swipe down to close lightbox on mobile
-- [ ] **LBOX-03**: Pinch-to-zoom and double-tap-to-zoom on photos
-- [ ] **LBOX-04**: Full-screen button in lightbox toolbar (user-initiated, not auto)
+- [x] **LBOX-01**: Lightbox serves responsive images via srcSet matching viewer's screen size
+- [x] **LBOX-02**: Swipe down to close lightbox on mobile
+- [x] **LBOX-03**: Pinch-to-zoom and double-tap-to-zoom on photos
+- [x] **LBOX-04**: Full-screen button in lightbox toolbar (user-initiated, not auto)
 
 ### Album Management
 
@@ -68,10 +68,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXIF-02     | 11    | Complete |
 | EXIF-03     | 11    | Complete |
 | EXIF-04     | 11    | Complete |
-| LBOX-01     | 12    | Pending  |
-| LBOX-02     | 12    | Pending  |
-| LBOX-03     | 12    | Pending  |
-| LBOX-04     | 12    | Pending  |
+| LBOX-01     | 12    | Complete |
+| LBOX-02     | 12    | Complete |
+| LBOX-03     | 12    | Complete |
+| LBOX-04     | 12    | Complete |
 | ALBM-01     | 13    | Pending  |
 | ALBM-02     | 13    | Pending  |
 | ALBM-03     | 13    | Pending  |
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 ---
 
 _Requirements defined: 2026-02-05_
-_Last updated: 2026-02-06 after Phase 11 completion_
+_Last updated: 2026-02-06 after Phase 12 completion_

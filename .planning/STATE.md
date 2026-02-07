@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Milestone v1.1 — Phase 12 (Lightbox Polish) in progress
+**Current focus:** Milestone v1.1 — Phase 12 (Lightbox Polish) complete
 
 ## Current Position
 
 Phase: 12 of 14 (Lightbox Polish)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-06 — Completed 12-02-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-06 — Completed 12-03-PLAN.md
 
-Progress: ██████████████████░░░░░░░░░░░░ v1.1 (5/8 plans)
+Progress: ██████████████████████░░░░░░░░ v1.1 (6/8 plans)
 
 ## Performance Metrics
 
@@ -27,10 +27,10 @@ Progress: ██████████████████░░░░░�
 
 **v1.1 Velocity:**
 
-- Total plans completed: 5
+- Total plans completed: 6
 - Plans estimated: 8
-- Average duration: 2 min
-- Total execution time: 13 min
+- Average duration: 3 min
+- Total execution time: 16 min
 
 ## Accumulated Context
 
@@ -55,6 +55,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - srcSet only included when width/height available (graceful fallback for legacy photos)
 - maxZoomPixelRatio: 1 prevents zooming beyond native resolution
 - EXIF panel hidden when zoomed in via derived effectiveExifVisible state
+- ExifPanel z-index must exceed YARL portal z-index (9999) — fixed to z-[10000]
 
 ### Pending Todos
 
@@ -69,5 +70,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 12-02-PLAN.md
+Stopped at: Completed 12-03-PLAN.md (Phase 12 complete)
 Resume file: None
