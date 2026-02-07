@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Milestone v1.1 — Phase 11 (EXIF Metadata Pipeline) complete
+**Current focus:** Milestone v1.1 — Phase 12 (Lightbox Polish) in progress
 
 ## Current Position
 
-Phase: 11 of 14 (EXIF Metadata Pipeline)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-06 — Completed 11-03-PLAN.md
+Phase: 12 of 14 (Lightbox Polish)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-06 — Completed 12-01-PLAN.md
 
-Progress: ████████████░░░░░░░░░░░░░░░░░░ v1.1 (3/8 plans)
+Progress: ████████████████░░░░░░░░░░░░░░ v1.1 (4/8 plans)
 
 ## Performance Metrics
 
@@ -27,10 +27,10 @@ Progress: ████████████░░░░░░░░░░░�
 
 **v1.1 Velocity:**
 
-- Total plans completed: 3
+- Total plans completed: 4
 - Plans estimated: 8
 - Average duration: 2 min
-- Total execution time: 7 min
+- Total execution time: 10 min
 
 ## Accumulated Context
 
@@ -48,6 +48,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Info icon placed before close button in YARL toolbar using toolbar.buttons prop
 - Used --require dotenv/config for standalone CLI scripts to solve ESM hoisting issue
 - Store empty JSON ({}) for photos with no EXIF data to ensure true backfill idempotency
+- Use sharp().rotate().metadata() for post-rotation dimensions (handles portrait EXIF orientation)
+- Width/height nullable to gracefully handle existing photos without dimensions
+- Migration added to initializeDatabase() for automatic schema evolution (Phase 12 pattern)
 
 ### Pending Todos
 
@@ -62,5 +65,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 11-03-PLAN.md (Phase 11 complete)
+Stopped at: Completed 12-01-PLAN.md
 Resume file: None
