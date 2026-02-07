@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 12 of 14 (Lightbox Polish)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-06 — Completed 12-01-PLAN.md
+Last activity: 2026-02-06 — Completed 12-02-PLAN.md
 
-Progress: ████████████████░░░░░░░░░░░░░░ v1.1 (4/8 plans)
+Progress: ██████████████████░░░░░░░░░░░░ v1.1 (5/8 plans)
 
 ## Performance Metrics
 
@@ -27,10 +27,10 @@ Progress: ████████████████░░░░░░░�
 
 **v1.1 Velocity:**
 
-- Total plans completed: 4
+- Total plans completed: 5
 - Plans estimated: 8
 - Average duration: 2 min
-- Total execution time: 10 min
+- Total execution time: 13 min
 
 ## Accumulated Context
 
@@ -51,6 +51,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Use sharp().rotate().metadata() for post-rotation dimensions (handles portrait EXIF orientation)
 - Width/height nullable to gracefully handle existing photos without dimensions
 - Migration added to initializeDatabase() for automatic schema evolution (Phase 12 pattern)
+- Zoom plugin before Fullscreen in YARL plugins array (Zoom needs pointer event priority for pan)
+- srcSet only included when width/height available (graceful fallback for legacy photos)
+- maxZoomPixelRatio: 1 prevents zooming beyond native resolution
+- EXIF panel hidden when zoomed in via derived effectiveExifVisible state
 
 ### Pending Todos
 
@@ -65,5 +69,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 12-01-PLAN.md
+Stopped at: Completed 12-02-PLAN.md
 Resume file: None
