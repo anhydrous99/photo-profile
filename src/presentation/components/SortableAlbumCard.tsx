@@ -13,6 +13,7 @@ interface SortableAlbumCardProps {
   album: AlbumWithCount;
   onEdit: () => void;
   onDelete: () => void;
+  onManage?: () => void;
   onPublishToggle?: (albumId: string, isPublished: boolean) => Promise<void>;
 }
 
@@ -30,6 +31,7 @@ export function SortableAlbumCard({
   album,
   onEdit,
   onDelete,
+  onManage,
   onPublishToggle,
 }: SortableAlbumCardProps) {
   const [isToggling, setIsToggling] = useState(false);
@@ -146,6 +148,15 @@ export function SortableAlbumCard({
 
       {/* Actions */}
       <div className="flex flex-shrink-0 gap-2">
+        {onManage && (
+          <button
+            type="button"
+            onClick={onManage}
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50"
+          >
+            Manage Photos
+          </button>
+        )}
         <button
           type="button"
           onClick={onEdit}

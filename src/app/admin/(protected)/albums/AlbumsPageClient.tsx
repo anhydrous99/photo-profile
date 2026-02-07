@@ -95,6 +95,10 @@ export function AlbumsPageClient({
     router.refresh();
   };
 
+  const handleManageClick = (albumId: string) => {
+    router.push(`/admin/albums/${albumId}`);
+  };
+
   const handleEditClick = (album: Album) => {
     setEditAlbum(album);
   };
@@ -180,6 +184,7 @@ export function AlbumsPageClient({
                 <SortableAlbumCard
                   key={album.id}
                   album={album}
+                  onManage={() => handleManageClick(album.id)}
                   onEdit={() => handleEditClick(album)}
                   onDelete={() => handleDeleteClick(album)}
                   onPublishToggle={handlePublishToggle}
