@@ -73,6 +73,25 @@ export class SQLitePhotoRepository implements PhotoRepository {
       );
   }
 
+  async updatePhotoSortOrders(
+    albumId: string,
+    photoIds: string[],
+  ): Promise<void> {
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < photoIds.length; i++) {
+        await tx
+          .update(photoAlbums)
+          .set({ sortOrder: i })
+          .where(
+            and(
+              eq(photoAlbums.albumId, albumId),
+              eq(photoAlbums.photoId, photoIds[i]),
+            ),
+          );
+      }
+    });
+  }
+
   async findRandomFromPublishedAlbums(limit: number): Promise<Photo[]> {
     const results = await db
       .select({ photo: photos })

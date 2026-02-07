@@ -11,6 +11,7 @@ export interface PhotoRepository {
   getAlbumIds(photoId: string): Promise<string[]>;
   addToAlbum(photoId: string, albumId: string): Promise<void>;
   removeFromAlbum(photoId: string, albumId: string): Promise<void>;
+  updatePhotoSortOrders(albumId: string, photoIds: string[]): Promise<void>;
 
   // Random photo retrieval
   findRandomFromPublishedAlbums(limit: number): Promise<Photo[]>;
