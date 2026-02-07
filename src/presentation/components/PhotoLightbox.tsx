@@ -14,6 +14,8 @@ export interface PhotoData {
   description: string | null;
   originalFilename: string;
   exifData?: ExifData | null;
+  width: number | null;
+  height: number | null;
 }
 
 interface PhotoLightboxProps {

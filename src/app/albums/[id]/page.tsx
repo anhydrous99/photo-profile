@@ -42,6 +42,8 @@ export default async function AlbumPage({ params }: PageProps) {
         originalFilename: p.originalFilename,
         blurDataUrl: p.blurDataUrl,
         exifData: p.exifData,
+        width: p.width,
+        height: p.height,
       }))}
     />
   );

@@ -19,6 +19,8 @@ export interface PhotoData {
   originalFilename: string;
   blurDataUrl: string | null;
   exifData?: ExifData | null;
+  width: number | null;
+  height: number | null;
 }
 
 interface AlbumGalleryClientProps {

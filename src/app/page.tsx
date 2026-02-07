@@ -25,6 +25,8 @@ export default async function Home() {
               originalFilename: p.originalFilename,
               blurDataUrl: p.blurDataUrl,
               exifData: p.exifData,
+              width: p.width,
+              height: p.height,
             }))}
           />
         )}
