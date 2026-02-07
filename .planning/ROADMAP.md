@@ -3,7 +3,7 @@
 ## Milestones
 
 - v1.0 MVP - Phases 1-10 (shipped 2026-02-05)
-- v1.1 Enhancement - Phases 11-14 (in progress)
+- v1.1 Enhancement - Phases 11-14 (shipped 2026-02-06)
 
 ## Phases
 
@@ -14,7 +14,7 @@
 
 </details>
 
-### v1.1 Enhancement (In Progress)
+### v1.1 Enhancement (SHIPPED 2026-02-06)
 
 **Milestone Goal:** Enrich the viewing experience with EXIF metadata, polished lightbox interactions, better album management, and shareability.
 
@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 11: EXIF Metadata Pipeline** - Extract, store, display, and backfill camera metadata from photos
 - [x] **Phase 12: Lightbox Polish** - Responsive images, touch gestures, zoom, and fullscreen in the lightbox
 - [x] **Phase 13: Album Management** - Cover photo selection and drag-to-reorder photos within albums
-- [ ] **Phase 14: Shareability** - Direct photo links and OpenGraph meta tags for social sharing
+- [x] **Phase 14: Shareability** - Direct photo links and OpenGraph meta tags for social sharing
 
 ## Phase Details
 
@@ -110,9 +110,9 @@ Plans:
 
 Plans:
 
-- [ ] 14-01-PLAN.md — URL sync in lightbox + slug-based photo lookup infrastructure
-- [ ] 14-02-PLAN.md — Deep link pages + OpenGraph meta tags for all public routes
-- [ ] 14-03-PLAN.md — Human verification of shareability features
+- [x] 14-01-PLAN.md — URL sync in lightbox + slug-based photo lookup infrastructure
+- [x] 14-02-PLAN.md — Deep link pages + OpenGraph meta tags for all public routes
+- [x] 14-03-PLAN.md — Human verification of shareability features
 
 ## Progress
 
@@ -120,9 +120,9 @@ Plans:
 Phases 12 and 13 are independent and could execute in parallel. Phase 14 depends on both.
 11 -> 12 (and/or 13) -> 14
 
-| Phase                      | Milestone | Plans Complete | Status      | Completed  |
-| -------------------------- | --------- | -------------- | ----------- | ---------- |
-| 11. EXIF Metadata Pipeline | v1.1      | 3/3            | ✓ Complete  | 2026-02-06 |
-| 12. Lightbox Polish        | v1.1      | 3/3            | ✓ Complete  | 2026-02-06 |
-| 13. Album Management       | v1.1      | 2/2            | ✓ Complete  | 2026-02-06 |
-| 14. Shareability           | v1.1      | 0/3            | Not started | -          |
+| Phase                      | Milestone | Plans Complete | Status     | Completed  |
+| -------------------------- | --------- | -------------- | ---------- | ---------- |
+| 11. EXIF Metadata Pipeline | v1.1      | 3/3            | ✓ Complete | 2026-02-06 |
+| 12. Lightbox Polish        | v1.1      | 3/3            | ✓ Complete | 2026-02-06 |
+| 13. Album Management       | v1.1      | 2/2            | ✓ Complete | 2026-02-06 |
+| 14. Shareability           | v1.1      | 3/3            | ✓ Complete | 2026-02-06 |

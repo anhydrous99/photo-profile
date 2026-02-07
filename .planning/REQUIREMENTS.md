@@ -30,10 +30,10 @@ Requirements for the v1.1 Enhancement milestone. Each maps to roadmap phases.
 
 ### Sharing
 
-- [ ] **SHAR-01**: Opening a photo in the lightbox updates the URL with the photo identifier
-- [ ] **SHAR-02**: Navigating to a photo URL opens the lightbox on that specific photo
-- [ ] **SHAR-03**: Albums have OpenGraph meta tags (title, description, cover photo image)
-- [ ] **SHAR-04**: Homepage has OpenGraph meta tags with site name and description
+- [x] **SHAR-01**: Opening a photo in the lightbox updates the URL with the photo identifier
+- [x] **SHAR-02**: Navigating to a photo URL opens the lightbox on that specific photo
+- [x] **SHAR-03**: Albums have OpenGraph meta tags (title, description, cover photo image)
+- [x] **SHAR-04**: Homepage has OpenGraph meta tags with site name and description
 
 ## Future Requirements
 
@@ -76,10 +76,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ALBM-02     | 13    | Complete |
 | ALBM-03     | 13    | Complete |
 | ALBM-04     | 13    | Complete |
-| SHAR-01     | 14    | Pending  |
-| SHAR-02     | 14    | Pending  |
-| SHAR-03     | 14    | Pending  |
-| SHAR-04     | 14    | Pending  |
+| SHAR-01     | 14    | Complete |
+| SHAR-02     | 14    | Complete |
+| SHAR-03     | 14    | Complete |
+| SHAR-04     | 14    | Complete |
 
 **Coverage:**
 
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 ---
 
 _Requirements defined: 2026-02-05_
-_Last updated: 2026-02-06 after Phase 13 completion_
+_Last updated: 2026-02-06 after Phase 14 completion_
