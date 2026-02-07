@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 15 of 19 (Testing Infrastructure)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-06 -- Roadmap created for v1.2 Quality & Hardening (5 phases, 14 plans)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-07 -- Completed 15-01-PLAN.md (Vitest Foundation and Test Helpers)
 
-Progress: [░░░░░░░░░░] 0% (0/14 plans)
+Progress: [█░░░░░░░░░] 7% (1/14 plans)
 
 ## Performance Metrics
 
@@ -32,15 +32,21 @@ Progress: [░░░░░░░░░░] 0% (0/14 plans)
 
 **v1.2 Velocity:**
 
-- Total plans completed: 0
-- Average duration: --
-- Total execution time: 0 min
+- Total plans completed: 1
+- Average duration: 2 min
+- Total execution time: 2 min
 
 ## Accumulated Context
 
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table.
+
+| ID         | Decision                                                     | Phase-Plan |
+| ---------- | ------------------------------------------------------------ | ---------- |
+| D-15-01-01 | Env vars in vitest.config.ts test.env (not .env.test)        | 15-01      |
+| D-15-01-02 | Setup file uses only vi.mock(), no imports of mocked modules | 15-01      |
+| D-15-01-03 | test-db.ts replays exact migration chain from client.ts      | 15-01      |
 
 ### Pending Todos
 
@@ -53,6 +59,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-06
-Stopped at: Roadmap created for v1.2 milestone
+Last session: 2026-02-07
+Stopped at: Completed 15-01-PLAN.md
 Resume file: None
