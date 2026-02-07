@@ -55,6 +55,11 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
     // Update progress - derivatives done
     await job.updateProgress(80);
 
+    // Get post-rotation dimensions for accurate srcSet
+    const rotatedMeta = await sharp(originalPath).rotate().metadata();
+    const width = rotatedMeta.width!;
+    const height = rotatedMeta.height!;
+
     // Extract EXIF metadata from original image
     const exifData = await extractExifData(originalPath);
 
@@ -68,10 +73,10 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
     await job.updateProgress(100);
 
     console.log(
-      `[ImageWorker] Generated ${derivatives.length} files + blur placeholder + EXIF for photo ${photoId}`,
+      `[ImageWorker] Generated ${derivatives.length} files + blur placeholder + EXIF + dimensions (${width}x${height}) for photo ${photoId}`,
     );
 
-    return { photoId, derivatives, blurDataUrl, exifData };
+    return { photoId, derivatives, blurDataUrl, exifData, width, height };
   },
   {
     connection,
@@ -112,9 +117,11 @@ imageWorker.on("completed", async (job, result) => {
       photo.status = "ready";
       photo.blurDataUrl = result.blurDataUrl;
       photo.exifData = result.exifData;
+      photo.width = result.width;
+      photo.height = result.height;
       await repository.save(photo);
       console.log(
-        `[ImageWorker] Successfully updated photo ${result.photoId} to 'ready' with blur placeholder and EXIF`,
+        `[ImageWorker] Successfully updated photo ${result.photoId} to 'ready' with blur placeholder, EXIF, and dimensions`,
       );
     } else {
       console.error(`[ImageWorker] Photo not found: ${result.photoId}`);

@@ -81,6 +81,17 @@ export function initializeDatabase() {
       sqlite.prepare("ALTER TABLE photos ADD COLUMN exif_data TEXT").run();
       console.log("[DB] Added exif_data column to photos table");
     }
+
+    // Migration: Add width/height columns (Phase 12)
+    const tableInfoForDims = sqlite
+      .prepare("PRAGMA table_info(photos)")
+      .all() as Array<{ name: string }>;
+    const hasWidth = tableInfoForDims.some((col) => col.name === "width");
+    if (!hasWidth) {
+      sqlite.prepare("ALTER TABLE photos ADD COLUMN width INTEGER").run();
+      sqlite.prepare("ALTER TABLE photos ADD COLUMN height INTEGER").run();
+      console.log("[DB] Added width and height columns to photos table");
+    }
   } catch (error) {
     console.error("Failed to initialize database schema:", error);
     throw new Error("Database initialization failed");

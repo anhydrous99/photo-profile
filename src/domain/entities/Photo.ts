@@ -19,6 +19,8 @@ export interface Photo {
   originalFilename: string;
   blurDataUrl: string | null;
   exifData: ExifData | null;
+  width: number | null;
+  height: number | null;
   status: "processing" | "ready" | "error";
   createdAt: Date;
   updatedAt: Date;

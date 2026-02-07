@@ -61,6 +61,8 @@ export async function POST(request: NextRequest) {
     originalFilename: file.name,
     blurDataUrl: null,
     exifData: null,
+    width: null,
+    height: null,
     status: "processing",
     createdAt: now,
     updatedAt: now,

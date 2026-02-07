@@ -14,6 +14,8 @@ export const photos = sqliteTable("photos", {
   originalFilename: text("original_filename").notNull(),
   blurDataUrl: text("blur_data_url"),
   exifData: text("exif_data"), // JSON-serialized ExifData
+  width: integer("width"),
+  height: integer("height"),
   status: text("status", { enum: ["processing", "ready", "error"] })
     .notNull()
     .default("processing"),

@@ -19,6 +19,8 @@ export interface ImageJobResult {
   derivatives: string[];
   blurDataUrl: string;
   exifData: ExifData | null;
+  width: number;
+  height: number;
 }
 
 /**
