@@ -71,7 +71,7 @@ export function ExifPanel({ exifData, visible }: ExifPanelProps) {
 
   return (
     <div
-      className={`fixed right-0 bottom-0 left-0 z-50 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-6 pt-12 pb-4 transition-transform duration-300 ease-out ${
+      className={`fixed right-0 bottom-0 left-0 z-[10000] bg-gradient-to-t from-black/90 via-black/70 to-transparent px-6 pt-12 pb-4 transition-transform duration-300 ease-out ${
         visible ? "translate-y-0" : "translate-y-full"
       }`}
       aria-hidden={!visible}
