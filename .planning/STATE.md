@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 14 of 14 (Shareability)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-06 — Completed 14-01-PLAN.md
+Last activity: 2026-02-06 — Completed 14-02-PLAN.md
 
-Progress: █████████████████████████████░ v1.1 (9/11 plans)
+Progress: ██████████████████████████████ v1.1 (10/11 plans)
 
 ## Performance Metrics
 
@@ -27,10 +27,10 @@ Progress: ███████████████████████�
 
 **v1.1 Velocity:**
 
-- Total plans completed: 9
+- Total plans completed: 10
 - Plans estimated: 11
 - Average duration: 3 min
-- Total execution time: 24 min
+- Total execution time: 27 min
 
 ## Accumulated Context
 
@@ -65,6 +65,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 8-char UUID prefix as photo slug for shareable URLs (negligible collision for personal portfolio)
 - window.history.replaceState for lightbox URL sync (no history entries, no React re-renders)
 - useState initializer functions for deep link landing (avoids flash)
+- WebP 1200w derivative for OG images (AVIF unsupported by social media crawlers)
+- React cache() for getAlbum to share data between generateMetadata and page function
+- Homepage photo deep link replaces last random photo if not in set (guaranteed lightbox target)
+- EXIF data appended to OG description when available (camera, focal length, aperture, shutter, ISO)
 
 ### Pending Todos
 
@@ -77,5 +81,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 14-01-PLAN.md (Lightbox URL Sync and Slug Lookup)
+Stopped at: Completed 14-02-PLAN.md (Deep Links and OG Metadata)
 Resume file: None
