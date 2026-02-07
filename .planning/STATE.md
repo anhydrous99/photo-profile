@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 13 of 14 (Album Management)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-06 — Completed 13-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-06 — Completed 13-02-PLAN.md
 
-Progress: ███████████████████████░░░░░░░ v1.1 (7/8 plans)
+Progress: ████████████████████████████░░ v1.1 (8/8 plans)
 
 ## Performance Metrics
 
@@ -27,10 +27,10 @@ Progress: ███████████████████████�
 
 **v1.1 Velocity:**
 
-- Total plans completed: 7
+- Total plans completed: 8
 - Plans estimated: 8
 - Average duration: 3 min
-- Total execution time: 19 min
+- Total execution time: 22 min
 
 ## Accumulated Context
 
@@ -59,6 +59,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - SQLite table recreation for FK constraint fix (ALTER CONSTRAINT not supported in SQLite)
 - PRAGMA foreign_keys = ON enabled in initializeDatabase() for FK enforcement
 - addToAlbum uses MAX(sort_order) + 1 so new photos appear at end of album
+- rectSortingStrategy for dnd-kit grid layout (photo grid uses 2D, not vertical list)
+- DragOverlay with presentational clone for clean drag feedback in grids
+- onManage prop optional on SortableAlbumCard for backward compatibility
 
 ### Pending Todos
 
@@ -71,5 +74,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 13-01-PLAN.md
+Stopped at: Completed 13-02-PLAN.md
 Resume file: None
