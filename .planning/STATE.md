@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-Phase: 15 of 19 (Testing Infrastructure)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-07 -- Completed 15-02-PLAN.md (Coverage, Fixtures, and Smoke Tests)
+Phase: 16 of 19 (Error Boundaries & API Hardening)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-07 -- Completed 16-01-PLAN.md (Error Boundaries and Loading States)
 
-Progress: [██░░░░░░░░] 14% (2/14 plans)
+Progress: [██░░░░░░░░] 21% (3/14 plans)
 
 ## Performance Metrics
 
@@ -32,9 +32,9 @@ Progress: [██░░░░░░░░] 14% (2/14 plans)
 
 **v1.2 Velocity:**
 
-- Total plans completed: 2
+- Total plans completed: 3
 - Average duration: 3 min
-- Total execution time: 6 min
+- Total execution time: 10 min
 
 ## Accumulated Context
 
@@ -42,11 +42,13 @@ Progress: [██░░░░░░░░] 14% (2/14 plans)
 
 All decisions logged in PROJECT.md Key Decisions table.
 
-| ID         | Decision                                                     | Phase-Plan |
-| ---------- | ------------------------------------------------------------ | ---------- |
-| D-15-01-01 | Env vars in vitest.config.ts test.env (not .env.test)        | 15-01      |
-| D-15-01-02 | Setup file uses only vi.mock(), no imports of mocked modules | 15-01      |
-| D-15-01-03 | test-db.ts replays exact migration chain from client.ts      | 15-01      |
+| ID         | Decision                                                                         | Phase-Plan |
+| ---------- | -------------------------------------------------------------------------------- | ---------- |
+| D-15-01-01 | Env vars in vitest.config.ts test.env (not .env.test)                            | 15-01      |
+| D-15-01-02 | Setup file uses only vi.mock(), no imports of mocked modules                     | 15-01      |
+| D-15-01-03 | test-db.ts replays exact migration chain from client.ts                          | 15-01      |
+| D-16-01-01 | global-error.tsx uses inline styles (not Tailwind) since root layout is replaced | 16-01      |
+| D-16-01-02 | Admin loading uses spinner (animate-spin) not skeleton grid                      | 16-01      |
 
 ### Pending Todos
 
@@ -60,5 +62,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 15-02-PLAN.md (Phase 15 complete)
-Resume file: None
+Stopped at: Completed 16-01-PLAN.md (Error Boundaries and Loading States)
+Resume file: .planning/phases/16-error-boundaries-api-hardening/16-02-PLAN.md
