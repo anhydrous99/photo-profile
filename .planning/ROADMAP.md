@@ -87,12 +87,13 @@ Plans:
 3. Admin can drag photos into a custom order within the album detail view and the new order persists after page reload
 4. The public album page displays photos in the same order the admin arranged them
 5. Deleting a photo that is an album's cover sets the cover to null instead of failing or leaving a dangling reference
-   **Plans**: TBD
+
+**Plans:** 2 plans
 
 Plans:
 
-- [ ] 13-01: TBD
-- [ ] 13-02: TBD
+- [ ] 13-01-PLAN.md — Backend: Fix FK constraint, ORDER BY, addToAlbum sortOrder + photo reorder API
+- [ ] 13-02-PLAN.md — Frontend: Admin album detail page with drag-to-reorder grid and cover photo selection
 
 ### Phase 14: Shareability
 
