@@ -11,6 +11,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepare": "husky",
     "worker": "npx tsx src/infrastructure/jobs/worker.ts",
     "test:pipeline": "npx tsx scripts/test-image-pipeline.ts",
@@ -50,6 +52,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/bcrypt": "^6.0.0",
     "@types/better-sqlite3": "^7.6.13",
@@ -63,8 +66,10 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "node-gyp": "^12.2.0",
+    "playwright": "^1.58.2",
     "prettier": "^3.8.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   }
 }
