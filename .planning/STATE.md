@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Milestone v1.1 — Phase 13 (Album Management) complete
+**Current focus:** Milestone v1.1 — Phase 14 (Shareability) in progress
 
 ## Current Position
 
-Phase: 13 of 14 (Album Management)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-06 — Completed 13-02-PLAN.md
+Phase: 14 of 14 (Shareability)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-06 — Completed 14-01-PLAN.md
 
-Progress: ████████████████████████████░░ v1.1 (8/8 plans)
+Progress: █████████████████████████████░ v1.1 (9/11 plans)
 
 ## Performance Metrics
 
@@ -27,10 +27,10 @@ Progress: ███████████████████████�
 
 **v1.1 Velocity:**
 
-- Total plans completed: 8
-- Plans estimated: 8
+- Total plans completed: 9
+- Plans estimated: 11
 - Average duration: 3 min
-- Total execution time: 22 min
+- Total execution time: 24 min
 
 ## Accumulated Context
 
@@ -62,6 +62,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - rectSortingStrategy for dnd-kit grid layout (photo grid uses 2D, not vertical list)
 - DragOverlay with presentational clone for clean drag feedback in grids
 - onManage prop optional on SortableAlbumCard for backward compatibility
+- 8-char UUID prefix as photo slug for shareable URLs (negligible collision for personal portfolio)
+- window.history.replaceState for lightbox URL sync (no history entries, no React re-renders)
+- useState initializer functions for deep link landing (avoids flash)
 
 ### Pending Todos
 
@@ -74,5 +77,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed Phase 13 (Album Management)
+Stopped at: Completed 14-01-PLAN.md (Lightbox URL Sync and Slug Lookup)
 Resume file: None
