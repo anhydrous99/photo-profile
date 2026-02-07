@@ -20,14 +20,14 @@ interface DropZoneProps {
  * @param onFilesAccepted - Called with accepted File array
  * @param onFilesRejected - Called with rejected files (wrong type/size)
  * @param maxFiles - Maximum files per drop (default: 20)
- * @param maxSize - Maximum file size in bytes (default: 100MB)
+ * @param maxSize - Maximum file size in bytes (default: 25MB)
  * @param disabled - Disable interaction during upload
  */
 export function DropZone({
   onFilesAccepted,
   onFilesRejected,
   maxFiles = 20,
-  maxSize = 100 * 1024 * 1024,
+  maxSize = 25 * 1024 * 1024,
   disabled = false,
 }: DropZoneProps) {
   const onDrop = useCallback(
@@ -82,7 +82,7 @@ export function DropZone({
             or click to select files
           </p>
           <p className="mt-4 text-xs text-text-tertiary">
-            JPEG, PNG, WebP, HEIC up to 100MB each
+            JPEG, PNG, WebP, HEIC up to 25MB each
           </p>
         </>
       )}

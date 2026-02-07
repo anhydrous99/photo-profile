@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import type { FileRejection } from "react-dropzone";
 import { DropZone, UploadQueue } from "@/presentation/components";
 import type { UploadItem } from "@/presentation/components";
 import { uploadFile } from "@/presentation/lib";
@@ -15,11 +16,16 @@ import Link from "next/link";
  * 3. Uploads processed sequentially
  * 4. Progress tracked per file
  * 5. Success/error states displayed
+ *
+ * Rejected files (too large, wrong type) show a dismissible notification
+ * while valid files in the same batch still upload normally.
  */
 export default function UploadPage() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [rejections, setRejections] = useState<string[]>([]);
   const processingRef = useRef(false);
+  const rejectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Process upload queue sequentially
   const processQueue = useCallback(async (queue: UploadItem[]) => {
@@ -73,6 +79,32 @@ export default function UploadPage() {
 
     setIsUploading(false);
     processingRef.current = false;
+  }, []);
+
+  // Handle files rejected by DropZone (wrong type, too large, etc.)
+  const handleFilesRejected = useCallback((fileRejections: FileRejection[]) => {
+    const messages = fileRejections.map((rejection) => {
+      const fileName = rejection.file.name;
+      const error = rejection.errors[0];
+      const reason =
+        error?.code === "file-too-large"
+          ? "exceeds 25MB limit"
+          : (error?.message ?? "rejected");
+      return `${fileName}: ${reason}`;
+    });
+
+    setRejections(messages);
+
+    // Clear any existing timer
+    if (rejectionTimerRef.current) {
+      clearTimeout(rejectionTimerRef.current);
+    }
+
+    // Auto-clear after 8 seconds
+    rejectionTimerRef.current = setTimeout(() => {
+      setRejections([]);
+      rejectionTimerRef.current = null;
+    }, 8000);
   }, []);
 
   // Handle files dropped onto zone
@@ -138,7 +170,37 @@ export default function UploadPage() {
         </Link>
       </div>
 
-      <DropZone onFilesAccepted={handleFilesAccepted} disabled={isUploading} />
+      <DropZone
+        onFilesAccepted={handleFilesAccepted}
+        onFilesRejected={handleFilesRejected}
+        disabled={isUploading}
+      />
+
+      {rejections.length > 0 && (
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                {rejections.length === 1
+                  ? "File rejected"
+                  : `${rejections.length} files rejected`}
+              </p>
+              <ul className="mt-1 text-sm text-red-700 dark:text-red-300">
+                {rejections.map((msg, i) => (
+                  <li key={i}>{msg}</li>
+                ))}
+              </ul>
+            </div>
+            <button
+              onClick={() => setRejections([])}
+              className="ml-4 text-red-700 hover:text-red-800 dark:text-red-300 dark:hover:text-red-200"
+              aria-label="Dismiss"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
 
       <UploadQueue items={items} onRetry={handleRetry} />
 
