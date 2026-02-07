@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Lightbox from "yet-another-react-lightbox";
 import Captions from "yet-another-react-lightbox/plugins/captions";
+import Zoom from "yet-another-react-lightbox/plugins/zoom";
+import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
 import "yet-another-react-lightbox/styles.css";
 import "yet-another-react-lightbox/plugins/captions.css";
 import type { ExifData } from "@/domain/entities/Photo";
@@ -25,6 +27,17 @@ interface PhotoLightboxProps {
   onIndexChange?: (index: number) => void;
 }
 
+const DERIVATIVE_WIDTHS = [300, 600, 1200, 2400] as const;
+
+function buildSrcSet(photoId: string, width: number, height: number) {
+  const aspectRatio = height / width;
+  return DERIVATIVE_WIDTHS.map((w) => ({
+    src: `/api/images/${photoId}/${w}w.webp`,
+    width: w,
+    height: Math.round(w * aspectRatio),
+  }));
+}
+
 export function PhotoLightbox({
   photos,
   index,
@@ -32,16 +45,27 @@ export function PhotoLightbox({
   onIndexChange,
 }: PhotoLightboxProps) {
   const [exifOpen, setExifOpen] = useState(false);
+  const [currentZoom, setCurrentZoom] = useState(1);
 
   // Current photo's EXIF data (updates automatically when index changes)
   const currentExif = photos[index]?.exifData ?? null;
 
+  // Hide EXIF panel when zoomed in
+  const effectiveExifVisible = exifOpen && currentZoom <= 1;
+
   // Transform photo data to YARL slide format
   // Use 600w as baseline - guaranteed to exist for all photos
-  // (larger sizes may not exist if original was smaller than target)
+  // Only include srcSet when dimensions are known (graceful fallback for legacy photos)
   const slides = photos.map((photo) => ({
     src: `/api/images/${photo.id}/600w.webp`,
     alt: photo.title || photo.originalFilename,
+    ...(photo.width && photo.height
+      ? {
+          width: photo.width,
+          height: photo.height,
+          srcSet: buildSrcSet(photo.id, photo.width, photo.height),
+        }
+      : {}),
     title: photo.title || undefined,
     description: photo.description || undefined,
   }));
@@ -53,7 +77,7 @@ export function PhotoLightbox({
         close={onClose}
         index={index}
         slides={slides}
-        plugins={[Captions]}
+        plugins={[Zoom, Fullscreen, Captions]}
         // Solid black background (phase decision)
         styles={{
           container: { backgroundColor: "rgb(0, 0, 0)" },
@@ -65,25 +89,39 @@ export function PhotoLightbox({
           imageFit: "contain",
           preload: 2,
         }}
-        // Animation timing
+        // Animation timing (includes zoom)
         animation={{
           fade: 200,
           swipe: 300,
+          zoom: 300,
         }}
-        // Controller behavior - X button only (phase decision)
+        // Controller behavior - pull-down close for mobile (LBOX-02)
         controller={{
-          closeOnBackdropClick: false,
-          closeOnPullDown: false,
+          closeOnPullDown: true,
           closeOnPullUp: false,
+          closeOnBackdropClick: false,
+        }}
+        // Zoom configuration (LBOX-03)
+        zoom={{
+          maxZoomPixelRatio: 1,
+          doubleClickMaxStops: 2,
+          scrollToZoom: false,
+          pinchZoomV4: true,
+        }}
+        // Fullscreen configuration (LBOX-04)
+        fullscreen={{
+          auto: false,
         }}
         // Captions configuration
         captions={{
           descriptionTextAlign: "center",
           descriptionMaxLines: 5,
         }}
-        // Toolbar with EXIF info toggle before close button
+        // Toolbar with zoom, fullscreen, EXIF info toggle, and close button
         toolbar={{
           buttons: [
+            "zoom",
+            "fullscreen",
             <button
               key="exif-info"
               type="button"
@@ -113,10 +151,14 @@ export function PhotoLightbox({
         }}
         // Lifecycle callbacks
         on={{
-          view: ({ index: newIndex }) => onIndexChange?.(newIndex),
+          view: ({ index: newIndex }) => {
+            onIndexChange?.(newIndex);
+            setCurrentZoom(1); // Reset zoom tracking on slide change
+          },
+          zoom: ({ zoom }) => setCurrentZoom(zoom),
         }}
       />
-      <ExifPanel exifData={currentExif} visible={exifOpen} />
+      <ExifPanel exifData={currentExif} visible={effectiveExifVisible} />
     </>
   );
 }
