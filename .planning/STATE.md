@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v1.2 Quality & Hardening
 
 ## Current Position
 
-Phase: All complete through v1.1
-Plan: N/A
-Status: Between milestones
-Last activity: 2026-02-06 — v1.1 milestone archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-06 — Milestone v1.2 started
 
-Progress: ██████████████████████████████ v1.1 SHIPPED
+Progress: ░░░░░░░░░░ 0%
 
 ## Performance Metrics
 
@@ -45,9 +45,10 @@ None.
 ### Blockers/Concerns
 
 - Docker not installed on development machine — Redis service not tested (docker-compose.yml created and ready)
+- coverPhotoId FK constraint mismatch: schema says SET NULL, DB has NO ACTION
 
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: v1.1 milestone archived
+Stopped at: Milestone v1.2 initialized
 Resume file: None

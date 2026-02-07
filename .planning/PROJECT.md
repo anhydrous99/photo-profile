@@ -36,7 +36,18 @@ Let the photos speak for themselves — a clean, distraction-free experience whe
 
 ### Active
 
-(No active milestone — use `/gsd:new-milestone` to start next version)
+#### Current Milestone: v1.2 Quality & Hardening
+
+**Goal:** Make the portfolio solid, tested, and resilient — unit tests for core logic, error handling across all surfaces, performance optimization, and tech debt cleanup.
+
+**Target features:**
+
+- Unit tests for domain entities, application services, and repository implementations
+- Upload failure recovery and retry mechanisms
+- Admin UX error handling (forms, network failures, loading states)
+- Public site resilience (missing images, broken albums, graceful 404s)
+- Performance audit and optimization (bundle size, image serving, query efficiency)
+- Tech debt cleanup (FK constraint fix, stale comments, schema drift, unused code)
 
 ### Out of Scope
 
@@ -96,4 +107,4 @@ Known tech debt:
 
 ---
 
-_Last updated: 2026-02-06 after v1.1 milestone_
+_Last updated: 2026-02-06 after v1.2 milestone started_
