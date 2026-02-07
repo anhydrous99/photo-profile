@@ -81,40 +81,45 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ photoId: string; filename: string }> },
 ): Promise<NextResponse> {
-  const { photoId, filename } = await params;
-
-  // Validate filename to prevent directory traversal
-  if (!isValidFilename(filename)) {
-    return new NextResponse("Invalid filename or unsupported format", {
-      status: 400,
-    });
-  }
-
-  const ext = getExtension(filename);
-  const mimeType = MIME_TYPES[ext];
-  const photoDir = join(env.STORAGE_PATH, "processed", photoId);
-  const filePath = join(photoDir, filename);
-
   try {
-    return await serveImage(filePath, mimeType);
-  } catch (error) {
-    // File not found - try falling back to largest available derivative
-    if (
-      error instanceof Error &&
-      "code" in error &&
-      (error as NodeJS.ErrnoException).code === "ENOENT"
-    ) {
-      const fallback = await findLargestDerivative(photoDir, ext);
-      if (fallback) {
-        try {
-          return await serveImage(join(photoDir, fallback), mimeType);
-        } catch {
-          // Fallback also failed, return 404
-        }
-      }
-      return new NextResponse("Image not found", { status: 404 });
+    const { photoId, filename } = await params;
+
+    // Validate filename to prevent directory traversal
+    if (!isValidFilename(filename)) {
+      return new NextResponse("Invalid filename or unsupported format", {
+        status: 400,
+      });
     }
-    // Re-throw unexpected errors
-    throw error;
+
+    const ext = getExtension(filename);
+    const mimeType = MIME_TYPES[ext];
+    const photoDir = join(env.STORAGE_PATH, "processed", photoId);
+    const filePath = join(photoDir, filename);
+
+    try {
+      return await serveImage(filePath, mimeType);
+    } catch (error) {
+      // File not found - try falling back to largest available derivative
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        (error as NodeJS.ErrnoException).code === "ENOENT"
+      ) {
+        const fallback = await findLargestDerivative(photoDir, ext);
+        if (fallback) {
+          try {
+            return await serveImage(join(photoDir, fallback), mimeType);
+          } catch {
+            // Fallback also failed, return 404
+          }
+        }
+        return new NextResponse("Image not found", { status: 404 });
+      }
+      // Non-ENOENT error - log and return 500
+      throw error;
+    }
+  } catch (error) {
+    console.error("[API] GET /api/images/[photoId]/[filename]:", error);
+    return new NextResponse("Internal server error", { status: 500 });
   }
 }

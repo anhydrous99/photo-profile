@@ -32,49 +32,58 @@ interface RouteContext {
  * Returns: Updated album object
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const session = await verifySession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const { id } = await context.params;
+    const { id } = await context.params;
 
-  // Fetch existing album
-  const album = await albumRepository.findById(id);
-  if (!album) {
-    return NextResponse.json({ error: "Album not found" }, { status: 404 });
-  }
+    // Fetch existing album
+    const album = await albumRepository.findById(id);
+    if (!album) {
+      return NextResponse.json({ error: "Album not found" }, { status: 404 });
+    }
 
-  const body = await request.json();
-  const result = updateAlbumSchema.safeParse(body);
+    const body = await request.json();
+    const result = updateAlbumSchema.safeParse(body);
 
-  if (!result.success) {
+    if (!result.success) {
+      const flat = z.flattenError(result.error);
+      return NextResponse.json(
+        { error: "Validation failed", details: flat.fieldErrors },
+        { status: 400 },
+      );
+    }
+
+    // Update only provided fields
+    if (result.data.title !== undefined) {
+      album.title = result.data.title;
+    }
+    if (result.data.description !== undefined) {
+      album.description = result.data.description;
+    }
+    if (result.data.tags !== undefined) {
+      album.tags = result.data.tags;
+    }
+    if (result.data.coverPhotoId !== undefined) {
+      album.coverPhotoId = result.data.coverPhotoId;
+    }
+    if (result.data.isPublished !== undefined) {
+      album.isPublished = result.data.isPublished;
+    }
+
+    await albumRepository.save(album);
+
+    return NextResponse.json(album);
+  } catch (error) {
+    console.error("[API] PATCH /api/admin/albums/[id]:", error);
     return NextResponse.json(
-      { error: "Invalid data", details: result.error.flatten() },
-      { status: 400 },
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
-
-  // Update only provided fields
-  if (result.data.title !== undefined) {
-    album.title = result.data.title;
-  }
-  if (result.data.description !== undefined) {
-    album.description = result.data.description;
-  }
-  if (result.data.tags !== undefined) {
-    album.tags = result.data.tags;
-  }
-  if (result.data.coverPhotoId !== undefined) {
-    album.coverPhotoId = result.data.coverPhotoId;
-  }
-  if (result.data.isPublished !== undefined) {
-    album.isPublished = result.data.isPublished;
-  }
-
-  await albumRepository.save(album);
-
-  return NextResponse.json(album);
 }
 
 /**
@@ -89,41 +98,49 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
  * Returns: 204 No Content on success
  */
 export async function DELETE(request: NextRequest, context: RouteContext) {
-  const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id: albumId } = await context.params;
-
-  // Verify album exists
-  const album = await albumRepository.findById(albumId);
-  if (!album) {
-    return NextResponse.json({ error: "Album not found" }, { status: 404 });
-  }
-
-  // Parse request body for delete mode
-  const body = (await request.json().catch(() => ({}))) as {
-    deletePhotos?: boolean;
-  };
-  const deletePhotos = body.deletePhotos === true;
-
-  // Delete album (and get photo IDs if deleting photos)
-  const { deletedPhotoIds } = await albumRepository.deleteWithPhotos(
-    albumId,
-    deletePhotos,
-  );
-
-  // Delete photo files and records if requested
-  if (deletePhotos) {
-    for (const photoId of deletedPhotoIds) {
-      await deletePhotoFiles(photoId);
-      await photoRepository.delete(photoId);
+  try {
+    const session = await verifySession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { id: albumId } = await context.params;
+
+    // Verify album exists
+    const album = await albumRepository.findById(albumId);
+    if (!album) {
+      return NextResponse.json({ error: "Album not found" }, { status: 404 });
+    }
+
+    // Parse request body for delete mode
+    const body = (await request.json().catch(() => ({}))) as {
+      deletePhotos?: boolean;
+    };
+    const deletePhotos = body.deletePhotos === true;
+
+    // Delete album (and get photo IDs if deleting photos)
+    const { deletedPhotoIds } = await albumRepository.deleteWithPhotos(
+      albumId,
+      deletePhotos,
+    );
+
+    // Delete photo files and records if requested
+    if (deletePhotos) {
+      for (const photoId of deletedPhotoIds) {
+        await deletePhotoFiles(photoId);
+        await photoRepository.delete(photoId);
+      }
+    }
+
+    revalidatePath("/admin/albums");
+    revalidatePath("/admin");
+
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    console.error("[API] DELETE /api/admin/albums/[id]:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
-
-  revalidatePath("/admin/albums");
-  revalidatePath("/admin");
-
-  return new NextResponse(null, { status: 204 });
 }

@@ -17,23 +17,31 @@ const createAlbumSchema = z.object({
  * Returns all albums sorted by sortOrder, including photo counts.
  */
 export async function GET() {
-  const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await verifySession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const albums = await albumRepository.findAll();
+    const photoCounts = await albumRepository.getPhotoCounts();
+
+    // Sort by sortOrder and merge photo counts
+    const albumsWithCounts = albums
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((album) => ({
+        ...album,
+        photoCount: photoCounts.get(album.id) ?? 0,
+      }));
+
+    return NextResponse.json(albumsWithCounts);
+  } catch (error) {
+    console.error("[API] GET /api/admin/albums:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
-
-  const albums = await albumRepository.findAll();
-  const photoCounts = await albumRepository.getPhotoCounts();
-
-  // Sort by sortOrder and merge photo counts
-  const albumsWithCounts = albums
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((album) => ({
-      ...album,
-      photoCount: photoCounts.get(album.id) ?? 0,
-    }));
-
-  return NextResponse.json(albumsWithCounts);
 }
 
 /**
@@ -45,37 +53,46 @@ export async function GET() {
  * Returns: Created album with 201 status
  */
 export async function POST(request: NextRequest) {
-  const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const session = await verifySession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const body = await request.json();
-  const result = createAlbumSchema.safeParse(body);
+    const body = await request.json();
+    const result = createAlbumSchema.safeParse(body);
 
-  if (!result.success) {
+    if (!result.success) {
+      const flat = z.flattenError(result.error);
+      return NextResponse.json(
+        { error: "Validation failed", details: flat.fieldErrors },
+        { status: 400 },
+      );
+    }
+
+    // Get max sortOrder to append at end
+    const albums = await albumRepository.findAll();
+    const maxSortOrder = Math.max(0, ...albums.map((a) => a.sortOrder));
+
+    const album = {
+      id: crypto.randomUUID(),
+      title: result.data.title,
+      description: result.data.description ?? null,
+      tags: result.data.tags ?? null,
+      coverPhotoId: null,
+      sortOrder: maxSortOrder + 1,
+      isPublished: false,
+      createdAt: new Date(),
+    };
+
+    await albumRepository.save(album);
+
+    return NextResponse.json(album, { status: 201 });
+  } catch (error) {
+    console.error("[API] POST /api/admin/albums:", error);
     return NextResponse.json(
-      { error: "Invalid data", details: result.error.flatten() },
-      { status: 400 },
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
-
-  // Get max sortOrder to append at end
-  const albums = await albumRepository.findAll();
-  const maxSortOrder = Math.max(0, ...albums.map((a) => a.sortOrder));
-
-  const album = {
-    id: crypto.randomUUID(),
-    title: result.data.title,
-    description: result.data.description ?? null,
-    tags: result.data.tags ?? null,
-    coverPhotoId: null,
-    sortOrder: maxSortOrder + 1,
-    isPublished: false,
-    createdAt: new Date(),
-  };
-
-  await albumRepository.save(album);
-
-  return NextResponse.json(album, { status: 201 });
 }
