@@ -86,7 +86,7 @@ export default async function PhotoDeepLinkPage({ params }: PageProps) {
       <main className="mx-auto max-w-6xl px-4 py-8">
         {photos.length === 0 ? (
           <div className="flex min-h-[60vh] items-center justify-center">
-            <p className="text-gray-500">No photos available yet.</p>
+            <p className="text-text-secondary">No photos available yet.</p>
           </div>
         ) : (
           <HomepageClient

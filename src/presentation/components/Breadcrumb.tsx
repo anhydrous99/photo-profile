@@ -19,21 +19,21 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
           return (
             <li key={item.label} className="flex items-center gap-2">
               {index > 0 && (
-                <span aria-hidden="true" className="text-gray-400">
+                <span aria-hidden="true" className="text-text-tertiary">
                   /
                 </span>
               )}
               {item.href && !isLast ? (
                 <Link
                   href={item.href}
-                  className="text-gray-600 hover:text-gray-900 hover:underline"
+                  className="text-text-secondary hover:text-text-primary hover:underline"
                 >
                   {item.label}
                 </Link>
               ) : (
                 <span
                   aria-current={isLast ? "page" : undefined}
-                  className="text-gray-900"
+                  className="text-text-primary"
                 >
                   {item.label}
                 </span>

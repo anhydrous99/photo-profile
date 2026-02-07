@@ -74,7 +74,7 @@ export function HomepageClient({
         <button
           type="button"
           onClick={() => handlePhotoClick(0)}
-          className="relative aspect-[3/2] w-full cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="relative aspect-[3/2] w-full cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-ring-offset"
           aria-label={`View ${heroPhoto.title || heroPhoto.originalFilename}`}
         >
           <FadeImage
@@ -95,7 +95,7 @@ export function HomepageClient({
               key={photo.id}
               type="button"
               onClick={() => handlePhotoClick(index + 1)}
-              className="relative aspect-square cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="relative aspect-square cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-ring-offset"
               aria-label={`View ${photo.title || photo.originalFilename}`}
             >
               <FadeImage

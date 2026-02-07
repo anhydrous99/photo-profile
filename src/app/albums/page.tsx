@@ -7,9 +7,9 @@ import type { Album } from "@/domain/entities/Album";
 // Placeholder icon for albums without photos
 function ImagePlaceholder() {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-gray-100">
+    <div className="flex h-full w-full items-center justify-center bg-surface-secondary">
       <svg
-        className="h-8 w-8 text-gray-400"
+        className="h-8 w-8 text-text-tertiary"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -60,17 +60,17 @@ export default async function AlbumsPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="mb-8 text-2xl font-semibold text-gray-900">Albums</h1>
+      <h1 className="mb-8 text-2xl font-semibold text-text-primary">Albums</h1>
 
       {albumsWithCovers.length === 0 ? (
-        <p className="text-center text-gray-500">No albums available.</p>
+        <p className="text-center text-text-secondary">No albums available.</p>
       ) : (
         <div className="space-y-4">
           {albumsWithCovers.map(({ album, coverPhotoId }) => (
             <Link
               key={album.id}
               href={`/albums/${album.id}`}
-              className="flex items-center gap-4 rounded-lg p-2 transition-colors hover:bg-gray-50"
+              className="flex items-center gap-4 rounded-lg p-2 transition-colors hover:bg-surface-hover"
             >
               <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg">
                 {coverPhotoId ? (
@@ -85,7 +85,7 @@ export default async function AlbumsPage() {
                   <ImagePlaceholder />
                 )}
               </div>
-              <span className="text-lg font-medium text-gray-900">
+              <span className="text-lg font-medium text-text-primary">
                 {album.title}
               </span>
             </Link>

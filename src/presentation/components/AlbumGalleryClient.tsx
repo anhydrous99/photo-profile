@@ -80,16 +80,18 @@ export function AlbumGalleryClient({
         ]}
       />
 
-      <h1 className="text-3xl font-semibold text-gray-900">{album.title}</h1>
+      <h1 className="text-3xl font-semibold text-text-primary">
+        {album.title}
+      </h1>
 
       {album.description && (
-        <p className="mt-2 mb-8 text-gray-600">{album.description}</p>
+        <p className="mt-2 mb-8 text-text-secondary">{album.description}</p>
       )}
 
       {!album.description && <div className="mb-8" />}
 
       {photos.length === 0 ? (
-        <p className="py-12 text-center text-gray-500">
+        <p className="py-12 text-center text-text-secondary">
           No photos in this album yet.
         </p>
       ) : (
@@ -99,7 +101,7 @@ export function AlbumGalleryClient({
               key={photo.id}
               type="button"
               onClick={() => handlePhotoClick(index)}
-              className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-ring-offset"
               aria-label={`View ${photo.title || photo.originalFilename}`}
             >
               <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
