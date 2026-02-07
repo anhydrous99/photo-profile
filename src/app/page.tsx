@@ -1,8 +1,24 @@
+import type { Metadata } from "next";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
 import { Header } from "@/presentation/components/Header";
 import { HomepageClient } from "@/presentation/components/HomepageClient";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: process.env.NEXT_PUBLIC_SITE_NAME || "Portfolio",
+  description:
+    process.env.NEXT_PUBLIC_SITE_DESCRIPTION || "A photography portfolio",
+  openGraph: {
+    title: process.env.NEXT_PUBLIC_SITE_NAME || "Portfolio",
+    description:
+      process.env.NEXT_PUBLIC_SITE_DESCRIPTION || "A photography portfolio",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+  },
+};
 
 export default async function Home() {
   const photoRepository = new SQLitePhotoRepository();

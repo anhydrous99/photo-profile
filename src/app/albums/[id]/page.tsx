@@ -1,3 +1,5 @@
+import { cache } from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AlbumGalleryClient } from "@/presentation/components/AlbumGalleryClient";
 import { SQLiteAlbumRepository } from "@/infrastructure/database/repositories/SQLiteAlbumRepository";
@@ -7,17 +9,64 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+const getAlbum = cache(async (id: string) => {
+  const albumRepo = new SQLiteAlbumRepository();
+  return albumRepo.findById(id);
+});
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const album = await getAlbum(id);
+
+  if (!album || !album.isPublished) {
+    return { title: "Album Not Found" };
+  }
+
+  const metadata: Metadata = {
+    title: album.title,
+    description: album.description || `Photos from ${album.title}`,
+    openGraph: {
+      title: album.title,
+      description: album.description || `Photos from ${album.title}`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+    },
+  };
+
+  // Use cover photo or first photo as OG image
+  if (album.coverPhotoId) {
+    const ogImageUrl = `/api/images/${album.coverPhotoId}/1200w.webp`;
+    metadata.openGraph!.images = [
+      { url: ogImageUrl, width: 1200, type: "image/webp" },
+    ];
+    metadata.twitter!.images = [ogImageUrl];
+  } else {
+    // Fallback: use first ready photo from album
+    const photoRepo = new SQLitePhotoRepository();
+    const photos = await photoRepo.findByAlbumId(id);
+    const firstReady = photos.find((p) => p.status === "ready");
+    if (firstReady) {
+      const ogImageUrl = `/api/images/${firstReady.id}/1200w.webp`;
+      metadata.openGraph!.images = [
+        { url: ogImageUrl, width: 1200, type: "image/webp" },
+      ];
+      metadata.twitter!.images = [ogImageUrl];
+    }
+  }
+
+  return metadata;
+}
+
 export default async function AlbumPage({ params }: PageProps) {
   const { id } = await params;
 
-  const albumRepo = new SQLiteAlbumRepository();
+  const album = await getAlbum(id);
   const photoRepo = new SQLitePhotoRepository();
-
-  // Fetch album and photos in parallel
-  const [album, allPhotos] = await Promise.all([
-    albumRepo.findById(id),
-    photoRepo.findByAlbumId(id),
-  ]);
+  const allPhotos = await photoRepo.findByAlbumId(id);
 
   // 404 if album doesn't exist or isn't published
   if (!album || !album.isPublished) {
