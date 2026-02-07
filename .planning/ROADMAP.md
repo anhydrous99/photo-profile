@@ -100,18 +100,19 @@ Plans:
 **Goal**: Visitors can link directly to a specific photo and shared links look good when previewed on social media
 **Depends on**: Phase 11 (EXIF data enriches OG tags), Phase 13 (album covers used in OG images, photo ordering for navigation context)
 **Requirements**: SHAR-01, SHAR-02, SHAR-03, SHAR-04
+**Plans:** 3 plans
 **Success Criteria** (what must be TRUE):
 
 1. Opening a photo in the lightbox updates the browser URL to include that photo's identifier without adding excessive history entries
 2. Navigating to a URL with a photo identifier opens the page with the lightbox already showing that specific photo
 3. Sharing an album URL on social media shows a preview card with the album's title, description, and cover photo image
 4. Sharing the homepage URL on social media shows a preview card with the site name and description
-   **Plans**: TBD
 
 Plans:
 
-- [ ] 14-01: TBD
-- [ ] 14-02: TBD
+- [ ] 14-01-PLAN.md — URL sync in lightbox + slug-based photo lookup infrastructure
+- [ ] 14-02-PLAN.md — Deep link pages + OpenGraph meta tags for all public routes
+- [ ] 14-03-PLAN.md — Human verification of shareability features
 
 ## Progress
 
@@ -124,4 +125,4 @@ Phases 12 and 13 are independent and could execute in parallel. Phase 14 depends
 | 11. EXIF Metadata Pipeline | v1.1      | 3/3            | ✓ Complete  | 2026-02-06 |
 | 12. Lightbox Polish        | v1.1      | 3/3            | ✓ Complete  | 2026-02-06 |
 | 13. Album Management       | v1.1      | 2/2            | ✓ Complete  | 2026-02-06 |
-| 14. Shareability           | v1.1      | 0/2            | Not started | -          |
+| 14. Shareability           | v1.1      | 0/3            | Not started | -          |
