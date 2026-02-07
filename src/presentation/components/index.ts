@@ -10,3 +10,4 @@ export { SortableAlbumCard } from "./SortableAlbumCard";
 export type { AlbumWithCount } from "./SortableAlbumCard";
 export { AlbumCreateModal } from "./AlbumCreateModal";
 export { DeleteAlbumModal } from "./DeleteAlbumModal";
+export { SortablePhotoCard } from "./SortablePhotoCard";
