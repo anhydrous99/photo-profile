@@ -62,11 +62,14 @@ Plans:
 2. On mobile, swiping down on a photo closes the lightbox
 3. On mobile, pinch-to-zoom and double-tap-to-zoom magnify the current photo
 4. A fullscreen button appears in the lightbox toolbar and entering fullscreen hides browser chrome (gracefully absent on unsupported browsers like iPhone Safari)
-   **Plans**: TBD
+
+**Plans:** 3 plans
 
 Plans:
 
-- [ ] 12-01: TBD
+- [ ] 12-01-PLAN.md — Backend: Add width/height to Photo entity, schema, worker, and data pipeline
+- [ ] 12-02-PLAN.md — Frontend: Enable Zoom, Fullscreen, srcSet, gestures in lightbox + dimensions backfill script
+- [ ] 12-03-PLAN.md — Verification: Human testing of all lightbox polish features
 
 ### Phase 13: Album Management
 
@@ -118,6 +121,6 @@ Phases 12 and 13 are independent and could execute in parallel. Phase 14 depends
 | Phase                      | Milestone | Plans Complete | Status      | Completed  |
 | -------------------------- | --------- | -------------- | ----------- | ---------- |
 | 11. EXIF Metadata Pipeline | v1.1      | 3/3            | ✓ Complete  | 2026-02-06 |
-| 12. Lightbox Polish        | v1.1      | 0/1            | Not started | -          |
+| 12. Lightbox Polish        | v1.1      | 0/3            | Not started | -          |
 | 13. Album Management       | v1.1      | 0/2            | Not started | -          |
 | 14. Shareability           | v1.1      | 0/2            | Not started | -          |
