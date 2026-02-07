@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 11: EXIF Metadata Pipeline** - Extract, store, display, and backfill camera metadata from photos
 - [x] **Phase 12: Lightbox Polish** - Responsive images, touch gestures, zoom, and fullscreen in the lightbox
-- [ ] **Phase 13: Album Management** - Cover photo selection and drag-to-reorder photos within albums
+- [x] **Phase 13: Album Management** - Cover photo selection and drag-to-reorder photos within albums
 - [ ] **Phase 14: Shareability** - Direct photo links and OpenGraph meta tags for social sharing
 
 ## Phase Details
@@ -92,8 +92,8 @@ Plans:
 
 Plans:
 
-- [ ] 13-01-PLAN.md — Backend: Fix FK constraint, ORDER BY, addToAlbum sortOrder + photo reorder API
-- [ ] 13-02-PLAN.md — Frontend: Admin album detail page with drag-to-reorder grid and cover photo selection
+- [x] 13-01-PLAN.md — Backend: Fix FK constraint, ORDER BY, addToAlbum sortOrder + photo reorder API
+- [x] 13-02-PLAN.md — Frontend: Admin album detail page with drag-to-reorder grid and cover photo selection
 
 ### Phase 14: Shareability
 
@@ -123,5 +123,5 @@ Phases 12 and 13 are independent and could execute in parallel. Phase 14 depends
 | -------------------------- | --------- | -------------- | ----------- | ---------- |
 | 11. EXIF Metadata Pipeline | v1.1      | 3/3            | ✓ Complete  | 2026-02-06 |
 | 12. Lightbox Polish        | v1.1      | 3/3            | ✓ Complete  | 2026-02-06 |
-| 13. Album Management       | v1.1      | 0/2            | Not started | -          |
+| 13. Album Management       | v1.1      | 2/2            | ✓ Complete  | 2026-02-06 |
 | 14. Shareability           | v1.1      | 0/2            | Not started | -          |

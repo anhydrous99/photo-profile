@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** Let the photos speak for themselves — a clean, distraction-free experience where the photography is the focus
-**Current focus:** Milestone v1.1 — Phase 13 (Album Management) in progress
+**Current focus:** Milestone v1.1 — Phase 13 (Album Management) complete
 
 ## Current Position
 
@@ -74,5 +74,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 13-02-PLAN.md
+Stopped at: Completed Phase 13 (Album Management)
 Resume file: None

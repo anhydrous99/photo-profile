@@ -23,10 +23,10 @@ Requirements for the v1.1 Enhancement milestone. Each maps to roadmap phases.
 
 ### Album Management
 
-- [ ] **ALBM-01**: Admin can select a cover photo for an album from the album's photos
-- [ ] **ALBM-02**: Current cover photo is visually indicated in admin
-- [ ] **ALBM-03**: Admin can drag to reorder photos within an album
-- [ ] **ALBM-04**: Photo order in admin is reflected on public album page
+- [x] **ALBM-01**: Admin can select a cover photo for an album from the album's photos
+- [x] **ALBM-02**: Current cover photo is visually indicated in admin
+- [x] **ALBM-03**: Admin can drag to reorder photos within an album
+- [x] **ALBM-04**: Photo order in admin is reflected on public album page
 
 ### Sharing
 
@@ -72,10 +72,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LBOX-02     | 12    | Complete |
 | LBOX-03     | 12    | Complete |
 | LBOX-04     | 12    | Complete |
-| ALBM-01     | 13    | Pending  |
-| ALBM-02     | 13    | Pending  |
-| ALBM-03     | 13    | Pending  |
-| ALBM-04     | 13    | Pending  |
+| ALBM-01     | 13    | Complete |
+| ALBM-02     | 13    | Complete |
+| ALBM-03     | 13    | Complete |
+| ALBM-04     | 13    | Complete |
 | SHAR-01     | 14    | Pending  |
 | SHAR-02     | 14    | Pending  |
 | SHAR-03     | 14    | Pending  |
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 ---
 
 _Requirements defined: 2026-02-05_
-_Last updated: 2026-02-06 after Phase 12 completion_
+_Last updated: 2026-02-06 after Phase 13 completion_
