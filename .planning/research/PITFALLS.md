@@ -1,516 +1,407 @@
-# Domain Pitfalls: v1.1 Enhancement Features
+# Domain Pitfalls: Quality Hardening
 
-**Domain:** Photography portfolio enhancements (EXIF, lightbox, reordering, social sharing)
-**Researched:** 2026-02-05
-**Scope:** Adding features to an existing, working v1.0 system
-**Confidence:** HIGH for codebase-specific pitfalls, MEDIUM for library-specific pitfalls
+**Domain:** Testing, error handling, performance optimization, tech debt for photography portfolio
+**Researched:** 2026-02-06
+**Confidence:** HIGH (all pitfalls verified by reading actual source code)
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, data loss, or broken existing functionality.
+Mistakes that cause rewrites, test suites that give false confidence, or regressions in production.
 
-### Pitfall 1: EXIF GPS Data Leaking to Public Visitors
+### Pitfall 1: Module-Scope Database Import Blocks Test Injection
 
-**What goes wrong:** Extracting EXIF metadata from uploaded photos and displaying all of it publicly, including GPS coordinates that reveal the photographer's home, clients' locations, or private venues.
+**What goes wrong:** Repository classes import the production database singleton at module scope. Tests cannot inject an in-memory SQLite database without either refactoring or fragile module mocking.
 
-**Why it happens:** EXIF extraction returns dozens of fields. Developers display everything to look complete, not realizing GPS lat/long is embedded in most phone photos and many DSLR images with GPS modules.
+**THIS PROJECT'S SPECIFIC RISK:** Both `SQLitePhotoRepository.ts` and `SQLiteAlbumRepository.ts` import `db` from `../client` at the top of the file:
+
+```typescript
+import { db } from "../client";
+```
+
+The `client.ts` module calls `initializeDatabase()` at module load time (line 140), which connects to the real SQLite file on disk. When a test file imports a repository, it triggers a real database connection immediately.
 
 **Consequences:**
 
-- Privacy violation for the photographer and subjects
-- Legal liability (GDPR, location data is PII)
-- Location of private shoots exposed publicly
-
-**Warning signs:**
-
-- EXIF display includes "GPSLatitude", "GPSLongitude", or "GPSPosition" fields
-- No explicit allowlist of which fields to show
-- Using a library's "parse everything" mode without filtering output
+- Tests hit the production/development database instead of an isolated test database
+- Tests are not isolated -- one test's data leaks into another
+- Tests fail if the database file does not exist or has wrong schema
+- Cannot run tests in CI without the real database file
 
 **Prevention:**
 
-- Use a strict allowlist approach: only display camera make, model, lens, focal length, aperture (f-stop), shutter speed, ISO, and date taken
-- Never display: GPS coordinates, serial numbers, software versions, owner name, unique image ID
-- Strip GPS from the EXIF buffer stored in the database (extract and discard, do not persist)
-- Consider stripping EXIF from served derivative images entirely (Sharp's `withMetadata()` preserves ICC profiles without EXIF)
+- Refactor repositories to accept a database instance via constructor parameter:
+  ```typescript
+  export class SQLitePhotoRepository implements PhotoRepository {
+    constructor(private db: typeof import("../client").db) {}
+    // ... methods use this.db instead of imported db
+  }
+  ```
+- Export a `createDatabase` factory from `client.ts` so tests can call `createDatabase(":memory:")`
+- Keep the default export `db` for production use -- backwards compatible
+- Alternative (less recommended): Use `vi.mock("@/infrastructure/database/client")` to replace the module in tests. This works but is brittle -- the mock must match the real module's shape exactly.
 
-**Detection:** Review the stored EXIF JSON/fields and confirm GPS data is absent. Search for "GPS" in any metadata stored in the database.
+**Detection:** If tests pass but the test database file grows in size, tests are hitting the real database. If tests hang at startup, the client module is trying to connect to a non-existent file.
 
-**Phase relevance:** Must be addressed when implementing EXIF extraction. Build the allowlist into the extraction step, not as a display-time filter.
+**Phase relevance:** Test infrastructure setup. Must be the FIRST thing done before any repository test can be written.
 
 ---
 
-### Pitfall 2: Schema Migration Breaking Existing Data
+### Pitfall 2: Testing Repository Logic by Mocking Drizzle
 
-**What goes wrong:** Adding new columns (EXIF fields, photo sort order within albums, etc.) to the SQLite database causes data loss or runtime errors.
+**What goes wrong:** Developers mock Drizzle ORM's query builder chain (`db.select().from().where().limit()`) in tests. The tests verify mock behavior, not actual SQL execution. Queries that would fail against real SQLite pass in tests.
 
-**Why it happens:** The project has a known pattern where `db:push` (Drizzle Kit push) can fail on SQLite ALTER TABLE operations. During v1.0 Phase 6, this caused runtime errors. The project's MEMORY.md explicitly warns: "Always use ALTER TABLE directly, never db:push."
-
-**THIS PROJECT'S SPECIFIC RISK:** The `initializeDatabase()` function in `src/infrastructure/database/client.ts` uses `CREATE TABLE IF NOT EXISTS`. If tables already exist (they do), new columns added to the schema file are NOT reflected in the actual database. The Drizzle schema already has `tags` in albums that is NOT in the `CREATE TABLE` statement -- evidence of existing schema drift.
+**Why it happens:** Mocking seems easier than setting up a test database. Drizzle's fluent API makes it tempting to mock each method in the chain.
 
 **Consequences:**
 
-- Adding EXIF columns to the `photos` table requires manual ALTER TABLE
-- `db:push` may try to recreate the table, losing all photo records
-- Runtime errors from Drizzle querying columns that do not exist in SQLite
+- Tests pass but SQL has bugs (wrong joins, missing WHERE clauses, incorrect ORDER BY)
+- Mock chain breaks whenever Drizzle ORM is updated
+- No coverage of `toDomain`/`toDatabase` mapping with real data types (e.g., SQLite integers becoming JavaScript numbers)
+- False confidence -- 100% mock-passing tests with 0% real SQL validation
 
-**Warning signs:**
-
-- "no such column" errors at runtime
-- Drizzle Kit push output showing "DROP TABLE" and "CREATE TABLE" instead of "ALTER TABLE"
-- Schema file says column exists but `SELECT` fails
+**THIS PROJECT'S SPECIFIC RISK:** `SQLitePhotoRepository.toDomain()` does `JSON.parse(row.exifData)` on a text column. A mock would return pre-parsed objects, never catching the JSON.parse failure path. Also, `updatePhotoSortOrders` uses a transaction with sequential updates -- mocking the transaction behavior is complex and unreliable.
 
 **Prevention:**
 
-- Write explicit `ALTER TABLE photos ADD COLUMN` SQL migration for each new field
-- Run migrations BEFORE updating the Drizzle schema to match
-- Add new columns as nullable (SQLite requires this for ALTER TABLE ADD COLUMN)
-- Backfill existing rows after adding column
-- Test migration on a copy of the production database first
-- Keep the `initializeDatabase()` CREATE TABLE statements in sync with schema (or remove them in favor of migration-only approach)
+- Use real in-memory SQLite via `new Database(":memory:")` with Drizzle
+- Create all tables in the test database using the same SQL as `initializeDatabase()`
+- Each test starts with a fresh in-memory database (instant creation, ~1ms)
+- Test real data round-trips: insert via `save()`, read via `findById()`, verify all fields match
+- Reserve mocking for truly external services: Redis (BullMQ), network calls
 
-**Detection:** After migration, verify with `PRAGMA table_info(photos)` that all expected columns exist.
+**Detection:** If your test file has `vi.mock("drizzle-orm")` or mocks `db.select`, you are testing the mock, not the query.
 
-**Phase relevance:** Must be the FIRST step of any phase that adds database columns. EXIF metadata storage is the primary trigger.
+**Phase relevance:** Integration testing phase. Establish the in-memory DB pattern in the first repository test.
 
 ---
 
-### Pitfall 3: Sharp EXIF Returns Raw Buffer, Not Parsed Object
+### Pitfall 3: JSON.parse in Repository toDomain Crashes on Corrupt Data
 
-**What goes wrong:** Developers call `sharp(image).metadata()` expecting parsed EXIF fields like `{ camera: "Canon EOS R5", aperture: "f/2.8" }` but receive `{ exif: <Buffer ...> }` -- a raw binary buffer requiring a second parsing step.
+**What goes wrong:** `SQLitePhotoRepository.toDomain()` calls `JSON.parse(row.exifData)` at line 125 with no try/catch. If the `exif_data` column contains corrupt, truncated, or malformed JSON, every page that loads photos will crash with an unhandled error.
 
-**Why it happens:** Sharp's `metadata()` function returns image dimensions, format, color space, and orientation as parsed fields, but EXIF, IPTC, and XMP data are returned as raw buffers. The only parsed EXIF value is the orientation integer.
+**THIS PROJECT'S SPECIFIC RISK:** This is on the critical path for every public page (homepage, album pages) and every admin page that displays photos. A single corrupt row crashes the entire application for all users.
+
+**Current code (vulnerable):**
+
+```typescript
+private toDomain(row: typeof photos.$inferSelect): Photo {
+  return {
+    // ...
+    exifData: row.exifData ? JSON.parse(row.exifData) : null,
+    // ...
+  };
+}
+```
 
 **Consequences:**
 
-- EXIF feature appears to work in testing (metadata returns something) but camera/lens/settings fields are absent
-- Developers waste time trying to decode the buffer manually
-- Falls back to displaying only width/height/format (not what photographers want)
-
-**Warning signs:**
-
-- `metadata.exif` is a Buffer, not an object
-- Camera make/model fields are undefined
-- Only `metadata.width`, `metadata.height`, `metadata.orientation` are populated
+- Homepage crashes if any photo has corrupt EXIF JSON
+- Album pages crash if any photo in the album has corrupt EXIF
+- Admin dashboard crashes, preventing the admin from fixing the data
+- Single corrupt database row takes down the entire site
 
 **Prevention:**
 
-- Use a dedicated EXIF parsing library to decode Sharp's raw EXIF buffer:
-  - `exifr` (recommended: fastest at 2.5ms/file, reads buffers directly, 497K weekly downloads)
-  - `exif-reader` (lightweight alternative, 62K weekly downloads, designed to parse Sharp's EXIF buffer)
-  - `exifreader` (most configurable bundle size, 91K weekly downloads)
-- Extract EXIF during the image processing worker job (not at upload time, not at display time)
-- Parse the buffer once, store the relevant fields as JSON in the database
+- Wrap `JSON.parse` in try/catch, returning `null` on failure:
+  ```typescript
+  exifData: row.exifData ? (() => {
+    try { return JSON.parse(row.exifData); }
+    catch { return null; }
+  })() : null,
+  ```
+- Or better: create a `safeParseJson<T>(json: string | null): T | null` utility
+- Log corrupt JSON occurrences for investigation
+- Add a test that verifies toDomain handles corrupt JSON gracefully
 
-**Detection:** In development, log `typeof metadata.exif` and confirm it is `Buffer`. Verify your parsing library can read it.
+**Detection:** Search for `JSON.parse` calls in repository code that lack surrounding try/catch.
 
-**Phase relevance:** EXIF extraction implementation. Choose the parsing library early and validate with real camera files.
+**Phase relevance:** Should be fixed immediately as a P0 bug, even before the quality milestone formally starts. This is a latent production crash waiting to happen.
 
 ---
 
-### Pitfall 4: Photo Reordering Breaks Public Gallery Sort Order
+### Pitfall 4: Testing API Routes Without Mocking Next.js Server-Only APIs
 
-**What goes wrong:** Adding drag-to-reorder for photos within an album works in the admin panel but the public album page shows photos in the wrong order (or the order keeps reverting).
+**What goes wrong:** Vitest imports API route handler functions directly, but the handlers call `cookies()` from `next/headers` (via `verifySession()`). `cookies()` only works within the Next.js request context. Tests crash with "cookies was called outside of a request scope" or similar errors.
 
-**THIS PROJECT'S SPECIFIC RISK:** The `photo_albums` junction table already has a `sortOrder` column, BUT the `SQLitePhotoRepository.findByAlbumId()` method does NOT order by it. The query at line 22-28 of `SQLitePhotoRepository.ts` joins `photos` with `photo_albums` but has no `.orderBy()` clause. Similarly, `addToAlbum()` hardcodes `sortOrder: 0` for all new entries.
+**THIS PROJECT'S SPECIFIC RISK:** All 8 API route files call `verifySession()` as their first action, which internally uses `cookies()` from `next/headers`. The `cookies()` function is a Next.js server-only API that requires the Next.js request lifecycle.
 
 **Consequences:**
 
-- Admin reorders photos, saves successfully, but public page shows arbitrary order
-- Photos appear in insertion order (SQLite default) rather than explicit sort order
-- Reorder state is persisted to the database but never read back
-
-**Warning signs:**
-
-- After reordering in admin, refreshing the public album page shows old order
-- All photos in `photo_albums` have `sortOrder = 0`
-- `findByAlbumId` returns results in inconsistent order
+- Cannot unit test any API route without mocking the auth module
+- Mock must handle both "authenticated" and "unauthenticated" paths
+- Tests become coupled to the internal implementation of `verifySession()`
 
 **Prevention:**
 
-- Add `.orderBy(asc(photoAlbums.sortOrder))` to `findByAlbumId()`
-- Create a `updatePhotoSortOrders(albumId, photoIds)` repository method (parallel to existing `updateSortOrders` for albums)
-- When adding a photo to an album, set `sortOrder` to `MAX(sortOrder) + 1` for that album (not hardcoded 0)
-- Create an API endpoint for photo reorder (similar to existing `/api/admin/albums/reorder`)
-- Test: reorder photos, refresh public page, confirm order matches
+Two approaches, not mutually exclusive:
 
-**Detection:** Query `SELECT photo_id, sort_order FROM photo_albums WHERE album_id = ? ORDER BY sort_order` and verify values are sequential, not all zeros.
+**Approach A (recommended for unit tests):** Mock the auth module:
 
-**Phase relevance:** Photo reordering feature. Fix `findByAlbumId` ordering BEFORE building the reorder UI, or the UI will appear broken on first test.
+```typescript
+vi.mock("@/infrastructure/auth", () => ({
+  verifySession: vi.fn().mockResolvedValue({ userId: "test-admin" }),
+}));
+```
+
+This is appropriate because auth is a cross-cutting concern, not the logic being tested.
+
+**Approach B (recommended for auth flow tests):** Use Playwright E2E tests that go through the real Next.js server. Test login, session creation, and protected route access end-to-end.
+
+**Detection:** If API route tests crash before reaching your assertion, check if `cookies()` or `headers()` is being called outside the Next.js context.
+
+**Phase relevance:** API route integration testing. Decide on the mocking strategy before writing the first API test.
 
 ---
 
-### Pitfall 5: Deep Links Break Browser Back Button
+### Pitfall 5: Error Boundaries That Swallow Errors Without Logging
 
-**What goes wrong:** Adding direct links to specific photos (e.g., `/albums/abc?photo=xyz`) causes the browser back button to cycle through every photo the user viewed in the lightbox instead of returning to the gallery.
+**What goes wrong:** error.tsx files catch errors and render a nice "Something went wrong" UI, but the error object is never logged. Bugs are hidden from the developer. Users see a nice page but the underlying issue is never diagnosed or fixed.
 
-**Why it happens:** Each photo navigation in the lightbox pushes a new history entry via `history.pushState()`. User opens lightbox, swipes through 15 photos, then has to press back 15 times to return to the album grid.
+**Why it happens:** Next.js error.tsx receives the error as a prop, but the component is a client component (`"use client"`). Console.error in client components goes to the browser console, not the server logs. Developers forget to add logging because the UI looks correct.
 
 **Consequences:**
 
-- Extremely frustrating user experience
-- Users abandon the site rather than clicking back repeatedly
-- Breaks expected browser navigation pattern
-
-**Warning signs:**
-
-- Each swipe/arrow-key in lightbox changes the URL
-- `window.history.length` increases rapidly during lightbox use
-- Back button returns to previous photo, not to gallery
+- Production errors are invisible to the developer
+- Same error recurs indefinitely because nobody knows about it
+- Users see "Something went wrong" but the developer does not know what went wrong
 
 **Prevention:**
 
-- Use `history.replaceState()` for lightbox navigation (replaces current entry, does not add new entries)
-- Use `history.pushState()` ONLY when opening the lightbox (so back button closes it)
-- On lightbox close, `history.replaceState()` back to the clean album URL (remove photo param)
-- Alternative: use URL hash (`#photo=xyz`) with `hashchange` event -- hashes do not add to history when replaced
-- Test: open lightbox, navigate 10 photos, press back once -- should return to gallery grid
+- Always log the error in a `useEffect` (client-side logging is better than nothing):
+  ```typescript
+  "use client";
+  export default function Error({ error, reset }) {
+    useEffect(() => {
+      console.error("[ErrorBoundary]", error);
+    }, [error]);
+    return <div>Something went wrong. <button onClick={reset}>Try again</button></div>;
+  }
+  ```
+- For server-side logging, consider a `reportError()` utility that writes to a file or sends to a logging endpoint
+- At minimum, error.tsx must render the `reset` button so users can attempt recovery
+- global-error.tsx must render its own `<html>` and `<body>` tags (it replaces the root layout)
 
-**Detection:** Open lightbox, navigate several photos, check `window.history.length` -- if it increased by more than 1, the history stack is polluted.
+**Detection:** If error.tsx has no `useEffect` with `console.error`, errors are being swallowed.
 
-**Phase relevance:** Direct photo linking feature. Must be designed correctly from the start; retrofitting history behavior is painful.
+**Phase relevance:** Error handling implementation. Every error.tsx file must include logging from day one.
 
 ---
 
 ## Moderate Pitfalls
 
-Mistakes that cause delays, rework, or noticeable quality issues.
+Mistakes that cause delays, flaky tests, or quality gaps.
 
-### Pitfall 6: Fullscreen Mode Fails Silently on iPhone Safari
+### Pitfall 6: Test Database Schema Drift from Production
 
-**What goes wrong:** The fullscreen button appears but does nothing on iPhone, or worse, is hidden entirely with no explanation. Users on iPhones (a significant portion of photography portfolio visitors) cannot access fullscreen mode.
+**What goes wrong:** The in-memory test database is created with CREATE TABLE SQL that does not match the production database. Tests pass on the test schema but production has different columns, constraints, or indexes due to manual migrations.
 
-**Why it happens:** iPhone Safari does not support the Fullscreen API at all. YARL's Fullscreen plugin detects this and hides the button automatically -- but if the feature is marketed as "fullscreen mode," iPhone users feel they are missing functionality.
+**THIS PROJECT'S SPECIFIC RISK:** The `initializeDatabase()` function in `client.ts` has inline CREATE TABLE statements AND migration logic (ALTER TABLE for exif_data, width, height, tags, FK constraint fix). The test database helper must replicate ALL of this, or test schema diverges from production.
 
-**Consequences:**
+Evidence of existing drift:
 
-- Feature gap on a major platform
-- User confusion about missing button
-- Wasted development time if fullscreen was a primary feature goal
-
-**Warning signs:**
-
-- Fullscreen button disappears on iOS testing
-- No console errors (it is detected and handled silently)
-- Works on iPad Safari but not iPhone Safari
-
-**Prevention:**
-
-- Do NOT promise fullscreen as a headline feature -- it is desktop/Android only
-- On iOS, implement a "cinema mode" alternative: hide navigation/header, expand image to viewport, use dark background
-- YARL's Fullscreen plugin is still worth using for desktop -- just do not rely on it as the only immersive viewing mode
-- Set `fullscreen.auto: false` (do not auto-enter fullscreen on lightbox open)
-- Test on actual iPhone hardware, not just Chrome DevTools mobile emulation
-
-**Detection:** Test on iPhone Safari. If the fullscreen button is absent, the browser does not support the API.
-
-**Phase relevance:** Lightbox enhancement phase. Design the immersive viewing experience to work WITHOUT the Fullscreen API as the baseline.
-
----
-
-### Pitfall 7: Touch Gesture Conflicts with dnd-kit Sortable
-
-**What goes wrong:** In the admin photo reorder UI, touch-based drag conflicts with native scrolling. Users try to scroll the photo grid on mobile but accidentally start dragging photos, or they try to drag but the page scrolls instead.
-
-**THIS PROJECT'S SPECIFIC RISK:** The existing album reorder in `AlbumsPageClient.tsx` uses `PointerSensor` and `KeyboardSensor` only. `PointerSensor` does not distinguish between scroll intent and drag intent on touchscreens, causing the documented dnd-kit issue where "sortable not working correctly when using touchscreens" (GitHub issue #834).
+- `albums` CREATE TABLE statement (line 38-47 of client.ts) does not include `tags TEXT` column
+- Drizzle schema (schema.ts) has `tags: text("tags")` on albums
+- The `tags` column was added via ALTER TABLE in a migration that is NOT in the CREATE TABLE
 
 **Consequences:**
 
-- Admin cannot reorder photos on mobile/tablet
-- Scrolling becomes impossible in the reorder view
-- Touch users experience janky, unpredictable behavior
-
-**Warning signs:**
-
-- Touching a photo card starts dragging when user intended to scroll
-- Cannot scroll down in a long photo list on touch devices
-- Drag starts on the first touch (no activation delay)
+- Tests pass but production queries fail (column not found)
+- New columns added via ALTER TABLE are missing from test schema
+- FK constraint behavior differs between test and production
 
 **Prevention:**
 
-- Use `TouchSensor` instead of or alongside `PointerSensor` for the reorder UI
-- Configure activation constraints: `{ delay: 250, tolerance: 5 }` (250ms press-and-hold before drag starts, 5px movement tolerance)
-- Add visual affordance: a dedicated drag handle (grip icon) that activates dragging, while the rest of the card scrolls normally
-- Use `MouseSensor` for desktop and `TouchSensor` for mobile (not `PointerSensor` for both)
-- The existing album reorder may also need this fix
+- Create a single source of truth for the test database schema -- use the SAME SQL as `initializeDatabase()` including all migrations
+- Or better: extract the schema DDL into a shared function used by both production init and test helper
+- After any migration, update the test database helper to match
+- Add a test that compares `PRAGMA table_info` output from test DB vs production schema expectations
 
-**Detection:** Test on a real touch device (not just Chrome DevTools). Try scrolling a list of 20+ photos.
+**Detection:** If a repository test passes but the same operation fails in development, the test schema is stale.
 
-**Phase relevance:** Photo reordering feature. Also consider retroactively fixing the album reorder while implementing photo reorder.
+**Phase relevance:** Test infrastructure setup. The test DB helper must be comprehensive from the start.
 
 ---
 
-### Pitfall 8: OpenGraph Images Not Served Correctly for Crawlers
+### Pitfall 7: Overly Granular Error Boundaries
 
-**What goes wrong:** Social media previews show a broken image, a generic fallback, or nothing at all when sharing an album or photo link.
-
-**Why it happens:** Multiple common mistakes:
-
-1. OG image URL is a relative path (must be absolute with domain)
-2. OG image is behind authentication (crawlers cannot access `/api/images/...` if behind proxy)
-3. OG image is AVIF/WebP format (some crawlers only support JPEG/PNG)
-4. OG image is too large or too small for the platform
-
-**THIS PROJECT'S SPECIFIC RISK:** The app serves images only in WebP and AVIF format through `/api/images/[photoId]/[filename]`. Social media crawlers (Facebook, Twitter, LinkedIn) have limited format support. Facebook supports WebP but Twitter/LinkedIn may not render AVIF. Additionally, the current image serving requires knowing the exact filename (e.g., `600w.webp`), which is not a pattern OG image URLs typically follow.
-
-**Consequences:**
-
-- Shared links look broken or generic on social media
-- Reduces click-through rates dramatically
-- Professional photographers need their images to preview beautifully when shared
-
-**Warning signs:**
-
-- Facebook Sharing Debugger shows "Could not scrape URL" or "Image not found"
-- Twitter Card Validator shows no image preview
-- OG image works locally but not on deployed site
+**What goes wrong:** Adding error.tsx to every route segment (every page, every layout) creates a confusing user experience where different parts of the page show error states independently, and the error messages are too generic to be helpful.
 
 **Prevention:**
 
-- Serve OG images in JPEG or PNG format (maximum compatibility) -- generate one OG-specific derivative
-- Use absolute URLs in meta tags: `https://yourdomain.com/api/og/album/[id]`
-- Create a dedicated OG image API route that serves JPEG, separate from the main image API
-- OG image dimensions: 1200x630 pixels (standard across all platforms)
-- Ensure the OG image route is NOT behind authentication (the proxy.ts only protects `/admin/*`, so public routes should work, but verify)
-- Use Next.js `generateMetadata()` in server components -- it is supported in App Router and resolves before HTML is sent
-- Test with: [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/), [Twitter Card Validator](https://cards-dev.twitter.com/validator)
+- Add error boundaries at meaningful UI boundaries, not file boundaries:
+  - Root: catch-all safety net
+  - `albums/[id]`: "This album could not be loaded" (specific)
+  - `admin/(protected)`: "Admin page error" (specific)
+- Do NOT add error.tsx to: homepage (root catches it), individual admin pages (admin/(protected) catches them), the login page (simple form, unlikely to error)
+- Each error.tsx should have a different message explaining what went wrong contextually
+- 3-5 error.tsx files is sufficient for this app's route structure
 
-**Detection:** Use `curl -I` on the OG image URL and verify it returns 200 with a `Content-Type` of `image/jpeg` or `image/png`.
+**Detection:** If you have more error.tsx files than route groups, you probably have too many.
 
-**Phase relevance:** OpenGraph implementation. Must generate JPEG derivatives specifically for OG use, not reuse WebP/AVIF.
+**Phase relevance:** Error handling implementation.
 
 ---
 
-### Pitfall 9: EXIF Extraction Happening at Wrong Time in Pipeline
+### Pitfall 8: Coverage Metrics Driving Low-Value Tests
 
-**What goes wrong:** EXIF metadata is extracted at upload time (in the API route) or at display time (in the server component), instead of during the background worker job.
-
-**Why it happens:** Seems natural to extract EXIF "when we have the file" (upload) or "when we need it" (render).
-
-**Consequences if extracted at upload time:**
-
-- Upload API route becomes slower (EXIF parsing adds 2-50ms per file depending on library)
-- Original file must be read twice (once for upload, once for processing)
-- If extraction fails, the upload fails too
-
-**Consequences if extracted at display time:**
-
-- Original file must be accessible from the web server (it may only be on the worker machine in production)
-- Reading a 50MP file's EXIF on every page load is wasteful
-- Creates a dependency between the display layer and the filesystem
-
-**THIS PROJECT'S SPECIFIC RISK:** The worker already calls `sharp(inputPath).metadata()` to get dimensions (for the no-upscale check). Adding EXIF extraction here is a natural extension. The worker has access to the original file path and already writes results back to the database.
+**What goes wrong:** After adding @vitest/coverage-v8, developers see 15% coverage and feel pressure to reach 80%+. They write tests for trivial code: barrel re-exports (`index.ts`), type definitions, Tailwind class strings, and static configuration. Coverage number goes up, but test value does not.
 
 **Prevention:**
 
-- Extract EXIF in the image processing worker, alongside derivative generation
-- Parse the EXIF buffer from `sharp(inputPath).metadata().exif` using exifr or exif-reader
-- Store parsed fields as a JSON column on the `photos` table
-- On display, read from database (already available in photo queries)
-- If extraction fails for a particular image, log it and continue -- do not fail the entire processing job
+- Target coverage only on files with logic:
+  - `infrastructure/services/` (imageService, exifService)
+  - `infrastructure/database/repositories/` (SQL queries, data mapping)
+  - `infrastructure/auth/` (session, password)
+  - `infrastructure/storage/` (file operations)
+  - `lib/imageLoader.ts` (URL construction)
+- Exclude from coverage: `domain/` (interfaces only), `presentation/` (deferred), `app/` (tested via E2E)
+- Configure exclude patterns in vitest.config.ts coverage section
+- Measure coverage on infrastructure layer only, not total codebase
 
-**Detection:** Check where the EXIF extraction call lives. If it is outside the worker, move it.
+**Detection:** If tests are asserting that an import re-exports correctly or that a TypeScript interface has certain properties, the test has no value.
 
-**Phase relevance:** EXIF extraction implementation. Decide on extraction location before coding.
+**Phase relevance:** Test authoring. Set coverage expectations in vitest.config.ts before writing tests.
 
 ---
 
-### Pitfall 10: Lightbox Transition Customization Fighting YARL Defaults
+### Pitfall 9: Parallel Image Processing Causing Memory Pressure
 
-**What goes wrong:** Attempting to implement custom smooth transitions (crossfade, zoom-from-thumbnail) by overriding YARL's built-in animation system creates flickering, double-rendering, or animation conflicts.
+**What goes wrong:** Converting sequential WebP+AVIF generation to `Promise.all` doubles peak memory usage. For large images (50MP = ~144MB per Sharp pipeline), this means 288MB per image instead of 144MB. With worker concurrency of 2, peak memory could reach ~576MB.
 
-**Why it happens:** YARL has its own animation system with `fade` and `swipe` timing. The existing PhotoLightbox component already configures these at lines 56-59. Adding CSS transitions on top of YARL's JavaScript-driven animations creates two animation systems fighting each other.
-
-**Consequences:**
-
-- Images flicker or flash white during transitions
-- Animations are janky or inconsistent
-- Worse visual experience than the current v1.0 defaults
-
-**Warning signs:**
-
-- CSS `transition` properties on elements YARL also animates
-- Two animation durations visible (e.g., 200ms fade + 300ms CSS transition)
-- Lightbox works smoothly with default styles but breaks with customizations
+**THIS PROJECT'S SPECIFIC RISK:** The worker already limits concurrency to 2 with a comment: "50MP images use ~144MB each." The `.clone()` approach shares the input buffer but each output format still requires its own processing memory.
 
 **Prevention:**
 
-- Work WITH YARL's animation system, not against it:
-  - Use the `animation` prop to control YARL's built-in timings
-  - Use the `render` prop for custom slide rendering (YARL animates the container, you render the content)
-  - Use YARL's `styles` prop for CSS-only visual changes (background color, padding)
-- For thumbnail-to-lightbox zoom transitions, this is NOT a built-in YARL feature -- it requires:
-  - Capturing the thumbnail's bounding rect before lightbox opens
-  - Using CSS `transform: scale()` and `transform-origin` on the lightbox container
-  - This is complex and fragile -- consider deferring to a later milestone
-- Stick to YARL's built-in `fade` and `swipe` animations for v1.1, only adjusting timing values
-- The Zoom plugin is for zoom-on-pinch/scroll within the lightbox, NOT for zoom-from-thumbnail transitions
+- Measure memory before parallelizing: run the worker with `--max-old-space-size` logging
+- If parallelizing, consider reducing worker concurrency from 2 to 1 to compensate
+- Only parallelize WebP+AVIF for the same width (safe because clone() reuses decoded data)
+- Do NOT parallelize across different widths (that would multiply memory by 4)
+- Test with the largest image in the portfolio (check max dimensions)
 
-**Detection:** If adding CSS transitions, check whether YARL is also animating the same element by inspecting with DevTools during transitions.
+**Detection:** Worker crashes with "JavaScript heap out of memory" or "Killed" by OS OOM killer.
 
-**Phase relevance:** Lightbox enhancement phase. Set realistic expectations -- smooth crossfade is easy, zoom-from-thumbnail is hard.
+**Phase relevance:** Performance optimization. Measure first, optimize carefully.
 
 ---
 
-### Pitfall 11: Album Cover Selection UI Without Validation
+### Pitfall 10: Adding Bundle Analyzer Without Understanding Next.js Build Output
 
-**What goes wrong:** The admin selects a cover photo for an album, but the selected photo is later deleted. The album then references a non-existent photo as its cover, causing broken images on the public albums page.
-
-**THIS PROJECT'S SPECIFIC RISK:** The `albums` table has `cover_photo_id` with `REFERENCES photos(id)`. The Drizzle schema says `onDelete: "set null"`, but the actual database `CREATE TABLE` statement does NOT include `ON DELETE SET NULL` -- it uses bare `REFERENCES photos(id)` which defaults to `NO ACTION` in SQLite. This is the known FK constraint mismatch documented in MEMORY.md. Deleting a photo that is an album cover will FAIL with a foreign key constraint error (if FK enforcement is enabled) or leave a dangling reference (if not).
-
-**Consequences:**
-
-- Deleting a photo that serves as album cover either fails or creates a broken reference
-- Public albums page shows broken image for the album cover
-- The fallback logic in `albums/page.tsx` (lines 42-49) tries to find the first photo as cover, but this only runs if `coverPhotoId` is null, not if it references a deleted photo
-
-**Warning signs:**
-
-- Broken album cover images after deleting photos
-- Foreign key constraint errors when deleting photos
-- `albums.cover_photo_id` contains IDs for photos that no longer exist
+**What goes wrong:** @next/bundle-analyzer shows large chunks and developers start "optimizing" by trying to remove packages they do not understand. They end up breaking functionality (removing a needed polyfill, tree-shaking an import that is actually used server-side, etc.).
 
 **Prevention:**
 
-- Fix the FK constraint mismatch: either:
-  - (a) Run `ALTER TABLE` or recreate the table with `ON DELETE SET NULL` (correct approach), or
-  - (b) Add application-level cleanup: when deleting a photo, also clear `cover_photo_id` on any album referencing it
-- Add null-check in the cover display logic: if `coverPhotoId` is set but the photo does not exist, treat it as null
-- In the cover selection UI, only show photos that belong to the album (not all photos)
-- When removing a photo from an album, check if it was the cover and clear the reference
+- Understand what to expect: Next.js bundles include framework code (~100KB), React (~40KB), and app code
+- Server components do NOT appear in the client bundle (they are server-only)
+- `"use client"` components DO appear in the client bundle
+- The app uses `output: "standalone"` which affects the server bundle structure
+- Key things to check: Is Sharp appearing in the client bundle? (it should not), Is better-sqlite3 in the client bundle? (it should not), Are any large presentation libraries unexpectedly bundled?
+- Treat the first analysis as a baseline, not a call to action
 
-**Detection:** Query `SELECT a.id, a.cover_photo_id FROM albums a LEFT JOIN photos p ON a.cover_photo_id = p.id WHERE a.cover_photo_id IS NOT NULL AND p.id IS NULL` to find orphaned cover references.
+**Detection:** If the client bundle shows Node.js-only packages (sharp, better-sqlite3, bcrypt), there is a "use client" directive pulling server code into the client.
 
-**Phase relevance:** Album cover selection AND photo deletion flows. Fix the FK constraint before adding the cover selection UI.
+**Phase relevance:** Performance optimization. Run analyzer, record baseline, then make targeted changes.
 
 ---
 
 ## Minor Pitfalls
 
-Mistakes that cause annoyance but are fixable without major rework.
+Mistakes that cause annoyance but are fixable.
 
-### Pitfall 12: EXIF Date Format Inconsistency
+### Pitfall 11: Vitest Global Imports Conflicting with TypeScript
 
-**What goes wrong:** EXIF dates are stored in various formats (`"2024:03:15 14:30:00"`, ISO 8601, Unix timestamps) depending on the camera. Display shows raw strings instead of formatted dates.
+**What goes wrong:** The vitest config has `globals: true` (already set), which makes `describe`, `it`, `expect` available without imports. But TypeScript does not know about these globals unless `vitest/globals` is added to the tsconfig types.
 
 **Prevention:**
 
-- Parse EXIF `DateTimeOriginal` into a JavaScript Date object immediately upon extraction
-- Store as ISO 8601 string or Unix timestamp in the database
-- Format for display using `Intl.DateTimeFormat` at render time
-- Handle missing dates gracefully (not all photos have EXIF dates)
+- Add to tsconfig.json: `"types": ["vitest/globals"]` (or use a `/// <reference types="vitest/globals" />` triple-slash directive in test files)
+- Or: set `globals: false` in vitest.config.ts and import explicitly in each test file: `import { describe, it, expect } from 'vitest'`
+- The existing config already has `globals: true`, so the tsconfig types approach is needed
 
-**Phase relevance:** EXIF extraction and display.
+**Detection:** TypeScript errors like "Cannot find name 'describe'" in test files, even though tests run fine.
+
+**Phase relevance:** Test infrastructure setup.
 
 ---
 
-### Pitfall 13: YARL Share Plugin Uses Web Share API (Not Universal)
+### Pitfall 12: FK Constraint Fix Migration Breaking Existing Data
 
-**What goes wrong:** The YARL Share plugin uses the Web Share API, which is not available in all browsers (notably absent in Firefox desktop as of early 2026). The share button appears only on supported browsers, confusing users on unsupported ones.
+**What goes wrong:** Fixing the `coverPhotoId` FK constraint requires recreating the `albums` table in SQLite (SQLite does not support `ALTER TABLE ... ALTER CONSTRAINT`). The migration script drops and recreates the table, potentially losing data if the INSERT...SELECT is incorrect.
+
+**THIS PROJECT'S SPECIFIC RISK:** The `initializeDatabase()` function in `client.ts` already has a FK fix migration (lines 96-128) that recreates the albums table. However, this migration checks `PRAGMA foreign_key_list` at startup. If the fix was already applied, it is a no-op. If it was NOT applied, it runs every server start -- which is correct but makes the migration non-idempotent in edge cases.
 
 **Prevention:**
 
-- Implement a fallback share mechanism: copy-to-clipboard button as an alternative
-- The share URL for each photo needs the deep link (from Pitfall 5) to be working first
-- Consider a custom share implementation instead of the YARL plugin for more control
-- Test in Firefox desktop, Chrome desktop, Safari mobile, Chrome mobile
+- The existing migration in `client.ts` (lines 96-128) is already correct and handles this
+- Verify it ran successfully by checking: `PRAGMA foreign_key_list(albums)` should show `on_delete: SET NULL` for `cover_photo_id`
+- Do NOT add a second migration for the same fix
+- Test the migration on a database backup before applying to production
 
-**Phase relevance:** Social sharing feature. Deep linking must work before sharing can work.
+**Detection:** Run `PRAGMA foreign_key_list(albums)` and verify the `on_delete` column shows `SET NULL` for the `cover_photo_id` foreign key.
+
+**Phase relevance:** Tech debt cleanup. Verify the existing migration rather than writing a new one.
 
 ---
 
-### Pitfall 14: dnd-kit Grid Strategy Mismatch
+### Pitfall 13: Test Fixture Images Too Large
 
-**What goes wrong:** Using `verticalListSortingStrategy` (the strategy currently used for album reorder) for a photo grid layout causes incorrect drop position calculations. Photos snap to wrong positions or the grid layout breaks during drag.
-
-**Prevention:**
-
-- Use `rectSortingStrategy` for grid layouts (default, handles 2D positioning)
-- Only use `verticalListSortingStrategy` for single-column lists (like the existing album reorder)
-- If photo thumbnails have variable sizes (portrait vs landscape), drop position may be unpredictable -- consider using uniform-sized containers
-- Test with a mix of portrait and landscape photos in the grid
-
-**Phase relevance:** Photo reordering feature.
-
----
-
-### Pitfall 15: Lightbox Image Quality Regression
-
-**What goes wrong:** The current lightbox uses 600w derivatives (line 32 of PhotoLightbox.tsx: `/api/images/${photo.id}/600w.webp`). On desktop monitors, 600px wide images look blurry in full-viewport lightbox view.
+**What goes wrong:** Test fixtures include high-resolution photos (20MB+ each) for testing Sharp image processing. Test suite becomes slow and the repository grows in size.
 
 **Prevention:**
 
-- Use YARL's `srcSet` slide property to provide multiple sizes, letting the browser choose
-- For lightbox slides, provide at least: `{ src: "1200w.webp", srcSet: [{ src: "600w.webp", width: 600 }, { src: "1200w.webp", width: 1200 }, { src: "2400w.webp", width: 2400 }] }`
-- YARL supports responsive images via srcSet on slides
-- This is already a v1.0 quality gap that should be fixed alongside lightbox enhancements
+- Use tiny test images: 10x10 or 100x100 JPEG/PNG
+- Create fixture images programmatically in test setup using Sharp:
+  ```typescript
+  const testImage = await sharp({
+    create: {
+      width: 100,
+      height: 100,
+      channels: 3,
+      background: { r: 128, g: 128, b: 128 },
+    },
+  })
+    .jpeg()
+    .toBuffer();
+  ```
+- For EXIF tests, use the smallest possible image with valid EXIF headers
+- Store fixture images in `tests/fixtures/` and add them to `.gitignore` if generated
 
-**Phase relevance:** Lightbox enhancement phase. Should be bundled with other lightbox improvements.
+**Detection:** If `git status` shows large binary files in the test fixtures directory, the images are too big.
+
+**Phase relevance:** Test infrastructure setup.
 
 ---
 
 ## Phase-Specific Warnings
 
-| Phase Topic           | Likely Pitfall                            | Mitigation                                              |
-| --------------------- | ----------------------------------------- | ------------------------------------------------------- |
-| EXIF extraction       | Sharp returns raw buffer (Pitfall 3)      | Choose exifr or exif-reader before coding               |
-| EXIF extraction       | GPS privacy leak (Pitfall 1)              | Build allowlist into extraction, not display            |
-| EXIF extraction       | Schema migration (Pitfall 2)              | Write ALTER TABLE first, test on real DB                |
-| EXIF display          | Date format inconsistency (Pitfall 12)    | Normalize to Date object during extraction              |
-| Lightbox enhancements | Fighting YARL animations (Pitfall 10)     | Use YARL's props, not custom CSS animations             |
-| Lightbox enhancements | 600w quality gap (Pitfall 15)             | Add srcSet to slides                                    |
-| Fullscreen mode       | iPhone Safari unsupported (Pitfall 6)     | Design CSS-based fallback, not just Fullscreen API      |
-| Touch gestures        | Scroll vs drag conflict (Pitfall 7)       | Use TouchSensor with delay, add drag handles            |
-| Album cover selection | FK constraint mismatch (Pitfall 11)       | Fix DB constraint before building UI                    |
-| Photo reordering      | findByAlbumId lacks ORDER BY (Pitfall 4)  | Fix query before building reorder UI                    |
-| Photo reordering      | Grid strategy mismatch (Pitfall 14)       | Use rectSortingStrategy, not verticalList               |
-| Direct photo links    | History stack pollution (Pitfall 5)       | Use replaceState for navigation, pushState only on open |
-| OpenGraph tags        | Image format / crawler compat (Pitfall 8) | Generate JPEG derivative for OG, use absolute URLs      |
-| Social sharing        | Web Share API not universal (Pitfall 13)  | Implement copy-to-clipboard fallback                    |
-
-## Dependency Chain for Prevention
-
-Some pitfalls must be resolved in order. The critical path is:
-
-```
-1. Fix FK constraint mismatch (Pitfall 11)
-   Required before: album cover selection, photo deletion safety
-
-2. Fix findByAlbumId sort order (Pitfall 4)
-   Required before: photo reorder UI makes sense
-
-3. Write schema migrations (Pitfall 2)
-   Required before: any new database columns (EXIF, etc.)
-
-4. Implement EXIF extraction in worker (Pitfall 9)
-   Required before: EXIF display
-
-5. Implement deep linking (Pitfall 5)
-   Required before: social sharing (share needs a URL to share)
-
-6. Generate JPEG OG derivatives (Pitfall 8)
-   Required before: OpenGraph tags work on social media
-```
+| Phase Topic         | Likely Pitfall                         | Mitigation                                                        |
+| ------------------- | -------------------------------------- | ----------------------------------------------------------------- |
+| Test infrastructure | Module-scope DB import (Pitfall 1)     | Refactor to constructor injection before writing repository tests |
+| Test infrastructure | Schema drift (Pitfall 6)               | Replicate ALL migrations in test DB helper                        |
+| Test infrastructure | Vitest globals (Pitfall 11)            | Add `vitest/globals` to tsconfig types                            |
+| Test infrastructure | Fixture image size (Pitfall 13)        | Generate tiny images programmatically                             |
+| Unit testing        | Mocking Drizzle (Pitfall 2)            | Use real in-memory SQLite, not mocks                              |
+| Unit testing        | Coverage metrics (Pitfall 8)           | Target infrastructure layer, exclude trivial code                 |
+| API route testing   | Next.js server APIs (Pitfall 4)        | Mock auth module, not Next.js internals                           |
+| Error handling      | Swallowing errors (Pitfall 5)          | Every error.tsx must log the error                                |
+| Error handling      | Overly granular boundaries (Pitfall 7) | 3-5 error.tsx files max                                           |
+| Error handling      | JSON.parse crash (Pitfall 3)           | Fix toDomain() immediately -- P0 bug                              |
+| Performance         | Memory pressure (Pitfall 9)            | Measure before parallelizing Sharp                                |
+| Performance         | Bundle misinterpretation (Pitfall 10)  | Understand baseline before optimizing                             |
+| Tech debt           | FK migration (Pitfall 12)              | Verify existing migration, do not duplicate                       |
 
 ## Sources
 
-- Sharp metadata API: [https://sharp.pixelplumbing.com/api-input](https://sharp.pixelplumbing.com/api-input)
-- YARL Fullscreen plugin: [https://yet-another-react-lightbox.com/plugins/fullscreen](https://yet-another-react-lightbox.com/plugins/fullscreen)
-- YARL Share plugin: [https://yet-another-react-lightbox.com/plugins/share](https://yet-another-react-lightbox.com/plugins/share)
-- YARL Plugins overview: [https://yet-another-react-lightbox.com/plugins](https://yet-another-react-lightbox.com/plugins)
-- dnd-kit Sortable: [https://docs.dndkit.com/presets/sortable](https://docs.dndkit.com/presets/sortable)
-- dnd-kit touch issues: [https://github.com/clauderic/dnd-kit/issues/834](https://github.com/clauderic/dnd-kit/issues/834)
-- Next.js generateMetadata: [https://nextjs.org/docs/app/api-reference/functions/generate-metadata](https://nextjs.org/docs/app/api-reference/functions/generate-metadata)
-- Next.js OG image conventions: [https://nextjs.org/docs/app/api-reference/file-conventions/metadata/opengraph-image](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/opengraph-image)
-- EXIF privacy implications: [https://er.educause.edu/articles/2021/6/privacy-implications-of-exif-data](https://er.educause.edu/articles/2021/6/privacy-implications-of-exif-data)
-- exifr npm (EXIF parsing): [https://www.npmjs.com/package/exifr](https://www.npmjs.com/package/exifr)
-- exif-reader npm: [https://www.npmjs.com/package/exif-reader](https://www.npmjs.com/package/exif-reader)
-- Drizzle ORM migrations: [https://orm.drizzle.team/docs/migrations](https://orm.drizzle.team/docs/migrations)
-- Drizzle push SQLite bug: [https://github.com/drizzle-team/drizzle-orm/issues/1313](https://github.com/drizzle-team/drizzle-orm/issues/1313)
+- Direct source code analysis of all files under `src/`
+- `infrastructure/database/client.ts`: lines 1-141 (module-scope init, migration logic)
+- `infrastructure/database/repositories/SQLitePhotoRepository.ts`: line 1 (db import), line 125 (JSON.parse)
+- `infrastructure/database/repositories/SQLiteAlbumRepository.ts`: line 1 (db import)
+- `vitest.config.ts`: existing configuration with `globals: true`
+- `package.json`: vitest 4.0.18, better-sqlite3 12.6.2
+- Worker concurrency comment: `imageProcessor.ts` line 83 ("50MP images use ~144MB each")
 
 ---
 
-_Research completed: 2026-02-05_
-_Confidence: HIGH for codebase-specific pitfalls (verified against actual source code), MEDIUM for library-specific pitfalls (verified against official docs)_
+_Pitfalls research for: Quality hardening of photography portfolio_
+_Researched: 2026-02-06_

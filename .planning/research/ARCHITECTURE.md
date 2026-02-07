@@ -1,722 +1,580 @@
-# Architecture Patterns: v1.1 Feature Integration
+# Architecture Research: Quality & Hardening for Clean Architecture Next.js App
 
-**Domain:** Photography Portfolio Enhancement (v1.1)
-**Researched:** 2026-02-05
-**Overall confidence:** HIGH (features integrate with well-understood existing architecture)
+**Domain:** Testing, Error Handling & Performance Optimization
+**Researched:** 2026-02-06
+**Confidence:** HIGH (patterns well-established; codebase deeply analyzed)
 
 ## Executive Summary
 
-The v1.1 features integrate into the existing Clean Architecture without requiring structural changes. Every new capability maps cleanly to existing layers: EXIF extraction extends the worker pipeline, lightbox enhancements are purely presentation-layer YARL plugin additions, album management features extend existing repository methods and admin UI patterns, and shareability features add new routes and metadata generation. No new external dependencies are needed beyond `exif-reader` (a small library the Sharp maintainer recommends for parsing Sharp's raw EXIF buffers).
+The existing Photo Portfolio codebase follows Clean Architecture with four clear layers (domain, application, infrastructure, presentation) plus the Next.js App Router layer. The quality/hardening work integrates naturally because Clean Architecture **was designed for testability** -- the domain and application layers have no external dependencies, making them trivially unit-testable. The infrastructure layer uses the repository pattern with interfaces, enabling mock-based testing of business logic without SQLite/Redis/filesystem.
 
-The key architectural insight is that **five of eight features are isolated within a single layer**, making them independently buildable. Only EXIF metadata spans all four layers (infrastructure extraction, domain entity changes, database schema migration, and presentation display).
+The codebase currently has zero error boundaries, zero `error.tsx` files, zero `not-found.tsx` files, and zero `loading.tsx` files. API routes have ad-hoc error handling (some catch errors, others let them propagate uncaught). The BullMQ worker has error handlers but no retry-with-status-recovery pattern. There is a single test file (`__tests__/theme-tokens.test.ts`) using Vitest. Playwright is installed but unconfigured.
 
-## Existing Architecture Reference
+**Key architectural insight:** The application layer is empty (`services/.gitkeep`). Business logic lives directly in API route handlers. This means:
+
+1. Unit tests must test API route handlers OR extract business logic into application services first
+2. Error handling is duplicated across every route handler (auth check, validation, repo call)
+3. The recommendation is to NOT extract services now -- test at the API route integration level and add services only when duplication becomes painful
+
+## Existing Architecture Reference (Current State)
 
 ```
 src/
   domain/
-    entities/         Photo.ts, Album.ts (interfaces)
+    entities/         Photo.ts, Album.ts (interfaces only, no logic)
     repositories/     PhotoRepository.ts, AlbumRepository.ts (interfaces)
   application/
-    services/         (empty - repositories instantiated directly in routes)
+    services/         .gitkeep (EMPTY -- business logic is in API routes)
   infrastructure/
-    auth/             JWT session, bcrypt password, rate limiter
-    config/           Environment variables
-    database/         SQLite client, Drizzle schema, repository implementations
-    jobs/             BullMQ queues, worker entry, imageProcessor worker
-    services/         imageService.ts (Sharp derivative generation)
-    storage/          fileStorage.ts (save/delete originals and processed)
+    auth/             dal.ts, session.ts, password.ts, rateLimiter.ts
+    config/           env.ts (Zod-validated environment)
+    database/         client.ts, schema.ts, repositories/ (SQLite implementations)
+    jobs/             queues.ts, worker.ts, workers/imageProcessor.ts
+    services/         imageService.ts, exifService.ts
+    storage/          fileStorage.ts
   presentation/
-    components/       PhotoLightbox, AlbumGalleryClient, HomepageClient, etc.
-    hooks/            (empty)
+    components/       20 components (PhotoGrid, UploadQueue, Lightbox, etc.)
     lib/              uploadFile.ts
   app/
-    (pages)           Public: /, /albums, /albums/[id]
-    admin/            Protected: dashboard, photos/[id], albums, upload
-    api/              admin/upload, admin/photos/[id], admin/albums/[id], images/[photoId]/[filename]
-    actions/          auth.ts
+    layout.tsx        Root layout (no error boundary)
+    page.tsx          Homepage (Server Component)
+    albums/           Public album pages
+    photo/[slug]/     Public photo permalink
+    admin/            Protected admin pages
+    api/              8 API route files across 6 endpoints
+    actions/          auth.ts (server action for login)
+  __tests__/
+    theme-tokens.test.ts  (single existing test)
+  proxy.ts            Edge route protection
 ```
 
-**Critical existing patterns to preserve:**
+**Critical observations for quality work:**
 
-- Server Components fetch data, pass serializable props to Client Components
-- PhotoLightbox is dynamically imported (`ssr: false`) to avoid bundle bloat
-- Image API route serves processed files from filesystem with immutable caching
-- Worker updates photo status via repository after processing completes
-- `photo_albums.sortOrder` column EXISTS in schema but is always set to 0 (never used yet)
-- Album `coverPhotoId` column EXISTS and the PATCH API already accepts it
+1. **No error boundaries anywhere** -- any server component error crashes the entire page
+2. **No error.tsx files** -- Next.js has no fallback UI for runtime errors
+3. **No not-found.tsx files** -- 404s show the default Next.js page
+4. **No loading.tsx files** -- no streaming/Suspense boundaries
+5. **API routes have repetitive auth + validation boilerplate** -- 8 route files all start with `verifySession()` check
+6. **Worker error handling updates status to "error" but has no recovery mechanism** -- photos stuck in "error" status forever
+7. **Database client initializes on module load** -- `initializeDatabase()` called at import time, making it hard to mock
+8. **Infrastructure services are pure functions** -- `generateDerivatives`, `extractExifData`, `generateBlurPlaceholder` are stateless, easily testable
+9. **Repositories are classes implementing interfaces** -- classic dependency inversion, ideal for mocking
 
-## Feature-by-Feature Integration Analysis
+## Recommended Test File Structure
 
-### Feature 1: EXIF Metadata Extraction and Display
+### Organization Strategy: Colocated with Source, Mirroring Architecture Layers
 
-**Layers touched:** All four (domain, infrastructure, database, presentation)
-**Complexity:** MEDIUM - spans full stack but each layer change is straightforward
+```
+src/
+  domain/
+    entities/
+      __tests__/
+        Photo.test.ts         # Entity validation/construction tests
+        Album.test.ts         # Entity validation/construction tests
+  infrastructure/
+    database/
+      repositories/
+        __tests__/
+          SQLitePhotoRepository.integration.test.ts  # Real SQLite, in-memory DB
+          SQLiteAlbumRepository.integration.test.ts   # Real SQLite, in-memory DB
+    services/
+      __tests__/
+        imageService.test.ts     # Mock Sharp, test pipeline logic
+        exifService.test.ts      # Test with fixture images
+    auth/
+      __tests__/
+        session.test.ts          # JWT encrypt/decrypt cycle
+        rateLimiter.test.ts      # Mock Redis client
+    storage/
+      __tests__/
+        fileStorage.test.ts      # Test with temp directories
+    jobs/
+      __tests__/
+        queues.test.ts           # Enqueue logic (mock IORedis)
+  presentation/
+    components/
+      __tests__/
+        PhotoGrid.test.tsx       # Render tests (if React Testing Library added)
+        UploadQueue.test.tsx     # State/UI tests
+  app/
+    api/
+      __tests__/
+        upload.integration.test.ts     # Full upload flow
+        photos.integration.test.ts     # CRUD operations
+        albums.integration.test.ts     # CRUD + reorder
+        images.integration.test.ts     # Image serving + fallback
+  __tests__/
+    theme-tokens.test.ts    # (existing)
 
-#### Domain Layer Changes
+tests/                       # E2E tests (Playwright)
+  e2e/
+    public-gallery.spec.ts   # Public pages load, images display
+    admin-login.spec.ts      # Login flow, rate limiting
+    upload-flow.spec.ts      # Upload, processing status, gallery display
+    album-management.spec.ts # CRUD, reorder, publish
+  fixtures/
+    test-image.jpg           # Small test image with EXIF data
+    test-image-no-exif.png   # Image without EXIF
+  playwright.config.ts
+```
 
-Extend the `Photo` entity with EXIF fields:
+### Why Colocated `__tests__/` Over Top-Level `tests/`
+
+1. **Matches existing pattern** -- the codebase already has `src/__tests__/`
+2. **Import paths stay short** -- `../Photo` instead of `../../../../src/domain/entities/Photo`
+3. **Layer isolation visible** -- if `domain/__tests__/` imports from `infrastructure/`, the test is wrong
+4. **Vitest glob works** -- existing config has no include restrictions, `**/*.test.{ts,tsx}` works
+
+### Vitest Configuration Updates Needed
+
+The existing `vitest.config.ts` needs additions for:
 
 ```typescript
-// domain/entities/Photo.ts - ADD these optional fields
-export interface Photo {
-  // ... existing fields ...
-
-  // EXIF metadata (populated by worker, null until processed)
-  cameraMake: string | null;
-  cameraModel: string | null;
-  lensModel: string | null;
-  focalLength: string | null; // e.g., "85mm"
-  aperture: string | null; // e.g., "f/1.8"
-  shutterSpeed: string | null; // e.g., "1/250"
-  iso: number | null;
-  takenAt: Date | null;
+// vitest.config.ts additions needed:
+{
+  test: {
+    globals: true,
+    environment: "node",
+    // NEW: separate integration tests (need real DB)
+    // by convention: *.integration.test.ts
+    include: ["src/**/*.test.{ts,tsx}", "src/**/*.integration.test.{ts,tsx}"],
+    // NEW: setup file for test database
+    setupFiles: ["./src/test-setup.ts"],
+    // NEW: coverage configuration
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/**/*.test.{ts,tsx}",
+        "src/**/__tests__/**",
+        "src/app/layout.tsx",     // Layout is trivial
+        "src/proxy.ts",           // Edge runtime, hard to unit test
+      ],
+    },
+  },
 }
 ```
 
-**Decision: Store EXIF as individual columns, not a JSON blob.** Individual columns enable future querying/filtering, are type-safe with Drizzle, and the set of fields is fixed and small (8 fields). A JSON blob would be simpler to add but sacrifices queryability.
+## Component Responsibilities: New vs Modified
 
-#### Database Layer Changes
+### New Files to Create
 
-Add columns to `photos` table via ALTER TABLE migration:
+| File                                  | Layer      | Purpose                                              | Type |
+| ------------------------------------- | ---------- | ---------------------------------------------------- | ---- |
+| `src/app/error.tsx`                   | app        | Root error boundary, catches unhandled errors        | NEW  |
+| `src/app/not-found.tsx`               | app        | Custom 404 page                                      | NEW  |
+| `src/app/admin/error.tsx`             | app        | Admin-specific error boundary                        | NEW  |
+| `src/app/admin/(protected)/error.tsx` | app        | Protected admin error boundary                       | NEW  |
+| `src/app/albums/[id]/not-found.tsx`   | app        | Album not found page                                 | NEW  |
+| `src/app/albums/[id]/loading.tsx`     | app        | Album loading skeleton                               | NEW  |
+| `src/lib/errors.ts`                   | lib        | Custom error classes (AppError, NotFoundError, etc.) | NEW  |
+| `src/test-setup.ts`                   | root       | Vitest setup (test DB, env mocks)                    | NEW  |
+| `tests/playwright.config.ts`          | root       | Playwright E2E config                                | NEW  |
+| `tests/e2e/*.spec.ts`                 | root       | E2E test files                                       | NEW  |
+| `src/*/__tests__/*.test.ts`           | all layers | Unit/integration tests                               | NEW  |
 
-```sql
-ALTER TABLE photos ADD COLUMN camera_make TEXT;
-ALTER TABLE photos ADD COLUMN camera_model TEXT;
-ALTER TABLE photos ADD COLUMN lens_model TEXT;
-ALTER TABLE photos ADD COLUMN focal_length TEXT;
-ALTER TABLE photos ADD COLUMN aperture TEXT;
-ALTER TABLE photos ADD COLUMN shutter_speed TEXT;
-ALTER TABLE photos ADD COLUMN iso INTEGER;
-ALTER TABLE photos ADD COLUMN taken_at INTEGER;  -- timestamp_ms
-```
+### Modified Files
 
-**CRITICAL:** Use `ALTER TABLE` directly, NOT `db:push`. The v1.0 project learned this the hard way -- `db:push` caused runtime errors in Phase 6. Write a migration script in `scripts/` that runs the ALTER TABLE statements.
+| File                                                | Layer | Change                                       | Why                 |
+| --------------------------------------------------- | ----- | -------------------------------------------- | ------------------- |
+| `vitest.config.ts`                                  | root  | Add coverage, setupFiles, include patterns   | Test infrastructure |
+| `package.json`                                      | root  | Add test scripts, @testing-library if needed | Test infrastructure |
+| `src/infrastructure/database/client.ts`             | infra | Extract DB creation for test injection       | Testability         |
+| `src/app/page.tsx`                                  | app   | Add try/catch or let error.tsx handle        | Error recovery      |
+| `src/app/albums/[id]/page.tsx`                      | app   | Call `notFound()` for missing albums         | Proper 404s         |
+| `src/app/admin/(protected)/page.tsx`                | app   | Add error boundary awareness                 | Error recovery      |
+| API route files (8 files)                           | app   | Wrap with consistent error handling helper   | Error consistency   |
+| `src/infrastructure/jobs/workers/imageProcessor.ts` | infra | Add stalled job recovery                     | Resilience          |
 
-Update Drizzle schema to include new columns, and update `toDomain`/`toDatabase` mappers in `SQLitePhotoRepository`.
+## Architectural Patterns
 
-#### Infrastructure Layer Changes
+### Pattern 1: Error Handling Strategy Per Layer
 
-**New file:** `infrastructure/services/exifService.ts`
-
-```typescript
-// Extract EXIF from Sharp's raw buffer using exif-reader
-import exifReader from "exif-reader";
-import { getImageMetadata } from "./imageService";
-
-export interface ExifData {
-  cameraMake: string | null;
-  cameraModel: string | null;
-  lensModel: string | null;
-  focalLength: string | null;
-  aperture: string | null;
-  shutterSpeed: string | null;
-  iso: number | null;
-  takenAt: Date | null;
-}
-
-export async function extractExif(originalPath: string): Promise<ExifData> {
-  const metadata = await getImageMetadata(originalPath);
-  if (!metadata.exif) return nullExifData();
-
-  const exif = exifReader(metadata.exif);
-  // Parse exif.image (Make, Model), exif.photo (FNumber, ExposureTime, ISO, LensModel, etc.)
-  // Format human-readable strings: "f/1.8", "1/250", "85mm"
-}
-```
-
-**Worker integration:** Add EXIF extraction to the existing `imageProcessor.ts` worker's job handler, between derivative generation and status update. The worker already has access to `originalPath` and already updates the photo record on completion. EXIF extraction adds ~50ms per image (negligible vs. derivative generation).
+The principle: **each layer handles errors it understands, propagates errors it does not**.
 
 ```
-Current worker flow:          Proposed worker flow:
-1. Generate derivatives       1. Generate derivatives
-2. Generate blur placeholder  2. Generate blur placeholder
-3. Update status to "ready"   3. Extract EXIF metadata
-                              4. Update photo with EXIF + status "ready"
+Layer Responsibility Chain:
+
+  domain/           No error handling. Pure interfaces, no logic.
+       |
+  application/      (Empty today.) Would catch domain validation errors,
+       |            translate to application-level errors.
+       |
+  infrastructure/   Catches external system errors (DB, filesystem, Redis, Sharp).
+       |            Translates to domain-meaningful errors or returns null.
+       |            Examples: session.ts decrypt returns null on invalid JWT,
+       |            exifService returns null on corrupt EXIF, rateLimiter
+       |            degrades gracefully when Redis is down.
+       |
+  app/api/          Catches validation errors (Zod), auth errors,
+       |            not-found errors. Returns appropriate HTTP status codes.
+       |            SHOULD catch unexpected errors with try/catch wrapper.
+       |
+  app/pages/        Server Components should catch data-fetch errors.
+       |            error.tsx catches anything that propagates uncaught.
+       |
+  presentation/     Client components handle UI-level errors
+                    (upload failures, network errors). Error boundaries
+                    catch render crashes.
 ```
 
-**New dependency:** `exif-reader` (npm package, recommended by Sharp's maintainer for parsing Sharp's raw EXIF buffer). Zero native dependencies, pure JavaScript, small footprint.
-
-#### Presentation Layer Changes
-
-Extend `PhotoLightbox` captions to show EXIF data below the description. YARL's Captions plugin already renders `description` text -- we can compose an EXIF summary string into the description, or use a custom render function.
-
-**Better approach:** Use YARL's custom `render.slideFooter` to add an EXIF metadata bar below the image, separate from the description caption. This keeps concerns separated.
-
-The `PhotoData` interface passed to lightbox components needs EXIF fields added. The Server Component in `albums/[id]/page.tsx` already fetches photos -- just include the new fields in the serialized props.
-
-**Confidence:** HIGH -- Sharp metadata API is documented, exif-reader is the officially recommended parser, YARL supports custom render functions.
-
----
-
-### Feature 2: Lightbox Smooth Transitions
-
-**Layers touched:** Presentation only
-**Complexity:** LOW - configuration change
-
-The existing `PhotoLightbox.tsx` already configures YARL's animation settings:
-
-```typescript
-animation={{
-  fade: 200,
-  swipe: 300,
-}}
-```
-
-This feature is about tuning these values for a smoother feel. Options:
-
-- Increase `fade` to 250-350ms for smoother cross-fade
-- Adjust `swipe` timing for gesture completion
-- Add `easing` configuration if YARL supports it
-
-**No new components needed.** This is a CSS/config tuning task on the existing PhotoLightbox component.
-
-**Confidence:** HIGH -- Already using YARL animation config, just needs tuning.
-
----
-
-### Feature 3: Touch Gestures (Swipe) for Mobile
-
-**Layers touched:** Presentation only
-**Complexity:** LOW - YARL has built-in support
-
-YARL already supports swipe gestures out of the box. The current configuration explicitly disables some:
-
-```typescript
-controller={{
-  closeOnBackdropClick: false,
-  closeOnPullDown: false,   // <-- swipe down to close
-  closeOnPullUp: false,     // <-- swipe up to close
-}}
-```
-
-To enable touch gestures:
-
-1. Set `closeOnPullDown: true` for swipe-down-to-close
-2. YARL's carousel already supports swipe left/right for navigation (enabled by default)
-3. Consider enabling `closeOnBackdropClick: true` for mobile tap-to-close
-
-**No new dependencies needed.** YARL handles touch events internally.
-
-**Confidence:** HIGH -- YARL docs confirm built-in gesture support.
-
----
-
-### Feature 4: Full-Screen Mode for Lightbox
-
-**Layers touched:** Presentation only
-**Complexity:** LOW - add YARL Fullscreen plugin
-
-YARL ships a Fullscreen plugin that uses the browser's Fullscreen API. Integration:
-
-```typescript
-import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
-
-<Lightbox
-  plugins={[Captions, Fullscreen]}
-  // Optional: auto-enter fullscreen on open
-  fullscreen={{ auto: false }}
-/>
-```
-
-The Fullscreen plugin adds an enter/exit button to the toolbar automatically. No custom UI needed.
-
-**Existing YARL version (3.28.0) includes this plugin** -- no version upgrade needed.
-
-**Confidence:** HIGH -- YARL official documentation, plugin is bundled with the installed package.
-
----
-
-### Feature 5: Album Cover Image Selection
-
-**Layers touched:** Presentation (admin UI), API (already exists)
-**Complexity:** LOW - API endpoint already handles this
-
-**The PATCH API for albums already accepts `coverPhotoId`:**
-
-```typescript
-// api/admin/albums/[id]/route.ts - ALREADY EXISTS
-const updateAlbumSchema = z.object({
-  coverPhotoId: z.string().nullable().optional(),
-  // ... other fields
-});
-```
-
-**The public albums page already resolves cover photos:**
-
-```typescript
-// app/albums/page.tsx - ALREADY EXISTS
-let coverPhotoId = album.coverPhotoId;
-if (!coverPhotoId) {
-  const photos = await photoRepo.findByAlbumId(album.id);
-  coverPhotoId = readyPhoto?.id ?? null;
-}
-```
-
-What's MISSING is an admin UI to select the cover photo. Options:
-
-**Option A (Recommended): Add "Set as Cover" button on each photo in the album view.**
-The admin photo detail page (`admin/photos/[id]`) shows album membership. But cover selection is more natural from the album context -- seeing all photos and picking one.
-
-**Option B: Dropdown/modal in album edit form.**
-Less visual but simpler to implement within the existing `AlbumCreateModal` component.
-
-**Recommended approach:** Add a dedicated admin album detail page (`admin/albums/[id]`) that shows the album's photos as a grid. Each photo gets a "Set as Cover" button. This page also serves as the foundation for Feature 6 (photo reordering within album).
-
-**New components needed:**
-
-- `app/admin/(protected)/albums/[id]/page.tsx` -- Server Component, fetches album + photos
-- `presentation/components/AlbumDetailClient.tsx` -- Client Component with cover selection UI
-
-**Confidence:** HIGH -- API already supports this, just needs admin UI.
-
----
-
-### Feature 6: Drag to Reorder Photos Within Album
-
-**Layers touched:** Domain (repository interface), Infrastructure (repository implementation, schema), Presentation (admin UI), API (new endpoint)
-**Complexity:** MEDIUM - requires new admin page + new API endpoint + leveraging unused schema column
-
-#### Key Finding: photo_albums.sortOrder Already Exists But Is Unused
-
-The junction table `photo_albums` already has a `sortOrder` column (integer, default 0). Currently:
-
-- `addToAlbum()` always sets `sortOrder: 0`
-- `findByAlbumId()` does NOT order by `sortOrder`
-
-This means the schema is ready but the data access ignores ordering.
-
-#### Changes Needed
-
-**1. Repository interface:** Add method to `PhotoRepository`:
-
-```typescript
-updatePhotoSortOrdersInAlbum(albumId: string, photoIds: string[]): Promise<void>;
-```
-
-**2. Repository implementation:** Update `findByAlbumId` to ORDER BY `photo_albums.sortOrder`:
-
-```typescript
-// SQLitePhotoRepository.ts - MODIFY existing method
-async findByAlbumId(albumId: string): Promise<Photo[]> {
-  const results = await db
-    .select({ photo: photos })
-    .from(photos)
-    .innerJoin(photoAlbums, eq(photos.id, photoAlbums.photoId))
-    .where(eq(photoAlbums.albumId, albumId))
-    .orderBy(photoAlbums.sortOrder);  // <-- ADD THIS
-  return results.map((r) => this.toDomain(r.photo));
-}
-```
-
-Add new method to update sort orders (same pattern as `AlbumRepository.updateSortOrders`):
-
-```typescript
-async updatePhotoSortOrdersInAlbum(albumId: string, photoIds: string[]): Promise<void> {
-  await db.transaction(async (tx) => {
-    for (let i = 0; i < photoIds.length; i++) {
-      await tx
-        .update(photoAlbums)
-        .set({ sortOrder: i })
-        .where(and(eq(photoAlbums.albumId, albumId), eq(photoAlbums.photoId, photoIds[i])));
-    }
-  });
-}
-```
-
-**3. API endpoint:** New route `POST /api/admin/albums/[id]/reorder` accepting `{ photoIds: string[] }`.
-
-**4. Admin UI:** Reuse the existing dnd-kit pattern from `AlbumsPageClient` (already uses `@dnd-kit/core` + `@dnd-kit/sortable`). The admin album detail page from Feature 5 gets a draggable photo grid.
-
-**No new dependencies needed.** `@dnd-kit/core` and `@dnd-kit/sortable` already installed.
-
-**Confidence:** HIGH -- Schema column exists, dnd-kit pattern already proven in the codebase.
-
----
-
-### Feature 7: Direct Links to Specific Photos
-
-**Layers touched:** App Router (new route), Presentation (lightbox opening logic)
-**Complexity:** MEDIUM - requires careful URL design and route architecture
-
-#### URL Scheme Design
-
-**Option A: Query parameter approach** (simpler)
-
-```
-/albums/[albumId]?photo=[photoId]
-```
-
-- Pro: No new routes needed, lightbox opens from existing album page
-- Pro: Easy to implement -- read query param, find photo index, open lightbox
-- Con: Less clean URL for sharing
-
-**Option B: Nested route approach** (cleaner)
-
-```
-/albums/[albumId]/photos/[photoId]
-```
-
-- Pro: Clean, semantic URL
-- Pro: Can render dedicated photo page for SEO/OG tags
-- Con: Requires new route files
-
-**Option C: Intercepting routes** (most sophisticated)
-
-```
-/photos/[photoId]           -- Direct access: full page render
-/albums/[albumId]           -- Clicking photo: modal overlay via intercepting route
-```
-
-- Pro: Instagram-like UX (modal in gallery, full page on direct link)
-- Con: Complex route structure, harder to maintain
-
-**Recommendation: Option B** -- Clean URLs for sharing, dedicated page enables OG tags (Feature 8), and the implementation is straightforward. When accessed directly, render a full page with photo + lightbox open. Include a "Back to Album" link for context.
-
-#### Route Structure
+**Specific recommendations per file:**
+
+| File                       | Current Error Handling              | Recommended Change                                                       |
+| -------------------------- | ----------------------------------- | ------------------------------------------------------------------------ |
+| `SQLitePhotoRepository.ts` | None (Drizzle throws)               | Add try/catch in `save()` for constraint violations, return typed errors |
+| `SQLiteAlbumRepository.ts` | None (Drizzle throws)               | Same as above                                                            |
+| `imageService.ts`          | None (Sharp throws)                 | Already used within worker try/catch. Add specific Sharp error types     |
+| `exifService.ts`           | try/catch returns null              | Good. Keep as-is.                                                        |
+| `session.ts`               | try/catch returns null              | Good. Keep as-is.                                                        |
+| `rateLimiter.ts`           | try/catch with graceful degradation | Good. Keep as-is.                                                        |
+| `fileStorage.ts`           | None (fs throws)                    | Add ENOSPC/EACCES handling for disk-full and permission errors           |
+| API routes (all 8)         | Auth check + partial validation     | Add consistent try/catch wrapper                                         |
+| Worker imageProcessor      | Has error/failed handlers           | Add stalled job detection and status recovery                            |
+| Server Component pages     | None                                | Let error.tsx handle via Next.js error boundary                          |
+
+### Pattern 2: Error Boundary Placement in Next.js App Router
+
+Next.js App Router uses `error.tsx` files as React Error Boundaries. They catch errors in their route segment and all child segments.
+
+**Recommended error boundary tree:**
 
 ```
 app/
+  error.tsx                              ← ROOT: catches all unhandled errors
+  not-found.tsx                          ← ROOT: custom 404 page
+  layout.tsx                             ← (no change)
+  page.tsx                               ← Homepage errors caught by app/error.tsx
   albums/
     [id]/
-      page.tsx                    -- Existing album gallery
-      photos/
-        [photoId]/
-          page.tsx                -- NEW: direct photo page
+      error.tsx                          ← Album-specific: "Album failed to load" + retry
+      not-found.tsx                      ← "Album not found"
+      loading.tsx                        ← Skeleton while Server Component loads
+  photo/
+    [slug]/
+      (errors caught by app/error.tsx)   ← No separate boundary needed (simple page)
+  admin/
+    error.tsx                            ← Admin area: "Something went wrong" + link to dashboard
+    login/
+      (errors caught by admin/error.tsx)
+    (protected)/
+      error.tsx                          ← Protected area: "Error loading admin" + retry
 ```
 
-The new photo page:
+**Why this structure:**
 
-1. Server Component fetches photo + album context
-2. Renders with lightbox pre-opened at the correct index
-3. Includes `generateMetadata()` for OG tags (Feature 8)
-4. "Back to Album" navigation link
+1. **Root `error.tsx`** -- Catches any unhandled error from any page. Shows generic "Something went wrong" with a "Try again" button. This is the safety net.
+2. **`albums/[id]/error.tsx`** -- Album pages are the most likely to error (dynamic data, database queries). Specific error UI: "Failed to load album" with retry button.
+3. **`albums/[id]/not-found.tsx`** -- When `findById` returns null, the page calls Next.js `notFound()` function to trigger this.
+4. **`admin/error.tsx`** -- Admin errors should not expose stack traces. Show "Something went wrong" with link to dashboard.
+5. **`admin/(protected)/error.tsx`** -- Catches errors within authenticated admin pages. Can show more detail since user is authenticated.
 
-**Alternative approach for the lightbox integration:** Rather than pre-opening the lightbox, the direct photo page could render a dedicated single-photo view (large image + EXIF + description) and link back to the album. This might be better UX since the lightbox carousel doesn't make as much sense without the gallery context.
+**What NOT to do:**
 
-#### Client-Side URL Sync
+- Do NOT add error.tsx to every route segment. Granularity should match user experience boundaries, not file boundaries.
+- Do NOT add loading.tsx everywhere. Only where Server Components do slow async work (album page with photo queries).
 
-Update `AlbumGalleryClient` to sync the lightbox state with the URL using `window.history.pushState`:
+### Pattern 3: API Route Error Handling Wrapper
 
-- Opening lightbox: push `/albums/[id]/photos/[photoId]` to history
-- Navigating between photos: replace state with new photoId
-- Closing lightbox: pop back to `/albums/[id]`
+Currently every API route has duplicated auth checking and no consistent error handling. A utility function eliminates this.
 
-This gives shareable URLs while maintaining the SPA lightbox experience.
-
-**Confidence:** MEDIUM -- URL scheme choice is a design decision, implementation patterns are well-established.
-
----
-
-### Feature 8: OpenGraph Meta Tags for Social Sharing
-
-**Layers touched:** App Router (metadata generation), Infrastructure (OG image generation)
-**Complexity:** MEDIUM - Next.js has excellent built-in support
-
-#### Approach: generateMetadata + opengraph-image.tsx
-
-Next.js App Router provides two mechanisms:
-
-**1. `generateMetadata()` for text metadata:**
+**Recommended pattern -- lightweight wrapper, not middleware:**
 
 ```typescript
-// app/albums/[id]/photos/[photoId]/page.tsx
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
-  const { id: albumId, photoId } = await params;
-  const photo = await photoRepo.findById(photoId);
-  const album = await albumRepo.findById(albumId);
+// src/app/api/_lib/handler.ts (NEW)
+import { NextRequest, NextResponse } from "next/server";
+import { verifySession } from "@/infrastructure/auth";
 
-  return {
-    title: photo.title || `Photo - ${album.title}`,
-    description: photo.description || `View this photo in ${album.title}`,
-    openGraph: {
-      title: photo.title || album.title,
-      description: photo.description || undefined,
-      images: [`/api/images/${photoId}/1200w.webp`],
-      type: "article",
-    },
-    twitter: {
-      card: "summary_large_image",
-    },
+type RouteHandler = (
+  request: NextRequest,
+  context: { params: Promise<Record<string, string>> },
+) => Promise<NextResponse>;
+
+export function withAuth(handler: RouteHandler): RouteHandler {
+  return async (request, context) => {
+    const session = await verifySession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    try {
+      return await handler(request, context);
+    } catch (error) {
+      console.error("[API Error]", error);
+      return NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 },
+      );
+    }
   };
 }
 ```
 
-**2. For OG images, point directly to existing processed images.**
-The processed derivatives at 1200w are ideal for OG images (1200px width matches Facebook's recommended 1200x630). No need for a custom `opengraph-image.tsx` that generates images with Satori -- the actual photo IS the OG image.
+**Trade-off note:** This wrapper is optional. The current approach (explicit auth check per route) is clear and readable. The wrapper reduces duplication but adds indirection. For 8 routes, the duplication is tolerable. **Recommendation:** Add the try/catch wrapper for error logging/consistency, but keep auth checks explicit for clarity.
 
-**Key insight:** Unlike blog posts that need generated OG images (title text overlaid on background), a photo portfolio's OG image IS the photo itself. Just reference the existing 1200w derivative.
+### Pattern 4: Test Organization for Clean Architecture
 
-#### Pages That Need OG Tags
+**Layer-by-layer testing strategy:**
 
-| Route                           | OG Title                  | OG Image                          |
-| ------------------------------- | ------------------------- | --------------------------------- |
-| `/` (homepage)                  | Portfolio name            | Hero photo or site default        |
-| `/albums`                       | "Albums"                  | First album cover or site default |
-| `/albums/[id]`                  | Album title               | Album cover photo                 |
-| `/albums/[id]/photos/[photoId]` | Photo title or album name | The photo itself (1200w)          |
+| Layer                     | Test Type       | What to Test                               | What to Mock                            |
+| ------------------------- | --------------- | ------------------------------------------ | --------------------------------------- |
+| `domain/entities`         | Unit            | Entity construction, validation            | Nothing (pure interfaces)               |
+| `domain/repositories`     | N/A             | Interfaces only, nothing to test           | N/A                                     |
+| `infrastructure/database` | Integration     | Repository CRUD, transactions, constraints | Nothing -- use real in-memory SQLite    |
+| `infrastructure/services` | Unit            | Sharp pipeline logic, EXIF extraction      | Sharp (or use small fixture images)     |
+| `infrastructure/auth`     | Unit            | JWT lifecycle, password verification       | Nothing (jose is fast enough)           |
+| `infrastructure/storage`  | Integration     | File save/delete, directory creation       | Nothing -- use temp directories         |
+| `infrastructure/jobs`     | Unit            | Job enqueueing, queue configuration        | IORedis/BullMQ                          |
+| `app/api`                 | Integration     | Full HTTP request/response cycle           | Database (in-memory), filesystem (temp) |
+| `presentation/components` | Unit (optional) | Render output, interaction handlers        | API calls                               |
+| E2E (Playwright)          | E2E             | Critical user flows                        | Nothing -- real app                     |
 
-**For the homepage and album listing**, use static metadata or `generateMetadata` with the first available photo.
+**Testing the database layer (integration):**
 
-**For album pages**, add `generateMetadata` to the existing `albums/[id]/page.tsx` Server Component.
+The `client.ts` module initializes the database at import time (`initializeDatabase()` called at module scope). This makes it hard to swap in a test database. The fix is small:
 
-**For direct photo links**, `generateMetadata` in the new photo page (Feature 7).
+```typescript
+// Current (hard to test):
+const sqlite = new Database(dbPath);
+export const db = drizzle({ client: sqlite, schema });
+initializeDatabase(); // runs at import time
 
-**Confidence:** HIGH -- Next.js generateMetadata is well-documented, existing processed images serve as OG images.
-
----
-
-## New Components Summary
-
-### New Files to Create
-
-| File                                            | Layer          | Feature         | Purpose                                         |
-| ----------------------------------------------- | -------------- | --------------- | ----------------------------------------------- |
-| `infrastructure/services/exifService.ts`        | Infrastructure | EXIF            | Parse EXIF from Sharp's raw buffer              |
-| `scripts/migrate-exif-columns.ts`               | Infrastructure | EXIF            | ALTER TABLE migration script                    |
-| `app/admin/(protected)/albums/[id]/page.tsx`    | App Router     | Cover + Reorder | Admin album detail page                         |
-| `presentation/components/AlbumDetailClient.tsx` | Presentation   | Cover + Reorder | Drag-to-reorder photo grid with cover selection |
-| `app/albums/[id]/photos/[photoId]/page.tsx`     | App Router     | Direct Links    | Public direct photo page                        |
-| `api/admin/albums/[id]/reorder/route.ts`        | App Router     | Reorder         | Photo reorder endpoint                          |
-
-### Existing Files to Modify
-
-| File                                                            | Feature                                    | Change                                                       |
-| --------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------ |
-| `domain/entities/Photo.ts`                                      | EXIF                                       | Add 8 optional EXIF fields                                   |
-| `infrastructure/database/schema.ts`                             | EXIF                                       | Add EXIF columns to Drizzle schema                           |
-| `infrastructure/database/repositories/SQLitePhotoRepository.ts` | EXIF + Reorder                             | Add EXIF to mappers, add reorder method, order findByAlbumId |
-| `domain/repositories/PhotoRepository.ts`                        | Reorder                                    | Add `updatePhotoSortOrdersInAlbum` method                    |
-| `infrastructure/jobs/workers/imageProcessor.ts`                 | EXIF                                       | Add EXIF extraction step to worker                           |
-| `infrastructure/jobs/queues.ts`                                 | EXIF                                       | Add EXIF fields to `ImageJobResult`                          |
-| `presentation/components/PhotoLightbox.tsx`                     | Transitions + Gestures + Fullscreen + EXIF | Add plugins, tune animation, add EXIF display                |
-| `presentation/components/AlbumGalleryClient.tsx`                | Direct Links                               | URL sync with lightbox state                                 |
-| `presentation/components/HomepageClient.tsx`                    | Direct Links                               | URL sync with lightbox state (optional)                      |
-| `app/albums/[id]/page.tsx`                                      | OG Tags                                    | Add `generateMetadata` export                                |
-| `app/layout.tsx`                                                | OG Tags                                    | Update default metadata                                      |
-| `app/page.tsx`                                                  | OG Tags                                    | Add `generateMetadata` export                                |
-| `app/albums/page.tsx`                                           | OG Tags                                    | Add `generateMetadata` export                                |
-
-### No Changes Needed
-
-| Component                                      | Reason                    |
-| ---------------------------------------------- | ------------------------- |
-| `infrastructure/auth/`                         | No auth changes           |
-| `infrastructure/storage/fileStorage.ts`        | No storage format changes |
-| `infrastructure/config/env.ts`                 | No new env vars needed    |
-| `proxy.ts`                                     | No middleware changes     |
-| `app/api/admin/upload/route.ts`                | Upload flow unchanged     |
-| `app/api/images/[photoId]/[filename]/route.ts` | Image serving unchanged   |
-
----
-
-## Data Flow Changes
-
-### EXIF Flow (New)
-
-```
-Upload (unchanged)
-       |
-       v
-Worker picks up job
-       |
-       v
-Generate derivatives (existing)
-       |
-       v
-Generate blur placeholder (existing)
-       |
-       v
-Extract EXIF metadata (NEW)  <-- exifService.ts
-  |-- sharp.metadata() returns raw EXIF buffer
-  |-- exif-reader parses buffer into structured data
-  |-- Format human-readable strings
-       |
-       v
-Update photo record with EXIF + status "ready" (modified)
-  |-- Existing: blurDataUrl, status
-  |-- New: cameraMake, cameraModel, lensModel, etc.
-       |
-       v
-Server Component fetches photo (unchanged query, more fields)
-       |
-       v
-Client Component receives EXIF in props (new data)
-       |
-       v
-Lightbox displays EXIF bar (new UI element)
+// Testable (extract factory):
+export function createDatabase(path: string) {
+  const sqlite = new Database(path);
+  const db = drizzle({ client: sqlite, schema });
+  // ... initialization ...
+  return db;
+}
+export const db = createDatabase(dbPath); // default for production
 ```
 
-### Direct Photo Link Flow (New)
+Then in tests: `createDatabase(":memory:")` for fast, isolated integration tests.
 
-```
-User shares URL: /albums/abc/photos/xyz
-       |
-       v
-Server Component (new page):
-  |-- Fetch photo by ID
-  |-- Fetch album by ID
-  |-- Fetch all album photos (for navigation context)
-  |-- Verify photo is in album, album is published
-  |-- generateMetadata() returns OG tags
-       |
-       v
-Render dedicated photo page:
-  |-- Large photo display
-  |-- EXIF metadata
-  |-- Description
-  |-- "View in Album" link
-  |-- Next/Previous navigation to adjacent photos
-```
+**Testing infrastructure services:**
 
-### Photo Reorder Flow (New, modeled on existing album reorder)
+`imageService.ts` and `exifService.ts` are pure functions that take file paths and return results. They can be tested with small fixture images (a 10x10 JPEG is fine) without mocking Sharp. This gives higher confidence than mock-based tests.
 
-```
-Admin opens album detail page
-       |
-       v
-Server Component fetches album photos (sorted by sortOrder)
-       |
-       v
-Client Component renders draggable photo grid
-       |
-       v
-Admin drags photo to new position
-       |
-       v
-Optimistic UI update (same pattern as AlbumsPageClient)
-       |
-       v
-POST /api/admin/albums/[id]/reorder { photoIds: [...] }
-       |
-       v
-Repository updates photo_albums.sortOrder in transaction
-       |
-       v
-Public album page automatically reflects new order
+**Testing API routes:**
+
+Next.js API routes are just async functions that take `NextRequest` and return `NextResponse`. They can be tested by constructing request objects directly:
+
+```typescript
+import { POST } from "@/app/api/admin/albums/route";
+
+const request = new NextRequest("http://localhost/api/admin/albums", {
+  method: "POST",
+  body: JSON.stringify({ title: "Test Album" }),
+  headers: { "Content-Type": "application/json" },
+});
+const response = await POST(request);
+expect(response.status).toBe(201);
 ```
 
----
+The challenge is mocking `verifySession()` (uses `cookies()` from Next.js). Options:
 
-## Suggested Build Order
+1. Mock the `@/infrastructure/auth` module in Vitest
+2. Create a test helper that sets up session cookies
+3. Test at E2E level with Playwright (recommended for auth flows)
 
-The build order is driven by two factors: (1) dependency chains between features, and (2) risk/complexity ordering (hardest first).
+### Pattern 5: Performance Monitoring Integration Points
 
-### Phase 1: EXIF Metadata (hardest, spans all layers, foundation for display features)
+Performance optimizations integrate at specific points in the existing architecture:
 
-**Why first:** EXIF touches every layer and requires a database migration. Building this first establishes the migration pattern for subsequent changes. The EXIF data is also needed for the lightbox display (Phase 2) and OG tags (Phase 4).
+**Image Serving (`/api/images/[photoId]/[filename]/route.ts`):**
 
-**Subtasks:**
+- Current: Reads file from disk on every request, returns with `Cache-Control: immutable`
+- Optimization: Add `ETag` header based on file stat mtime. Add `If-None-Match` / `304 Not Modified` support. This reduces bandwidth for re-requests.
+- Integration point: Modify the `serveImage` function only.
 
-1. Database migration script (ALTER TABLE)
-2. Update Drizzle schema + Photo entity + repository mappers
-3. Create exifService.ts
-4. Integrate EXIF extraction into worker
-5. Verify end-to-end: upload photo, check EXIF in database
+**Server Components (pages):**
 
-### Phase 2: Lightbox Polish (transitions, gestures, fullscreen, EXIF display)
+- Current: `force-dynamic` on homepage, no caching hints elsewhere
+- Optimization: Add `revalidate` export for semi-static pages. Homepage could revalidate every 60s instead of being fully dynamic.
+- Integration point: Add `export const revalidate = 60` to page files.
 
-**Why second:** All presentation-layer changes to the existing PhotoLightbox component. Grouped together because they all modify the same file. EXIF display depends on Phase 1 data being available.
+**Database Queries:**
 
-**Subtasks:**
+- Current: Simple queries, no optimization needed at this scale
+- Potential: Add WAL mode for concurrent reads during writes. One-line change: `sqlite.pragma("journal_mode = WAL")`
+- Integration point: `infrastructure/database/client.ts`
 
-1. Add Fullscreen + Zoom plugins to PhotoLightbox
-2. Tune animation timings (transitions)
-3. Enable gesture controls (swipe to close)
-4. Add EXIF metadata display in lightbox (depends on Phase 1)
+**Image Processing Worker:**
 
-### Phase 3: Album Management (cover selection, photo reordering)
+- Current: Processes sequentially within each job, concurrency=2
+- Optimization: Process WebP and AVIF for same size in parallel (they use `.clone()` already but `await` sequentially)
+- Integration point: `infrastructure/services/imageService.ts` -- change sequential awaits to `Promise.all`
 
-**Why third:** Both features require a new admin album detail page. Building them together avoids creating the page twice. Neither depends on Phase 1 or 2.
+**Bundle Size:**
 
-**Subtasks:**
+- Current: `PhotoLightbox` is already dynamically imported. Good.
+- Audit: Check for unnecessary client-side JS. `PhotoGrid` (200 lines) is imported in admin but is not marked "use client" -- it is a Server Component when used in pages. Good.
 
-1. Create admin album detail page with photo grid
-2. Add "Set as Cover" functionality
-3. Add drag-to-reorder with dnd-kit
-4. Create reorder API endpoint
-5. Fix findByAlbumId to ORDER BY sortOrder
+## Data Flow: Error Propagation
 
-### Phase 4: Shareability (direct links, OG tags)
-
-**Why last:** Direct photo links require the new route structure, and OG tags benefit from having EXIF data (Phase 1) available. These are the most user-facing polish features.
-
-**Subtasks:**
-
-1. Create direct photo page route
-2. Add URL sync to lightbox in album gallery
-3. Add generateMetadata to all public pages
-4. Test OG tags with social media preview tools
-
-### Dependency Graph
+### Current Error Propagation (No Boundaries)
 
 ```
-Phase 1: EXIF Metadata
-    |
-    +--> Phase 2: Lightbox Polish (needs EXIF data for display)
-    |
-    +--> Phase 4: Shareability (OG tags benefit from EXIF/photo data)
+User visits /albums/[id] where id doesn't exist
+  → Server Component calls photoRepository.findByAlbumId(id)
+    → Drizzle query returns empty array (not an error)
+    → Page renders empty state
+    (This case is handled)
 
-Phase 3: Album Management (independent, can run in parallel with Phase 2)
-    |
-    +--> Phase 4: Shareability (direct links need album photo ordering to work)
+User visits /albums/[id] where database is corrupted
+  → Server Component calls photoRepository.findByAlbumId(id)
+    → Drizzle throws SqliteError
+      → Error propagates to Next.js runtime
+        → Next.js shows default error page (ugly, no retry)
+        (This case is NOT handled)
+
+Admin uploads file but disk is full
+  → API route calls saveOriginalFile(photoId, file)
+    → fs.writeFile throws ENOSPC
+      → Error propagates to API route
+        → API route has no try/catch
+          → Next.js returns 500 with generic error
+          (This case is NOT handled)
 ```
 
-**Phases 2 and 3 are independent of each other** and could theoretically run in parallel, but sequential execution is recommended for a single-developer project.
+### Recommended Error Propagation (With Boundaries)
 
----
+```
+User visits /albums/[id] where database is corrupted
+  → Server Component calls photoRepository.findByAlbumId(id)
+    → Drizzle throws SqliteError
+      → Error caught by albums/[id]/error.tsx
+        → Shows "Failed to load album" + retry button
+        → Logs error for debugging
+
+Admin uploads file but disk is full
+  → API route calls saveOriginalFile(photoId, file)
+    → fs.writeFile throws ENOSPC
+      → Try/catch in API route catches error
+        → Returns { error: "Storage full" }, status: 507
+        → Client shows error in UploadQueue component
+
+Worker fails to process image after 3 retries
+  → BullMQ marks job as failed
+    → Worker "failed" handler sets photo.status = "error"
+      → Admin dashboard shows error badge
+        → Admin can trigger reprocess (NEW: recovery endpoint)
+```
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern: JSON Blob for EXIF Data
+### Anti-Pattern 1: Over-Testing Trivial Code
 
-**What:** Storing all EXIF as a single JSON column instead of individual fields.
-**Why tempting:** Fewer ALTER TABLE statements, flexible schema.
-**Why bad:** Cannot query by camera model, cannot sort by date taken, Drizzle type safety lost. The set of display fields is fixed (8 fields) and will not grow unpredictably.
-**Instead:** Use individual typed columns.
+**What:** Writing unit tests for `Photo.ts` and `Album.ts` entity interfaces
+**Why bad:** These are TypeScript interfaces with zero logic. Tests would just assert that TypeScript types work, which the compiler already guarantees.
+**Instead:** Test the code that USES these entities -- repositories and API routes.
 
-### Anti-Pattern: Custom Lightbox Gestures
+### Anti-Pattern 2: Mocking the Database for Repository Tests
 
-**What:** Implementing swipe/pinch gesture handlers from scratch.
-**Why tempting:** More control over behavior.
-**Why bad:** Touch event handling is notoriously complex (preventing default scroll, handling multi-touch, momentum). YARL already handles this well.
-**Instead:** Use YARL's built-in gesture support and plugin system.
+**What:** Mocking `db.select().from().where()` chain in SQLitePhotoRepository tests
+**Why bad:** You are testing that your mock matches Drizzle's API, not that your queries work. The mock becomes brittle and meaningless.
+**Instead:** Use real SQLite with `:memory:` mode. Fast, accurate, no mocking needed.
 
-### Anti-Pattern: Intercepting Routes for Direct Links
+### Anti-Pattern 3: Error Boundaries That Swallow Errors
 
-**What:** Using Next.js intercepting routes (`(.)photos/[id]`) for the modal-overlay pattern.
-**Why tempting:** Instagram-like UX where clicking opens a modal but direct URL shows a full page.
-**Why bad:** Intercepting routes add significant complexity to the route structure, are harder to reason about, and have edge cases with back/forward navigation. The portfolio is a simple gallery, not a social media app.
-**Instead:** Use dedicated photo pages with clean URLs. Keep the lightbox as the in-page viewing experience.
+**What:** `error.tsx` that catches errors but does not log them
+**Why bad:** Errors are hidden from the developer. Users see a nice page but bugs are never found.
+**Instead:** Always log the error in error.tsx's `useEffect`, then show recovery UI.
 
-### Anti-Pattern: Running db:push for Schema Changes
+### Anti-Pattern 4: Testing Implementation Details
 
-**What:** Using `drizzle-kit push` to apply schema changes to existing database.
-**Why bad:** Learned in v1.0 Phase 6 -- `db:push` caused runtime errors. It may drop and recreate tables, losing data.
-**Instead:** Always use `ALTER TABLE` migration scripts for existing databases.
+**What:** Testing that `SQLitePhotoRepository.save()` calls `db.insert().values().onConflictDoUpdate()`
+**Why bad:** If the implementation changes (e.g., uses raw SQL), the test breaks despite correct behavior.
+**Instead:** Test behavior: save a photo, find it by ID, verify fields match.
 
----
+### Anti-Pattern 5: Global Error Boundary Only
+
+**What:** Adding just one `app/error.tsx` and considering error handling "done"
+**Why bad:** Every error shows the same generic message. User has no context about what failed or how to recover.
+**Instead:** Add error boundaries at route segment boundaries where the error message differs (root, album detail, admin).
+
+### Anti-Pattern 6: Testing Server Components Directly
+
+**What:** Importing and calling Server Components in Vitest like regular functions
+**Why bad:** Server Components use `async/await` at the component level, `cookies()`, `headers()`, and other server-only APIs that do not work outside the Next.js runtime.
+**Instead:** Test Server Component data-fetching logic separately. Test the full page with Playwright E2E tests.
+
+## Integration Points Summary
+
+### Where New Code Connects to Existing Architecture
+
+| Integration Point | What Connects       | Existing File                                  | Change Type                          |
+| ----------------- | ------------------- | ---------------------------------------------- | ------------------------------------ |
+| Error boundaries  | error.tsx files     | `app/` directory                               | NEW files alongside existing pages   |
+| Not-found pages   | not-found.tsx files | `app/` directory                               | NEW files alongside existing pages   |
+| API error wrapper | Handler utility     | `app/api/` routes                              | NEW utility, MODIFY routes to use it |
+| Test setup        | Database factory    | `infrastructure/database/client.ts`            | MODIFY to export factory             |
+| Test fixtures     | JPEG/PNG test files | `tests/fixtures/`                              | NEW directory                        |
+| Repository tests  | In-memory SQLite    | `infrastructure/database/repositories/`        | NEW test files                       |
+| Service tests     | Fixture images      | `infrastructure/services/`                     | NEW test files                       |
+| Worker recovery   | Retry endpoint      | `app/api/admin/photos/[id]/` route             | MODIFY to add reprocess action       |
+| Performance: WAL  | SQLite pragma       | `infrastructure/database/client.ts`            | MODIFY (one line)                    |
+| Performance: ETag | Image serving       | `app/api/images/[photoId]/[filename]/route.ts` | MODIFY serveImage function           |
+| E2E tests         | Full app testing    | Root `tests/` directory                        | NEW                                  |
+| Playwright config | E2E runner          | Root                                           | NEW file                             |
+
+### Dependency Graph for Implementation Order
+
+```
+Phase 1: Test Infrastructure (foundation -- everything depends on this)
+  ├── vitest.config.ts updates
+  ├── test-setup.ts (DB factory, env mocks)
+  ├── playwright.config.ts
+  └── test fixture files
+
+Phase 2: Error Handling (independent of tests)
+  ├── Custom error classes (src/lib/errors.ts)
+  ├── error.tsx files (root, albums/[id], admin, admin/(protected))
+  ├── not-found.tsx files (root, albums/[id])
+  └── API route error consistency
+
+Phase 3: Unit & Integration Tests (depends on Phase 1)
+  ├── Infrastructure tests (repositories, services, auth)
+  ├── API route integration tests
+  └── Coverage reporting
+
+Phase 4: E2E Tests (depends on Phase 1, Phase 2)
+  ├── Public gallery flows
+  ├── Admin login flow
+  ├── Upload and processing flow
+  └── Album management flow
+
+Phase 5: Performance (independent, can be parallel)
+  ├── WAL mode for SQLite
+  ├── ETag/304 for image serving
+  ├── Image processing parallelization
+  └── Page revalidation hints
+```
+
+## Confidence Assessment
+
+| Area                                     | Confidence | Rationale                                                                                                 |
+| ---------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------- |
+| Test file structure                      | HIGH       | Standard Vitest colocated pattern, matches existing `__tests__/` convention                               |
+| Error boundary placement                 | HIGH       | Next.js App Router error.tsx is well-documented, placement follows route hierarchy                        |
+| API error handling                       | HIGH       | Standard try/catch patterns, Zod validation already in use                                                |
+| Repository testing with in-memory SQLite | HIGH       | better-sqlite3 supports `:memory:` natively, Drizzle works identically                                    |
+| Worker error recovery                    | MEDIUM     | BullMQ stalled job handling needs configuration verification                                              |
+| Performance: WAL mode                    | HIGH       | Standard SQLite optimization, one pragma call                                                             |
+| Performance: ETag/304                    | HIGH       | Standard HTTP caching, small change to existing route                                                     |
+| Performance: image parallelization       | MEDIUM     | Sharp clone() should support parallel output, but memory implications with large images need verification |
+| E2E test patterns                        | MEDIUM     | Playwright is installed but unconfigured; auth flow testing with cookies needs investigation              |
 
 ## Sources
 
-### Authoritative (HIGH confidence)
+- Codebase analysis: All files in `src/` examined directly (HIGH confidence)
+- Vitest 4.x: Installed at version 4.0.18, configuration verified from `vitest.config.ts`
+- Playwright: Installed at version 1.58.2, no config file exists yet
+- Next.js 16: Installed at version 16.1.6, App Router patterns verified from existing code
+- better-sqlite3: Supports `:memory:` databases (verified from npm docs, standard SQLite feature)
+- Drizzle ORM: Repository pattern verified from existing implementations
+- BullMQ: Job retry/failure patterns verified from existing `queues.ts` configuration (3 retries, exponential backoff)
 
-- [Sharp API - metadata()](https://sharp.pixelplumbing.com/api-input/) -- Returns raw EXIF buffer, requires separate parsing
-- [Sharp GitHub Issue #285](https://github.com/lovell/sharp/issues/285) -- Sharp maintainer recommends exif-reader for parsing EXIF buffers
-- [YARL Plugins Documentation](https://yet-another-react-lightbox.com/plugins) -- Fullscreen, Zoom, Slideshow, Captions all bundled
-- [YARL Fullscreen Plugin](https://yet-another-react-lightbox.com/plugins/fullscreen) -- Configuration options, ref API
-- [YARL Zoom Plugin](https://yet-another-react-lightbox.com/plugins/zoom) -- Pinch zoom, scroll zoom, double-click zoom
-- [YARL Next.js Example](https://yet-another-react-lightbox.com/examples/nextjs) -- Custom render.slide with next/image
-- [Next.js generateMetadata](https://nextjs.org/docs/app/api-reference/functions/generate-metadata) -- Dynamic OG metadata generation
-- [Next.js Metadata and OG Images](https://nextjs.org/docs/app/getting-started/metadata-and-og-images) -- File conventions, ImageResponse API
+---
 
-### Project-Specific (HIGH confidence -- verified by reading codebase)
-
-- `photo_albums.sortOrder` exists in schema but is unused (always 0, findByAlbumId unordered)
-- Album PATCH API already accepts `coverPhotoId` updates
-- YARL v3.28.0 installed, includes Fullscreen/Zoom/Slideshow plugins bundled
-- @dnd-kit/core + @dnd-kit/sortable already installed (used for album reordering)
-- Sharp v0.34.5 installed, metadata() API returns raw EXIF buffer
-- v1.0 established ALTER TABLE migration pattern (Phase 6 lesson learned)
+_Architecture research for: Quality & Hardening (v1.2)_
+_Researched: 2026-02-06_

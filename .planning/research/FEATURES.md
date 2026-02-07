@@ -1,604 +1,218 @@
-# Feature Landscape: v1.1 Enhancement Features
+# Feature Research: Quality & Hardening
 
-**Domain:** Photography portfolio enhancements
-**Researched:** 2026-02-05
-**Scope:** 8 specific features for existing v1.0 portfolio app
+**Domain:** Photography portfolio -- quality hardening for production readiness
+**Researched:** 2026-02-06
+**Confidence:** HIGH (based on thorough codebase audit of all source files + domain knowledge of Next.js/testing patterns)
 
----
+## Current State Assessment
 
-## Feature Analysis
+Before defining features, here is what the codebase audit revealed:
 
-### 1. EXIF Metadata Extraction and Display
+**Testing:** 1 test file exists (`theme-tokens.test.ts` -- CSS token validation). Vitest is configured with path aliases. Playwright is a dev dependency but has no config file or test files. Effectively zero functional test coverage across ~6,043 LOC.
 
-**Category:** Table Stakes (was deferred from v1.0, photographers expect this)
+**Error boundaries:** Zero `error.tsx`, `loading.tsx`, or `not-found.tsx` files anywhere in the app. Server component errors render the Next.js default error page. Client component errors are unhandled at the boundary level (individual components have local try/catch but nothing catches a full render crash).
 
-**How it typically works:**
+**API route validation:** Inconsistent. Album routes use Zod schemas (`updateAlbumSchema`, `createAlbumSchema`, `reorderSchema`). Photo PATCH route does raw `request.json()` with no validation -- `body as { description: string | null }` is a type assertion, not a runtime check. Upload route validates file type but not file size.
 
-Photography sites like Flickr and 500px display EXIF data alongside or below images. The standard pattern is:
+**Worker error handling:** Worker has `failed` event handler that sets photo status to `"error"`, but there is no mechanism for the admin to retry a failed job, see why it failed, or reprocess a photo. Photos stuck in `"processing"` status after Redis timeout are orphans with no recovery path. The upload route silently swallows Redis errors in a catch block with no comment to the user.
 
-- **Extraction at upload time:** EXIF is parsed from the original file during the image processing pipeline and stored in the database. It is NOT parsed on each request.
-- **Storage:** A JSON column or separate metadata table stores the parsed values. Only the photographically-relevant subset is kept.
-- **Display:** A compact info panel shown below the photo in the lightbox or as a toggleable overlay. The most common layout is a single row of icons with values (camera icon + "Canon R5", aperture icon + "f/2.8", etc.).
+**Database integrity:** Known FK constraint mismatch on `coverPhotoId` (schema says `SET NULL`, actual DB may have `NO ACTION`). No database health checks or migration validation. `SQLitePhotoRepository.toDomain()` does `JSON.parse(row.exifData)` with no try/catch -- corrupt JSON will crash any page that loads photos.
 
-**Expected EXIF fields to display (in priority order):**
+**Performance:** Homepage has `force-dynamic` which disables caching. Image API serves files with `immutable` cache headers (good). No `loading.tsx` means no streaming/Suspense for server components. `findAll()` queries have no pagination.
 
-| Field         | EXIF Tag         | Example           | Why                                   |
-| ------------- | ---------------- | ----------------- | ------------------------------------- |
-| Camera body   | Make + Model     | Canon EOS R5      | Most asked "what did you shoot with?" |
-| Lens          | LensModel        | RF 24-70mm f/2.8L | Second most asked question            |
-| Focal length  | FocalLength      | 50mm              | Compositional context                 |
-| Aperture      | FNumber          | f/2.8             | Depth of field context                |
-| Shutter speed | ExposureTime     | 1/250s            | Motion context                        |
-| ISO           | ISOSpeedRatings  | 400               | Light conditions context              |
-| Date taken    | DateTimeOriginal | Jan 15, 2026      | When, not just upload date            |
-
-**Fields to extract but NOT display publicly:**
-
-| Field                | Reason                              |
-| -------------------- | ----------------------------------- |
-| GPS coordinates      | Privacy: reveals shooting locations |
-| Camera serial number | Privacy: identifies specific device |
-| Software version     | Not useful to viewers               |
-| Full IPTC/XMP        | Overkill for portfolio display      |
-
-**Implementation approach:**
-
-Sharp already returns an `exif` property as a raw Buffer from `metadata()`. This buffer needs parsing with a dedicated library. The two viable options:
-
-- **exif-reader** (recommended by Sharp's own documentation, ~4KB, zero dependencies, parses the buffer Sharp provides directly)
-- **exifr** (faster, more versatile, supports selective tag extraction, ~30KB full bundle)
-
-Recommendation: Use **exifr** because it supports selective parsing (only grab the 7 fields needed), handles edge cases better across camera manufacturers, and works directly with file buffers. Sharp's `metadata().exif` buffer can be passed directly to exifr.
-
-**Where to extract:** During the BullMQ image processing worker job, right alongside derivative generation and blur placeholder creation. Parse EXIF, store the 7 relevant fields as a JSON string in a new `exifData` column on the `photos` table.
-
-**Complexity:** Low-Medium
-
-- Schema migration: Add `exif_data TEXT` column to photos table (use ALTER TABLE, not db:push per project lessons)
-- Worker change: ~15 lines to extract and store EXIF after loading the original
-- Display component: New `ExifDisplay` component shown in lightbox captions area
-- Backfill: Need a one-time script to extract EXIF from existing originals
-
-**Dependencies on existing features:**
-
-- Image processing worker (already exists)
-- Sharp library (already installed, `metadata()` already used in `imageService.ts`)
-- PhotoLightbox component (already exists, uses Captions plugin)
-- Photo entity and schema (need migration)
-
-**Confidence:** HIGH -- Sharp metadata extraction verified in existing codebase (`src/infrastructure/services/imageService.ts` already calls `sharp(inputPath).metadata()`). EXIF buffer parsing with exifr is well-documented.
+**Client error states:** Most client components have decent optimistic update patterns with rollback on error (AlbumDetailClient, AlbumsPageClient, AlbumSelector). But errors auto-dismiss after 3 seconds with no way to persist or copy error details. PhotoDetail uses `alert()` for delete failure and `confirm()` for delete confirmation -- not accessible, not styled.
 
 ---
 
-### 2. Smooth Transitions Between Photos in Lightbox
-
-**Category:** Differentiator (enhances perceived quality significantly)
-
-**How it typically works:**
-
-Professional photography sites use smooth crossfade or slide transitions when navigating between photos. The key patterns:
-
-- **Crossfade:** Current photo fades out while next fades in. Typical duration: 200-300ms. Creates an elegant, unhurried feel.
-- **Slide/swipe:** Photos slide left/right like a carousel. Typical duration: 300-500ms. Feels natural, especially on touch devices.
-- **Spring animation:** Slightly bouncy easing for a modern feel. Used by Apple Photos and Google Photos.
-
-**Current state in the project:**
-
-The existing `PhotoLightbox.tsx` already configures YARL animations:
-
-```typescript
-animation={{
-  fade: 200,
-  swipe: 300,
-}}
-```
-
-This means basic fade and swipe transitions are already present. The "smooth transitions" enhancement would involve:
-
-1. **Improving image loading so transitions feel smooth:** Currently the lightbox uses `600w.webp` for all slides. This means small images on large screens. Using YARL's `srcSet` feature to serve the right resolution would make transitions between fully-loaded images feel much smoother.
-2. **Preloading:** YARL's `carousel.preload: 2` is already set, which preloads 2 slides ahead. This is good.
-3. **Easing refinement:** Tuning the easing curves for a more cinematic feel. YARL supports custom easing strings per animation type.
-
-**What users actually notice:**
-
-The biggest "smoothness" issue is not animation duration -- it is the flash of loading when swiping to the next photo. A photo that takes 500ms to load with a 200ms crossfade feels janky. The fix is responsive srcSet with preloading, not animation tweaking.
-
-**YARL srcSet support:**
-
-YARL slides accept a `srcSet` array for responsive images:
-
-```typescript
-{
-  src: '/api/images/photoId/1200w.webp',
-  srcSet: [
-    { src: '/api/images/photoId/600w.webp', width: 600 },
-    { src: '/api/images/photoId/1200w.webp', width: 1200 },
-    { src: '/api/images/photoId/2400w.webp', width: 2400 },
-  ]
-}
-```
-
-This is the single biggest improvement for perceived smoothness.
-
-**Complexity:** Low
-
-- Update slide data to include srcSet with all available widths
-- Fine-tune animation easing values
-- No new dependencies needed
-
-**Dependencies on existing features:**
-
-- PhotoLightbox component (already exists with YARL)
-- Image API route serving multiple widths (already exists)
-- Multiple derivative sizes already generated (300, 600, 1200, 2400)
-
-**Confidence:** HIGH -- YARL documentation confirms srcSet support. Existing animation config just needs tuning.
-
----
-
-### 3. Touch Gestures (Swipe) for Mobile
-
-**Category:** Table Stakes (mobile users expect swipe navigation)
-
-**How it typically works:**
-
-On mobile photography sites:
-
-- **Horizontal swipe:** Navigate to previous/next photo. This is the primary interaction.
-- **Pinch to zoom:** Enlarge photo details. Secondary but expected.
-- **Pull down to close:** Swipe down to dismiss the lightbox and return to gallery.
-- **Double-tap to zoom:** Quick zoom toggle.
-
-**Current state:**
-
-YARL already has built-in touch support including horizontal swipe navigation. The current lightbox config explicitly disables some gestures:
-
-```typescript
-controller={{
-  closeOnBackdropClick: false,
-  closeOnPullDown: false,
-  closeOnPullUp: false,
-}}
-```
-
-So horizontal swipe for prev/next already works (this is YARL's default behavior). The enhancement is about enabling additional gestures and potentially the Zoom plugin.
-
-**What needs to change:**
-
-1. **Enable pull-down to close:** Set `closeOnPullDown: true`. This is the standard mobile dismiss gesture (used by Instagram, Google Photos, Apple Photos). Currently explicitly disabled.
-2. **Add Zoom plugin:** YARL's Zoom plugin enables pinch-to-zoom and double-tap-to-zoom on mobile. This is a table stakes feature for photography viewing.
-3. **Consider pull-up to close:** Some sites also support pull-up. Less standard; could enable for completeness.
-
-**YARL Zoom plugin capabilities:**
-
-- Pinch to zoom (touch)
-- Double-tap to zoom (touch)
-- Mouse wheel zoom (desktop)
-- Configurable max zoom, scroll to zoom sensitivity
-- Zoom in/out buttons in toolbar
-
-**Complexity:** Low
-
-- Import and add Zoom plugin to plugins array
-- Flip `closeOnPullDown` to `true`
-- Configure zoom limits (maxZoomPixelRatio, scrollToZoom)
-- No new dependencies (Zoom is bundled with YARL)
-
-**Dependencies on existing features:**
-
-- PhotoLightbox component (already exists)
-- YARL already installed at v3.28.0
-
-**Confidence:** HIGH -- YARL documentation and GitHub confirm all these gestures are built-in.
-
----
-
-### 4. Full-Screen Mode for Lightbox
-
-**Category:** Differentiator (valued by photography enthusiasts, not expected by casual viewers)
-
-**How it typically works:**
-
-Full-screen mode uses the browser's Fullscreen API to hide all browser chrome (address bar, tabs, bookmarks). The photo fills the entire screen. Common patterns:
-
-- **Manual entry:** A fullscreen button (expand icon) in the lightbox toolbar
-- **Auto-enter on open:** Some sites go fullscreen when the lightbox opens (aggressive but immersive)
-- **Exit on Escape:** Standard browser behavior, also YARL's close trigger
-- **Hide on unsupported:** Safari on iPhone does not support the Fullscreen API; the button should not appear
-
-**YARL Fullscreen plugin:**
-
-YARL has a built-in Fullscreen plugin that handles all of this:
-
-- Adds a fullscreen toggle button to the toolbar
-- Supports `auto` mode (enter fullscreen when lightbox opens)
-- Provides enter/exit lifecycle callbacks
-- Automatically hides the button on unsupported browsers (Safari iOS, iframes)
-- Provides a ref API for programmatic control
-
-**Recommendation:** Enable the Fullscreen plugin but do NOT auto-enter. Auto-entering fullscreen is surprising and feels intrusive. Let the user choose. The button in the toolbar is sufficient.
-
-**Complexity:** Very Low
-
-- Import Fullscreen plugin
-- Add to plugins array
-- Optionally customize icons to match design
-- No new dependencies (bundled with YARL)
-
-**Dependencies on existing features:**
-
-- PhotoLightbox component (already exists)
-- YARL already installed
-
-**Confidence:** HIGH -- YARL Fullscreen plugin documentation verified via official site.
-
----
-
-### 5. Album Cover Image Selection
-
-**Category:** Table Stakes (the schema and API already support this, just missing the UI)
-
-**How it typically works:**
-
-Admin selects which photo represents an album in the album listing. Common UI patterns:
-
-- **Click to set as cover:** In the album management view, each photo has a "Set as Cover" button or a star/pin icon
-- **Visual indicator:** The current cover photo is visually highlighted (border, badge, checkmark)
-- **Fallback:** If no cover is explicitly set, use the first photo in the album
-- **Grid selection modal:** A modal showing album photos as thumbnails; click one to select
-
-**Current state:**
-
-The infrastructure is already fully built:
-
-- `albums.coverPhotoId` column exists in the schema
-- `Album` entity has `coverPhotoId: string | null`
-- `PATCH /api/admin/albums/[id]` accepts `coverPhotoId` in the update schema
-- `AlbumsPage` (`src/app/albums/page.tsx`) already has fallback logic: uses `coverPhotoId` if set, otherwise first photo
-- The admin album edit API validates and saves `coverPhotoId`
-
-What is missing is only the **admin UI** to set/change the cover photo. There is no visual way for the admin to pick a cover photo from the album's photos.
-
-**Recommended UI pattern:** Within the album edit/management page, show a thumbnail grid of the album's photos. Each photo has a "Set as Cover" action. The current cover has a visible "Cover" badge. Clicking a non-cover photo sends `PATCH /api/admin/albums/[id] { coverPhotoId: photoId }`.
-
-**Complexity:** Low
-
-- New client component: Cover photo picker (thumbnail grid + click handler)
-- Wire to existing `PATCH` endpoint
-- Visual indicator for current cover
-- No schema changes, no API changes, no new dependencies
-
-**Dependencies on existing features:**
-
-- Album management admin UI (exists)
-- Album PATCH API with coverPhotoId support (exists)
-- Photo thumbnails served via image API (exists)
-
-**Confidence:** HIGH -- All backend infrastructure verified in codebase. Only UI component is needed.
-
----
-
-### 6. Drag to Reorder Photos Within Album
-
-**Category:** Table Stakes (admin expects to control photo order in albums)
-
-**How it typically works:**
-
-Admin drags photo thumbnails to rearrange their order within an album. The order is saved and reflected on the public album page.
-
-- **Drag handle or entire card:** Either a dedicated grip icon or the whole thumbnail is draggable
-- **Visual feedback:** Dragged item follows cursor with opacity/scale change. Drop target shows insertion point.
-- **Optimistic update:** Reorder visually immediately, then persist to backend
-- **Grid layout:** Photos shown as a grid (not a list), requiring 2D sorting strategy
-- **Save strategy:** Either auto-save on drop, or batch save with a "Save Order" button
-
-**Current state:**
-
-The project already uses `@dnd-kit/core` (v6.3.1) and `@dnd-kit/sortable` (v10.0.0) for album reordering on the albums admin page. The `SortableAlbumCard` component is a working example of the pattern.
-
-However, the `photo_albums` junction table already has a `sortOrder` column, and `findByAlbumId` does NOT currently order by it:
-
-```typescript
-// Current: no ORDER BY on sortOrder
-const results = await db
-  .select({ photo: photos })
-  .from(photos)
-  .innerJoin(photoAlbums, eq(photos.id, photoAlbums.photoId))
-  .where(eq(photoAlbums.albumId, albumId));
-```
-
-Also, `addToAlbum` always sets `sortOrder: 0`, so all photos currently have the same sort order.
-
-**What needs to be built:**
-
-1. **Admin album detail page** with photo grid showing sortable thumbnails
-2. **Sortable photo grid component** using `@dnd-kit/sortable` (similar pattern to `SortableAlbumCard`)
-3. **API endpoint** to update photo sort orders within an album (batch update `photo_albums.sortOrder`)
-4. **Repository method** to update sort orders for a batch of photo-album pairs
-5. **Fix `findByAlbumId`** to ORDER BY `photo_albums.sortOrder`
-
-**Grid vs List sorting note:** dnd-kit supports grid sorting via `rectSortingStrategy` (or `rectSwappingStrategy`). For a photo grid, `rectSortingStrategy` is the right choice -- it handles 2D reordering where items wrap across rows.
-
-**Complexity:** Medium
-
-- New admin page/view for album photo management
-- Sortable grid component (can follow SortableAlbumCard pattern)
-- New API endpoint for batch sort order updates
-- Repository query fix to respect sort order
-- dnd-kit already installed
-
-**Dependencies on existing features:**
-
-- dnd-kit packages (already installed)
-- SortableAlbumCard (existing pattern to follow)
-- photo_albums.sortOrder column (exists but unused)
-- Album management admin (exists)
-
-**Confidence:** HIGH -- dnd-kit already in use, sortOrder column exists, proven pattern in SortableAlbumCard.
-
----
-
-### 7. Direct Links to Specific Photos
-
-**Category:** Table Stakes (users expect to share/bookmark a specific photo view)
-
-**How it typically works:**
-
-When a user opens a photo in the lightbox, the URL updates to include the photo identifier. If someone navigates to that URL directly, the page loads with the lightbox open on that specific photo.
-
-**Common URL patterns:**
-
-| Pattern            | Example                         | Pros                                                           | Cons                                             |
-| ------------------ | ------------------------------- | -------------------------------------------------------------- | ------------------------------------------------ |
-| Hash fragment      | `/albums/abc#photo-xyz`         | No server roundtrip, easy to implement                         | Not indexable by search engines, no SSR metadata |
-| Query parameter    | `/albums/abc?photo=xyz`         | Works with Next.js useSearchParams, integrates with App Router | Slightly less clean URL                          |
-| Dedicated route    | `/photos/xyz`                   | SEO-friendly, can have own metadata, proper SSR                | Requires new route, more complex navigation      |
-| Intercepting route | `/albums/abc/@modal/photos/xyz` | Next.js parallel routes pattern, best of both worlds           | Complex setup                                    |
-
-**Recommended approach for this project:** Query parameter with `window.history.pushState`.
-
-Rationale:
-
-- Next.js App Router integrates `pushState`/`replaceState` with `usePathname` and `useSearchParams` (confirmed since Next.js 14.1).
-- URL becomes `/albums/abc?photo=xyz` when a photo is opened in the lightbox.
-- On page load, check for `photo` search param. If present, find the photo's index and open the lightbox at that index.
-- `window.history.replaceState` updates the URL without triggering navigation or re-rendering the page.
-- When the lightbox closes, remove the `photo` param from the URL.
-- No new routes needed. Works with existing album pages.
-
-**For the homepage:** Since the homepage shows random photos, deep linking is less meaningful there. Could use `/photos/xyz` as a standalone photo page that shows the photo with its metadata, but this is a separate feature from lightbox deep linking.
-
-**Complexity:** Low-Medium
-
-- Update AlbumGalleryClient and HomepageClient to read/write URL search params
-- Update PhotoLightbox onIndexChange callback to update URL
-- On mount, check for photo param and auto-open lightbox
-- Handle browser back button (popstate event)
-
-**Dependencies on existing features:**
-
-- AlbumGalleryClient (exists, manages lightbox state)
-- HomepageClient (exists, manages lightbox state)
-- PhotoLightbox (exists, provides onIndexChange callback)
-- Photo IDs (already passed to client components)
-
-**Confidence:** HIGH -- window.history.pushState integration with Next.js App Router confirmed in official docs.
-
----
-
-### 8. OpenGraph Meta Tags for Social Sharing
-
-**Category:** Table Stakes (shared links should show photo preview, not a blank card)
-
-**How it typically works:**
-
-When someone shares a portfolio link on Twitter/X, Facebook, Discord, iMessage, etc., the platform fetches the page's OpenGraph meta tags to render a rich preview card. The essential tags:
-
-- `og:title` -- Page or photo title
-- `og:description` -- Album description or photo description
-- `og:image` -- Preview image URL (must be absolute, publicly accessible)
-- `og:url` -- Canonical URL
-- `og:type` -- "website" for pages, "article" for individual photos
-- `twitter:card` -- "summary_large_image" for photo content
-
-**Current state:**
-
-The root layout has default metadata:
-
-```typescript
-export const metadata: Metadata = {
-  title: "Create Next App",
-  description: "Generated by create next app",
-};
-```
-
-No pages have custom metadata. No OpenGraph images are configured.
-
-**What needs to be built:**
-
-1. **Root layout metadata:** Site-wide defaults (portfolio name, description, default OG image)
-2. **Album page metadata:** `generateMetadata` in `albums/[id]/page.tsx` returning album title, description, and cover photo as og:image
-3. **Photo-specific metadata (if deep linking):** When a direct photo URL exists, use that photo as the og:image
-4. **OG image serving:** The og:image URL must point to a publicly accessible image. The existing `/api/images/[photoId]/[filename]` route already serves images with proper content types. A 1200w.webp would work as the OG image.
-
-**Next.js Metadata API approach:**
-
-```typescript
-// In albums/[id]/page.tsx
-export async function generateMetadata({ params }): Promise<Metadata> {
-  const album = await albumRepo.findById(params.id);
-  return {
-    title: album.title,
-    description: album.description,
-    openGraph: {
-      title: album.title,
-      description: album.description,
-      images: [{ url: `/api/images/${coverPhotoId}/1200w.webp`, width: 1200 }],
-    },
-    twitter: {
-      card: "summary_large_image",
-    },
-  };
-}
-```
-
-**OG image size considerations:**
-
-- Facebook recommends 1200x630 pixels
-- Twitter recommends 1200x675 or larger
-- The existing 1200w derivative is the right size to use
-- Images must be accessible without authentication (the public image API route already works this way)
-- AVIF is NOT supported by all OG crawlers; use WebP or fall back to the derivative format
-
-**Dynamic OG image generation (optional, advanced):**
-
-Next.js supports `opengraph-image.tsx` files that dynamically generate OG images using `ImageResponse` from `next/og`. This could create a branded card with the photo overlaid on a template with the portfolio name. This is a differentiator, not table stakes.
-
-**Complexity:** Low
-
-- Add `generateMetadata` to album page and homepage
-- Update root layout with site-wide defaults
-- Point og:image to existing image API route
-- No new dependencies (Next.js Metadata API is built-in)
-
-**Dependencies on existing features:**
-
-- Image serving API (exists, serves 1200w.webp publicly)
-- Album cover photo resolution (exists or will exist via Feature 5)
-- Photo and album data accessible in server components (exists)
-
-**Confidence:** HIGH -- Next.js generateMetadata API is well-documented. Image route already serves publicly accessible images.
-
----
-
-## Summary by Category
-
-### Table Stakes
-
-Features users expect. Missing them makes the product feel incomplete for v1.1.
-
-| Feature                                  | Complexity | New Dependencies         | Schema Changes              |
-| ---------------------------------------- | ---------- | ------------------------ | --------------------------- |
-| 1. EXIF metadata extraction & display    | Low-Medium | exifr (~30KB)            | Add `exif_data` TEXT column |
-| 3. Touch gestures (zoom, pull-to-close)  | Low        | None (YARL built-in)     | None                        |
-| 5. Album cover image selection (UI only) | Low        | None                     | None                        |
-| 6. Drag to reorder photos in album       | Medium     | None (dnd-kit installed) | None (column exists)        |
-| 7. Direct links to photos                | Low-Medium | None                     | None                        |
-| 8. OpenGraph meta tags                   | Low        | None (Next.js built-in)  | None                        |
-
-### Differentiators
-
-Features that elevate quality above typical portfolio sites.
-
-| Feature                                 | Complexity | New Dependencies     | Schema Changes |
-| --------------------------------------- | ---------- | -------------------- | -------------- |
-| 2. Smooth transitions (srcSet + easing) | Low        | None                 | None           |
-| 4. Full-screen mode                     | Very Low   | None (YARL built-in) | None           |
-
-### Anti-Features
-
-Things to deliberately NOT build for these 8 features.
-
-| Anti-Feature                                   | Why Avoid                                                                                                 | What to Do Instead                                       |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Display GPS coordinates from EXIF              | Privacy: reveals shooting locations. Many photographers strip GPS before sharing.                         | Extract but do not store or display GPS data             |
-| Display camera serial number                   | Privacy: identifies specific physical device                                                              | Strip during extraction                                  |
-| Auto-enter fullscreen on lightbox open         | Surprising, feels intrusive. Users hate unexpected fullscreen.                                            | Provide button; let user choose                          |
-| Dynamic OG image generation (branded cards)    | Over-engineered for v1.1. The actual photo is better than a generated card for a portfolio.               | Use the real photo as og:image. Revisit later if wanted. |
-| Custom animation library (Framer Motion, etc.) | YARL handles animations. Adding another animation library increases bundle size for marginal improvement. | Use YARL's built-in animation config                     |
-| Zoom with custom gesture handler               | YARL's Zoom plugin handles pinch/double-tap. Custom gesture code is fragile on mobile.                    | Use YARL Zoom plugin                                     |
-| Photo-level pages (standalone /photos/[id])    | Adds routing complexity, requires its own layout and navigation. Photos belong in album context.          | Use query param deep linking within album pages          |
-| Slideshow auto-play                            | Distracting for portfolio viewing. Photographers want viewers to linger on each photo.                    | Omit. Can add later if requested.                        |
+## Feature Landscape
+
+### Table Stakes (Users Expect These)
+
+Features that are baseline requirements for a production application. Missing these means the app will crash, confuse users, or lose data in predictable scenarios.
+
+| #   | Feature                                      | Why Expected                                                                                                                                                                                          | Complexity | Depends On                   | Notes                                                                                                                                                    |
+| --- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T1  | **Error boundaries (error.tsx)**             | Uncaught server/client errors currently show Next.js default error page or white screen. Users need a recoverable error state with a retry button, not a crash.                                       | Low        | --                           | Need at minimum: root `app/error.tsx`, root `app/global-error.tsx`, `app/admin/(protected)/error.tsx`, and public route `error.tsx`. Each is ~20-30 LOC. |
+| T2  | **Not-found pages (not-found.tsx)**          | Albums and photos call `notFound()` but there are no custom not-found pages. Users see the generic Next.js 404 with no site navigation or styling.                                                    | Low        | --                           | Root `app/not-found.tsx` with nav header and link back to home.                                                                                          |
+| T3  | **API route input validation**               | Photo PATCH route trusts client input without validation (`body as { description }`). Upload route has no file size limit. Malformed JSON crashes `request.json()` calls that lack try/catch.         | Low        | Zod (already installed)      | Audit all 8 API route files. 5 already use Zod. Standardize the remaining 3.                                                                             |
+| T4  | **API route error handling**                 | Multiple `request.json()` calls have no try/catch. Invalid JSON body crashes routes with a 500. Database errors propagate as unstructured 500s.                                                       | Low        | T3                           | Wrap routes in consistent try/catch or create a utility wrapper.                                                                                         |
+| T5  | **Unit tests for domain and infrastructure** | Zero test coverage on core logic. Repository `toDomain`/`toDatabase` mappings, image loader, env config validation, file storage, and EXIF extraction are all untested. Regressions are undetectable. | Medium     | Vitest (configured)          | Highest-value targets: imageLoader, env validation, repository mappers, image service pure functions. ~15-20 test files.                                 |
+| T6  | **Worker failure recovery**                  | Photos stuck in `"processing"` (Redis unavailable) or `"error"` (Sharp crash) have no admin-visible recovery path. Admin cannot retry, reprocess, or see failure reasons.                             | Medium     | Worker infrastructure exists | Need: admin UI filtering for stuck/error photos, retry action that re-enqueues the job, cleanup for orphaned processing entries.                         |
+| T7  | **Database JSON parsing safety**             | `SQLitePhotoRepository.toDomain()` does `JSON.parse(row.exifData)` with no try/catch. Corrupt or malformed EXIF JSON will crash any page that loads photos (homepage, album pages, admin dashboard).  | Low        | --                           | Single try/catch with fallback to null. Apply to any JSON column parsing.                                                                                |
+| T8  | **File size limit on uploads**               | Upload route validates file type but not size. The handler calls `file.arrayBuffer()` which loads the entire file into memory. A 2GB upload will exhaust Node.js memory.                              | Low        | --                           | Check `file.size` before `arrayBuffer()`. Reject files over configured max (e.g., 100MB for high-res photography).                                       |
+| T9  | **Consistent error response format**         | API routes return different error shapes: `{ error: string }`, `{ error: string, details: object }`, plain text `"Invalid filename"`. Client code must handle multiple formats.                       | Low        | T4                           | Define a standard `ApiError` response type. Apply consistently across all routes.                                                                        |
+| T10 | **Loading states for server components**     | No `loading.tsx` files anywhere. Page transitions show a blank white area while server components fetch from SQLite. Users see a flash of empty content on every navigation.                          | Low        | --                           | Add `loading.tsx` with simple skeleton/spinner at key route segments: root, admin, albums.                                                               |
+
+### Differentiators (Competitive Advantage in Polish)
+
+Features that distinguish a well-built app from a functional-but-rough one. Not expected by users, but their presence signals production quality.
+
+| #   | Feature                                       | Value Proposition                                                                                                                                                                                                                   | Complexity | Depends On                     | Notes                                                                                                                                                                         |
+| --- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | **Integration tests for API routes**          | Verify full request-to-response cycle including auth checks, Zod validation, database operations, and error responses. Catches regressions that unit tests miss because they test the wiring between layers.                        | Medium     | T3, T4, Vitest                 | Test each route handler function directly in Vitest with mock/test DB. ~8 test suites for 8 route files.                                                                      |
+| D2  | **E2E smoke tests with Playwright**           | Verify the 3-4 critical user flows end-to-end: admin login, photo upload, album creation, public gallery viewing. Catches integration bugs across client/server boundary that no other test type can find.                          | High       | Playwright config, running app | Need Playwright config, test fixtures, CI integration. 3-5 targeted tests, NOT comprehensive suite.                                                                           |
+| D3  | **Database FK constraint fix (coverPhotoId)** | Known mismatch: schema says `SET NULL` on photo delete, actual DB may have `NO ACTION`. Deleting a photo used as an album cover could fail with a FK constraint error or leave a dangling reference.                                | Low        | --                             | One-off migration script using `ALTER TABLE`. Already documented in project memory as known tech debt.                                                                        |
+| D4  | **Structured logging**                        | Currently uses `console.log`/`console.error` with string interpolation. No log levels, no structured format, no request context. Debugging production issues requires grepping through unstructured text.                           | Medium     | --                             | Thin logging utility wrapping console with JSON output, levels (info/warn/error), and optional context (photoId, albumId). Not a logging framework -- just structured output. |
+| D5  | **Health check endpoint**                     | No way to verify the app is running, database is accessible, and storage directory is writable. Needed for Docker HEALTHCHECK, deployment verification, and uptime monitoring.                                                      | Low        | --                             | `GET /api/health` returning `{ status: "ok", db: true, storage: true }`. Check DB with a simple query, storage with `fs.access`.                                              |
+| D6  | **Stale processing data cleanup**             | Photos stuck in `"processing"` status indefinitely (Redis was down, worker crashed mid-job, server restarted) accumulate as phantom entries with no automated cleanup. Over time the admin dashboard fills with un-viewable photos. | Low        | T6                             | Script or admin endpoint to find photos in `"processing"` status older than N minutes and mark them `"error"` with a note.                                                    |
+| D7  | **CI pipeline (lint + typecheck + test)**     | No CI configuration. Pre-commit hook runs lint-staged, but there is no automated quality gate for pushes or PRs. A failing test is only caught if the developer runs tests locally.                                                 | Medium     | T5                             | GitHub Actions workflow: `npm run lint`, `npm run typecheck`, `npm run test`. Blocks merge on failure.                                                                        |
+
+### Anti-Features (Commonly Requested, Often Problematic During Hardening)
+
+Things that sound useful but are wrong to prioritize during a quality/hardening milestone.
+
+| #   | Feature                                         | Why Requested                                                                                       | Why Problematic                                                                                                                                                                                                                                                      | Alternative                                                                                                                                                                                                 |
+| --- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1  | **100% test coverage target**                   | "We should test everything" is a common reflex when going from zero to tested.                      | Chasing coverage percentage produces low-value tests: testing that React renders a div, testing Tailwind class strings, testing that Drizzle ORM calls the right SQL. Time is better spent on high-value logic tests.                                                | Target coverage on `infrastructure/services/`, `infrastructure/database/repositories/`, `infrastructure/config/`, `lib/imageLoader.ts`, and API route handlers. Leave `presentation/components/` for later. |
+| A2  | **Full observability stack (Sentry, Datadog)**  | "We need error tracking in production."                                                             | This is a self-hosted, single-admin-user app. External SaaS monitoring adds complexity, recurring cost, and privacy concerns (photo metadata sent to third parties) disproportionate to the user base.                                                               | Structured logging (D4) + health check (D5) provides sufficient operational visibility for a single-user app. Add Sentry later only if logging proves insufficient.                                         |
+| A3  | **Comprehensive Playwright E2E suite**          | "We should E2E test every page and every button."                                                   | E2E tests are slow (seconds per test), flaky (browser timing, network), and expensive to maintain (break on any UI change). For a single-admin portfolio, the critical interaction paths are narrow.                                                                 | 3-5 targeted smoke tests: login flow, upload a photo, create an album, view public gallery, view photo in lightbox. Not every admin interaction.                                                            |
+| A4  | **Database migration framework**                | "We should add proper migration tooling for schema changes."                                        | The app uses SQLite with `drizzle-kit push`. Introducing a migration framework (drizzle-kit generate + migrate) changes the development workflow and deployment process. This is a tooling change, not a quality improvement.                                        | Fix the known FK constraint with a targeted `ALTER TABLE` script (D3). Defer migration framework adoption to a future milestone if schema changes become frequent.                                          |
+| A5  | **Performance optimization before measurement** | "We should add caching, pagination, and lazy loading everywhere."                                   | Optimizing without profiling leads to premature optimization. The app serves one admin user and typically low-traffic public visitors. SQLite with hundreds of photos will not have query performance problems.                                                      | Measure first: check Core Web Vitals on public pages. The only known issue is homepage `force-dynamic` which could be addressed, but even that needs measurement to confirm it matters.                     |
+| A6  | **Refactoring the empty application layer**     | "The application/ directory is empty. We should add service classes for proper Clean Architecture." | The application layer being empty is fine for this app's complexity level. Adding PhotoService, AlbumService, etc. that simply delegate to repositories creates indirection without providing value. The current repository + API route pattern is clean and direct. | Leave the architecture as-is. If business logic grows to need orchestration across multiple repositories, add services then. Do not add them pre-emptively.                                                 |
+| A7  | **Rate limiting on all API routes**             | "Every endpoint should be rate limited for security."                                               | Rate limiting already exists on the login endpoint. All admin API routes require JWT authentication. Public routes serve cached/immutable images and read-only album data. The threat model does not justify rate limiting everything.                               | Keep login rate limiting. Optionally add rate limiting to the upload route only (it accepts large files and queues background jobs).                                                                        |
 
 ---
 
 ## Feature Dependencies
 
 ```
-EXIF Extraction (1)
-  |-- Depends on: Image worker (exists), Sharp metadata (exists)
-  |-- Feeds into: EXIF Display component, OG description enrichment
-  |-- Schema: New exif_data column on photos table
-  |-- Backfill: Script needed for existing photos
+T3 (API validation) -------> T4 (API error handling) -------> T9 (error response format)
+                                                          \
+                                                           --> D1 (API integration tests)
 
-Smooth Transitions (2)
-  |-- Depends on: PhotoLightbox (exists), Multiple image widths (exist)
-  |-- Independent: No other features depend on this
+T5 (unit tests) -----------> D7 (CI pipeline)
 
-Touch Gestures (3)
-  |-- Depends on: PhotoLightbox (exists), YARL (exists)
-  |-- Independent: No other features depend on this
+T6 (worker recovery) ------> D6 (stale data cleanup)
 
-Full-Screen Mode (4)
-  |-- Depends on: PhotoLightbox (exists), YARL (exists)
-  |-- Independent: No other features depend on this
+T7 (JSON parsing safety) --- standalone, no dependencies
+T8 (file size limit) ------- standalone, no dependencies
 
-Album Cover Selection UI (5)
-  |-- Depends on: Album PATCH API (exists), Photo thumbnails (exist)
-  |-- Feeds into: OG tags (8) - cover photo used as og:image for album pages
+T1 (error.tsx) ------------- standalone, no dependencies
+T2 (not-found.tsx) --------- standalone, no dependencies
+T10 (loading.tsx) ---------- standalone, no dependencies
 
-Drag Reorder Photos (6)
-  |-- Depends on: dnd-kit (exists), photo_albums.sortOrder (exists)
-  |-- Feeds into: Photo display order on public pages
-  |-- Requires: Admin album detail page (new view)
-
-Direct Photo Links (7)
-  |-- Depends on: AlbumGalleryClient (exists), URL search params
-  |-- Feeds into: OG tags (8) - photo-specific sharing
-
-OG Meta Tags (8)
-  |-- Depends on: Album data (exists), Photo data (exists), Image API (exists)
-  |-- Enhanced by: Album cover selection (5), Direct links (7), EXIF data (1)
+D3 (FK constraint fix) ----- standalone, no dependencies
+D4 (structured logging) ---- standalone, no dependencies
+D5 (health check) ---------- standalone, no dependencies
 ```
-
-### Recommended Implementation Order
-
-Based on dependencies and effort:
-
-**Wave 1 -- Lightbox Enhancements (features 2, 3, 4):**
-All three modify the same `PhotoLightbox.tsx` component. Low complexity, no schema changes, no new pages. Can be done together.
-
-**Wave 2 -- EXIF Pipeline (feature 1):**
-Schema migration + worker change + display component + backfill script. Touches multiple layers but is self-contained.
-
-**Wave 3 -- Album Admin (features 5, 6):**
-Both require new admin UI components for album management. Feature 5 (cover selection) is simpler and could inform the UI for feature 6 (photo reordering). Both operate on the same album management admin context.
-
-**Wave 4 -- Sharing & Links (features 7, 8):**
-Feature 7 (deep links) should come before feature 8 (OG tags) because OG tags become more valuable when there are photo-specific URLs to share. Feature 8 is the capstone that ties everything together.
 
 ---
 
-## Complexity Summary
+## MVP Definition
 
-| #   | Feature                            | Complexity | Est. Effort | New Deps | Schema Change  |
-| --- | ---------------------------------- | ---------- | ----------- | -------- | -------------- |
-| 1   | EXIF metadata extraction & display | Low-Medium | 1-2 days    | exifr    | Yes (1 column) |
-| 2   | Smooth transitions (srcSet)        | Low        | 0.5 day     | None     | No             |
-| 3   | Touch gestures (zoom, pull-close)  | Low        | 0.5 day     | None     | No             |
-| 4   | Full-screen mode                   | Very Low   | 0.5 day     | None     | No             |
-| 5   | Album cover selection UI           | Low        | 0.5-1 day   | None     | No             |
-| 6   | Drag reorder photos in album       | Medium     | 1-2 days    | None     | No             |
-| 7   | Direct links to photos             | Low-Medium | 1 day       | None     | No             |
-| 8   | OpenGraph meta tags                | Low        | 0.5-1 day   | None     | No             |
+### This Milestone (Quality & Hardening)
 
-**Total estimated effort:** 5-8 days of implementation
+Priority order based on risk reduction and dependency chains:
+
+**Phase 1: Safety Net** (highest risk reduction, all standalone)
+
+1. T1 -- Error boundaries (`error.tsx` + `global-error.tsx`)
+2. T2 -- Not-found pages (`not-found.tsx`)
+3. T10 -- Loading states (`loading.tsx`)
+4. T7 -- JSON parsing safety in repository mappers
+
+**Phase 2: API Hardening** (dependency chain: T3 -> T4 -> T9) 5. T3 -- Input validation on all API routes 6. T4 -- Error handling wrappers 7. T9 -- Consistent error response format 8. T8 -- File size limit on uploads
+
+**Phase 3: Testing Foundation** (T5 then D1) 9. T5 -- Unit tests for domain + infrastructure 10. D1 -- Integration tests for API routes
+
+**Phase 4: Worker Resilience** (T6 then D6) 11. T6 -- Worker failure recovery (admin visibility + retry) 12. D6 -- Stale processing data cleanup
+
+**Phase 5: Production Polish** (standalone items) 13. D3 -- Database FK constraint fix 14. D5 -- Health check endpoint 15. D4 -- Structured logging 16. D7 -- CI pipeline
+
+### Defer (v2+)
+
+- D2 -- Playwright E2E tests (high setup cost, lower ROI until functional coverage exists)
+- Any items from the Anti-Features list
+
+---
+
+## Feature Prioritization Matrix
+
+| #   | Feature               | User Value         | Risk Reduction                                              | Implementation Cost | Priority |
+| --- | --------------------- | ------------------ | ----------------------------------------------------------- | ------------------- | -------- |
+| T1  | Error boundaries      | High               | **Critical** -- prevents white screen on any uncaught error | Low (~2h)           | **P0**   |
+| T7  | JSON parsing safety   | Medium             | **Critical** -- prevents page crash from corrupt data       | Low (~30min)        | **P0**   |
+| T2  | Not-found pages       | Medium             | Medium -- cosmetic but expected in production               | Low (~1h)           | **P0**   |
+| T10 | Loading states        | Medium             | Medium -- prevents blank flash on navigation                | Low (~1h)           | **P0**   |
+| T3  | API input validation  | Medium             | **High** -- prevents crashes from malformed requests        | Low (~2h)           | **P1**   |
+| T4  | API error handling    | Medium             | **High** -- prevents 500 errors from reaching users         | Low (~2h)           | **P1**   |
+| T8  | File size limit       | Low                | **High** -- prevents OOM crash on large upload              | Low (~30min)        | **P1**   |
+| T9  | Error response format | Low                | Medium -- developer experience, client reliability          | Low (~1h)           | **P1**   |
+| T5  | Unit tests            | High (long-term)   | **High** -- regression detection for core logic             | Medium (~8h)        | **P1**   |
+| D1  | API integration tests | High (long-term)   | **High** -- contract verification for all endpoints         | Medium (~6h)        | **P2**   |
+| T6  | Worker recovery       | Medium             | Medium -- recovers stuck photos                             | Medium (~4h)        | **P2**   |
+| D3  | FK constraint fix     | Low                | Medium -- prevents data integrity bugs                      | Low (~1h)           | **P2**   |
+| D5  | Health check          | Low                | Low -- operational visibility for deployment                | Low (~1h)           | **P2**   |
+| D6  | Stale data cleanup    | Low                | Low -- maintenance utility                                  | Low (~2h)           | **P2**   |
+| D4  | Structured logging    | Low                | Low -- debugging improvement                                | Medium (~4h)        | **P3**   |
+| D7  | CI pipeline           | Medium (long-term) | Medium -- automated quality gate                            | Medium (~3h)        | **P3**   |
+
+---
+
+## Detailed Audit Findings
+
+### API Routes Audit
+
+| Route                                  | Auth        | Validation          | Error Handling                | Issues Found                                                                                               |
+| -------------------------------------- | ----------- | ------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `POST /api/admin/upload`               | Yes         | Partial (type only) | Partial (Redis timeout catch) | No file size limit. Silent Redis failure leaves photo in `"processing"` forever with no user notification. |
+| `PATCH /api/admin/photos/[id]`         | Yes         | **None**            | Minimal                       | `body as { description: string                                                                             | null }`is a type assertion, not validation. No try/catch on`request.json()`. |
+| `DELETE /api/admin/photos/[id]`        | Yes         | N/A                 | Minimal                       | `deletePhotoFiles()` errors propagate as 500. Should be resilient to partial file deletion.                |
+| `POST /api/admin/photos/[id]/albums`   | Yes         | ?                   | ?                             | Not fully audited but follows similar patterns.                                                            |
+| `DELETE /api/admin/photos/[id]/albums` | Yes         | ?                   | ?                             | Same as above.                                                                                             |
+| `GET /api/admin/albums`                | Yes         | N/A                 | **None**                      | Database errors propagate as unstructured 500.                                                             |
+| `POST /api/admin/albums`               | Yes         | Zod                 | Yes (safeParse)               | Good pattern. No try/catch on `request.json()` though.                                                     |
+| `PATCH /api/admin/albums/[id]`         | Yes         | Zod                 | Yes (safeParse)               | Good pattern. `request.json()` lacks try/catch for truly malformed bodies.                                 |
+| `DELETE /api/admin/albums/[id]`        | Yes         | Partial             | Good (`json().catch()`)       | Good defensive pattern on body parse.                                                                      |
+| `POST /api/admin/albums/reorder`       | Yes         | Zod                 | Yes (safeParse)               | Good pattern.                                                                                              |
+| `POST .../photos/reorder`              | Yes         | Zod                 | Yes (safeParse)               | Good pattern.                                                                                              |
+| `GET /api/images/[photoId]/[filename]` | No (public) | Yes (filename)      | Yes (fallback)                | Good: validates filename, handles missing files, falls back to largest derivative.                         |
+
+### Client Component Error Handling Audit
+
+| Component          | Has Error State | Rollback on Failure     | Issues                                                                                                                                               |
+| ------------------ | --------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AlbumDetailClient  | Yes             | Yes (optimistic revert) | Error auto-dismisses after 3s. `setError` with `setTimeout` cleanup.                                                                                 |
+| AlbumsPageClient   | Yes             | Yes (optimistic revert) | Same auto-dismiss. `handlePublishToggle` throws but the caller (`SortableAlbumCard`) may not catch.                                                  |
+| AlbumSelector      | Yes             | Yes (optimistic revert) | Same auto-dismiss pattern.                                                                                                                           |
+| PhotoDetail        | **Partial**     | **No**                  | Uses browser `alert()` for delete failure and `confirm()` for delete confirmation. Not accessible, not styled, not consistent with other components. |
+| DeleteAlbumModal   | Yes             | N/A (modal stays open)  | Good pattern: shows error in modal, keeps modal open for retry.                                                                                      |
+| UploadPage         | Yes             | N/A                     | Good pattern: per-file error state, retry button per file.                                                                                           |
+| HomepageClient     | No error states | N/A                     | Client component but read-only; no mutations that could fail.                                                                                        |
+| AlbumGalleryClient | No error states | N/A                     | Similar: read-only rendering of server-provided data.                                                                                                |
+
+### Missing Next.js Convention Files
+
+| File               | Needed At                                       | Impact of Absence                                            |
+| ------------------ | ----------------------------------------------- | ------------------------------------------------------------ |
+| `error.tsx`        | `app/`, `app/albums/`, `app/admin/(protected)/` | Unhandled errors show framework default page or white screen |
+| `global-error.tsx` | `app/`                                          | Root layout errors are completely unrecoverable              |
+| `not-found.tsx`    | `app/`                                          | Generic 404 with no site styling or navigation               |
+| `loading.tsx`      | `app/`, `app/admin/(protected)/`, `app/albums/` | No loading indicator during server component data fetching   |
+
+### Worker Failure Scenarios
+
+| Scenario                             | Current Behavior                                                                      | User Impact                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Redis unavailable during upload      | Upload succeeds, job enqueue silently fails, photo stays in `"processing"` forever    | Admin sees "Processing..." forever, no way to fix it            |
+| Sharp crashes on corrupt image       | Worker `failed` handler sets status to `"error"`                                      | Admin sees "error" badge but cannot retry or see reason         |
+| Worker process crashes mid-job       | Photo stays in `"processing"` (no cleanup)                                            | Same as Redis unavailable                                       |
+| Worker completes but DB update fails | Worker logs error, photo stays in `"processing"` despite derivatives existing on disk | Admin sees stale status, derivatives exist but are unreferenced |
 
 ---
 
 ## Sources
 
-- [YARL Plugins](https://yet-another-react-lightbox.com/plugins) -- Fullscreen, Zoom, Captions plugin documentation
-- [YARL Fullscreen Plugin](https://yet-another-react-lightbox.com/plugins/fullscreen) -- Fullscreen API, auto mode, ref API
-- [YARL Documentation](https://yet-another-react-lightbox.com/documentation) -- Animation, controller, carousel options
-- [Sharp Input Metadata](https://sharp.pixelplumbing.com/api-input/) -- metadata() method, EXIF buffer output
-- [exifr on npm](https://www.npmjs.com/package/exifr) -- Selective EXIF tag parsing, performance
-- [Next.js Metadata and OG Images](https://nextjs.org/docs/app/getting-started/metadata-and-og-images) -- generateMetadata, ImageResponse
-- [Next.js generateMetadata](https://nextjs.org/docs/app/api-reference/functions/generate-metadata) -- Dynamic metadata per route
-- [dnd-kit Sortable](https://docs.dndkit.com/presets/sortable) -- Grid sorting, rectSortingStrategy
-- [Next.js Linking and Navigating](https://nextjs.org/docs/app/getting-started/linking-and-navigating) -- history.pushState integration
-- [Flickr EXIF FAQ](https://www.flickrhelp.com/hc/en-us/articles/4404078521108-EXIF-data-FAQ) -- EXIF display patterns, privacy settings
-- [500px Gear Pages](https://support.500px.com/hc/en-us/articles/115000759214-Gear-Pages-FAQ) -- Camera/lens metadata display
+- Direct codebase audit of all source files under `/Users/arxherre/Documents/photo-profile/src/`
+- `package.json` dependencies: Next.js 16.1.6, Vitest 4.0.18, Playwright 1.58.2, Zod 4.3.6
+- Next.js App Router conventions for `error.tsx`, `loading.tsx`, `not-found.tsx`, `global-error.tsx` (training data, HIGH confidence -- stable conventions since Next.js 13, unchanged through 16)
+- Vitest configuration and testing patterns (training data, HIGH confidence)
+- BullMQ worker event handling patterns (training data, HIGH confidence)
+- Zod validation patterns for API routes (training data, confirmed by existing usage in this codebase)
 
-_Research completed: 2026-02-05_
-_Confidence: HIGH -- All 8 features verified against existing codebase, YARL documentation, and Next.js APIs_
+**Note:** WebSearch was unavailable during this research session. All findings are based on direct codebase file reads and training data. Codebase-specific findings (audit tables, file gap inventory) are HIGH confidence since they come from reading every relevant file. Pattern recommendations (error boundaries, testing strategy, API hardening) are HIGH confidence as they are well-established conventions in the Next.js and Node.js ecosystems.
+
+---
+
+_Feature research for: Photography portfolio quality & hardening_
+_Researched: 2026-02-06_

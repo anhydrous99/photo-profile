@@ -1,183 +1,258 @@
 # Project Research Summary
 
-**Project:** Photo Profile v1.1 Enhancement Milestone
-**Domain:** Photography Portfolio (self-hosted)
-**Researched:** 2026-02-05
+**Project:** Photo Portfolio v1.2 Quality & Hardening
+**Domain:** Testing, error handling, performance optimization for existing Next.js photography portfolio
+**Researched:** 2026-02-06
 **Confidence:** HIGH
 
 ## Executive Summary
 
-The v1.1 milestone adds EXIF metadata, lightbox polish, album management improvements, and social sharing to the existing v1.0 photography portfolio. The good news: **this requires almost zero new dependencies**. The existing stack (YARL for lightbox, @dnd-kit for drag-and-drop, Next.js for metadata) already supports seven of eight features. Only `exifr` (~30KB) is needed for EXIF extraction.
+This milestone adds production-readiness to an existing ~6,043 LOC photography portfolio built with Next.js 16, TypeScript, SQLite/Drizzle, Sharp, and BullMQ. The codebase follows Clean Architecture (domain/application/infrastructure/presentation layers), which was designed for testability. The core architectural insight: **the application layer is empty** — business logic lives directly in API route handlers. This means unit tests must either test routes directly OR extract services first. The research recommends testing at the API route integration level and only extracting services when duplication becomes painful.
 
-The recommended approach is to build in four waves: (1) EXIF extraction pipeline (touches all layers, requires schema migration), (2) Lightbox enhancements (pure presentation layer), (3) Album management UI (admin interface for existing database columns), and (4) Shareability features (OpenGraph tags and deep links). This ordering mitigates the biggest risks: database migration must come first (v1.0 learned the hard way to use ALTER TABLE, not db:push), and EXIF data must be available before it can be displayed or shared.
+The recommended approach is wave-based execution starting with testing infrastructure, followed by error handling, unit/integration testing, worker resilience, and production polish. The critical blocker is module-level initialization of infrastructure (database, Redis, env validation) that fires at import time, making test isolation impossible without comprehensive mocking. The vitest setup must establish global mocks for Next.js server APIs (server-only, cookies, headers), IORedis connections, and environment variables BEFORE any infrastructure code can be tested. This is Phase 1, blocking all other work.
 
-Key risks are **privacy** (GPS coordinates in EXIF must never be displayed), **schema drift** (the project has existing FK constraint mismatches and sort order columns that are unused), and **browser compatibility** (fullscreen API doesn't work on iPhone Safari, OG images need JPEG format for crawler compatibility). The research identifies 15 specific pitfalls with codebase-specific warnings based on v1.0 lessons learned.
+Key risks: (1) module-scope database imports prevent test injection unless repositories are refactored to constructor injection, (2) JSON.parse in repository toDomain() crashes on corrupt EXIF data with no try/catch (latent production bug affecting every page), (3) silent Redis failure in upload route leaves photos stuck in "processing" forever with zero logging, (4) worker event handlers update DB after BullMQ marks job complete, so failures are not retried. These are all fixable with targeted changes, but attempting quality work without addressing the testing infrastructure blockers first will waste effort on fragile mock-dependent tests.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Net new dependencies: 1.** YARL already includes Fullscreen and Zoom plugins. @dnd-kit already handles drag-to-reorder (proven in album reordering). Next.js `generateMetadata` is built-in. The only addition is `exifr` for EXIF extraction.
+The project already has Vitest 4.0.18 and Playwright 1.58.2 installed but zero tests written. The quality gap is not missing tools but missing implementation. Only two dev dependencies are needed: @vitest/coverage-v8 (must match vitest major version 4.x for V8 native coverage, faster than Istanbul) and @next/bundle-analyzer@16.1.6 (must match Next.js 16.1.6 for bundle composition analysis). Everything else required is implementation, not dependencies.
 
 **Core technologies:**
 
-- **exifr v7.1.3**: Parse EXIF metadata from uploaded photos — fastest option (2.5ms/photo), 497K weekly downloads, zero dependencies, handles selective field extraction. Sharp's `metadata()` returns raw EXIF buffers; exifr parses them.
-- **YARL Fullscreen plugin**: Built-in to existing YARL v3.28.0 — uses browser Fullscreen API, auto-hides on unsupported browsers (iPhone Safari).
-- **YARL Zoom plugin**: Built-in to YARL — handles pinch-to-zoom, double-tap-to-zoom, mouse wheel zoom. No additional gesture library needed.
-- **@dnd-kit rectSortingStrategy**: Already installed, used for album reordering — reuse the exact same pattern for photo reordering within albums, switching from vertical to grid strategy.
-- **Next.js generateMetadata**: Framework built-in — dynamic OG tags per page. Point `og:image` to existing 1200w derivatives (already generated and cached).
+- @vitest/coverage-v8@^4.0.18: Code coverage reporting — V8 native coverage requires no source instrumentation, faster than Istanbul for CI
+- @next/bundle-analyzer@16.1.6: Bundle analysis — official Vercel package matching installed Next.js version
+- In-memory SQLite (better-sqlite3 :memory:): Repository testing — real SQL execution without mocking Drizzle ORM
+- Zod (already installed): API validation — already used in env.ts, same pattern applies to route validation
+- No runtime libraries needed: Error handling uses Next.js built-in error.tsx/not-found.tsx/global-error.tsx boundaries
+
+**Testing strategy by layer:**
+
+- domain/entities: Skip (interfaces only, no logic)
+- infrastructure/repositories: Integration tests with real in-memory SQLite (fast, accurate)
+- infrastructure/services (imageService, exifService): Unit tests with tiny fixture images or Sharp mocks
+- infrastructure/auth: Unit tests with mocked Redis for rate limiter, real jose/bcrypt
+- infrastructure/storage: Unit tests with temp directories (os.tmpdir())
+- app/api routes: Integration tests calling handlers directly with mock auth/repos
+- presentation/components: Deferred (out of scope for this milestone)
 
 ### Expected Features
 
+From comprehensive codebase audit: zero error.tsx files, zero not-found.tsx files, zero loading.tsx files. API routes have inconsistent validation (5 use Zod, 3 use raw type assertions). Worker has error handlers but no retry-with-status-recovery pattern. Single test file exists (theme-tokens.test.ts). The upload route silently swallows Redis errors in an empty catch block with no user notification, leaving photos stuck in "processing" forever.
+
 **Must have (table stakes):**
 
-- EXIF metadata display — photographers expect to show camera, lens, settings (make, model, lens, focal length, aperture, shutter speed, ISO, date taken). Extract during image processing worker, store as individual typed columns (not JSON blob for queryability).
-- Touch gestures in lightbox — horizontal swipe already works (YARL default), enable pull-down-to-close and add Zoom plugin for pinch gestures.
-- Album cover selection — infrastructure fully built (schema column, API endpoint), only needs admin UI.
-- Photo reordering in albums — `photo_albums.sortOrder` column EXISTS but is never used. Fix `findByAlbumId` to ORDER BY it, then build drag UI.
-- Direct photo links — use query param approach (`/albums/abc?photo=xyz`) with `history.replaceState` for navigation (not `pushState`, which pollutes history).
-- OpenGraph meta tags — generate dynamically with `generateMetadata`, serve existing 1200w derivatives as `og:image` (add JPEG generation for maximum crawler compatibility).
+- T1: Error boundaries (error.tsx + global-error.tsx) — prevents white screen crashes
+- T2: Not-found pages (not-found.tsx) — proper 404s instead of framework default
+- T3: API input validation — standardize on Zod for all routes
+- T4: API error handling wrappers — consistent try/catch patterns
+- T5: Unit tests for domain + infrastructure — repositories, image service, auth, storage
+- T6: Worker failure recovery — admin UI for stuck/error photos with retry
+- T7: JSON parsing safety — wrap JSON.parse in repository toDomain() (P0 latent crash bug)
+- T8: File size limit on uploads — prevent OOM with 2GB upload
+- T9: Consistent error response format — standardize { error: string } shape
+- T10: Loading states (loading.tsx) — prevent blank flash during navigation
 
-**Should have (differentiators):**
+**Should have (competitive):**
 
-- Smooth lightbox transitions — already configured at 200ms fade / 300ms swipe. Add responsive `srcSet` to slides (biggest win: loading the right resolution eliminates flashing). Tune easing curves.
-- Fullscreen mode — YARL plugin adds toolbar button automatically. Do NOT auto-enter (surprising). Note: iPhone Safari unsupported, design works without it.
+- D1: Integration tests for API routes — verify full request-to-response cycle
+- D2: E2E smoke tests with Playwright (3-5 tests) — login, upload, album creation, gallery viewing
+- D3: Database FK constraint fix (coverPhotoId SET NULL) — already has migration, verify it ran
+- D4: Structured logging — replace console.log with leveled JSON output
+- D5: Health check endpoint — GET /api/health for Docker HEALTHCHECK
+- D6: Stale processing data cleanup — find photos in "processing" >N minutes, mark error
+- D7: CI pipeline (lint + typecheck + test) — automated quality gate
 
 **Defer (v2+):**
 
-- Dynamic OG image generation — the actual photo IS the best OG image for a portfolio. Branded text overlays can wait.
-- Slideshow auto-play — distracting, photographers want viewers to linger.
-- Zoom-from-thumbnail transitions — complex, fragile, not a YARL built-in.
+- Comprehensive Playwright suite (E2E tests are slow/flaky, target critical paths only)
+- 100% test coverage target (focus on infrastructure layer, exclude trivial code)
+- Database migration framework (fix FK constraint with targeted ALTER TABLE, defer migration tooling)
+- Full observability stack (single-admin app needs logging, not Sentry/Datadog)
 
 ### Architecture Approach
 
-All eight features integrate cleanly into the existing Clean Architecture. Five features are isolated within a single layer (presentation-only: fullscreen, transitions, gestures; admin UI-only: album management). Only EXIF spans all four layers. The codebase already has infrastructure ready: `photo_albums.sortOrder` exists, `albums.coverPhotoId` exists and the PATCH API accepts it, YARL plugins are bundled, @dnd-kit is proven in `SortableAlbumCard`.
+The existing Clean Architecture with four layers (domain, application, infrastructure, presentation) plus Next.js App Router is ideal for quality hardening because the domain and application layers have no external dependencies (designed for testability). The infrastructure layer uses repository pattern with interfaces, enabling mock-based testing. The critical finding: application/services/ is empty (.gitkeep files only), so business logic is in route handlers and worker event handlers. This is acceptable at current complexity — add services only when duplication emerges, not preemptively.
 
-**Major components:**
+**Test file structure (colocated):**
 
-1. **EXIF extraction service** — new `infrastructure/services/exifService.ts`, integrates into existing image processing worker between derivative generation and status update. Extracts metadata from Sharp's raw EXIF buffer using exifr. Stores 8 fields in photos table (camera make/model, lens, focal length, aperture, shutter speed, ISO, date taken). Privacy-safe: GPS coordinates explicitly excluded.
-2. **Lightbox enhancement** — modify existing `PhotoLightbox.tsx` to add Fullscreen + Zoom plugins, enable pull-down-to-close gesture, add `srcSet` to slides for responsive images, display EXIF metadata via custom `render.slideFooter`. Pure configuration changes, no new components.
-3. **Album management admin page** — new `app/admin/(protected)/albums/[id]/page.tsx` with photo grid. Enables cover selection ("Set as Cover" button) and drag-to-reorder (reuse @dnd-kit pattern from `SortableAlbumCard`, switch to `rectSortingStrategy` for grid). New API endpoint for batch sort order updates.
-4. **Direct photo pages + OG metadata** — new route at `albums/[id]/photos/[photoId]/page.tsx` with `generateMetadata` export. Lightbox URL sync with `history.replaceState` on navigation. OG images point to existing 1200w derivatives (add JPEG generation for crawler compatibility).
+```
+src/
+  infrastructure/
+    database/repositories/__tests__/SQLitePhotoRepository.integration.test.ts
+    services/__tests__/imageService.test.ts
+    auth/__tests__/session.test.ts
+  app/api/__tests__/upload.integration.test.ts
+tests/
+  e2e/public-gallery.spec.ts (Playwright)
+  fixtures/test-image.jpg
+```
+
+**Major architectural decisions for quality:**
+
+1. Error boundary tree: Root app/error.tsx (catch-all), albums/[id]/error.tsx (specific: "Failed to load album"), admin/(protected)/error.tsx (authenticated errors). 3-5 error.tsx files max, aligned with route groups, not every file.
+2. API error handling: Lightweight wrapper for try/catch + error logging, keep auth checks explicit for clarity (not hidden in wrapper).
+3. Repository testing: Refactor repositories to accept DB instance via constructor injection, enabling test DB injection. Alternative: accept module-level mocking with vi.mock() as the testing seam.
+4. Worker resilience: Move DB update INTO processor function (not event handler) so BullMQ retries cover it, OR add stuck-processing detection job.
+5. Performance: Measure FIRST (Lighthouse, EXPLAIN QUERY PLAN, memory usage), optimize bottlenecks only. Baseline for ~100-500 photos, not premature optimization.
 
 ### Critical Pitfalls
 
-1. **GPS privacy leak** — EXIF extraction returns GPS coordinates that reveal shooting locations. Use a strict allowlist: only extract camera make/model, lens, focal length, aperture, shutter speed, ISO, date taken. Never store or display GPS, serial numbers, software versions.
+From deep codebase analysis, five critical pitfalls that block progress or cause data corruption:
 
-2. **Schema migration breaking data** — v1.0 Phase 6 lesson: `db:push` caused runtime errors. Always use explicit `ALTER TABLE` migrations for existing databases. Add EXIF columns as nullable. The `initializeDatabase()` CREATE TABLE statements are out of sync with the Drizzle schema (evidence: `albums.tags` exists in schema but not in CREATE TABLE).
+1. **Module-scope database import blocks test injection** — repositories import `db` from `../client` at module top, which calls initializeDatabase() on import. Tests hit real database, cannot inject in-memory test DB. FIX: Refactor to constructor injection OR use vi.mock("@/infrastructure/database/client") as the testing seam.
 
-3. **Sharp EXIF returns raw buffer** — `sharp(image).metadata()` returns `{ exif: <Buffer> }`, not parsed fields. Requires `exifr` or `exif-reader` for parsing. Extract in the worker (not at upload or display time).
+2. **JSON.parse in repository toDomain() crashes on corrupt data** — SQLitePhotoRepository.toDomain() does JSON.parse(row.exifData) with no try/catch (line 125). Corrupt EXIF JSON crashes every page loading photos (homepage, albums, admin). This is on the critical path for all pages. FIX: Wrap in try/catch returning null on failure. **This is a P0 production bug, fix immediately.**
 
-4. **Photo reorder ignored by public pages** — `photo_albums.sortOrder` exists but `findByAlbumId()` does NOT order by it. Admin reorder UI will appear broken until the query adds `.orderBy(photoAlbums.sortOrder)`.
+3. **Schema drift between Drizzle schema and actual DB** — albums.tags exists in schema.ts but not in CREATE TABLE (only added if FK migration fired). photos.exif_data/width/height added via ALTER TABLE. Test databases created from CREATE TABLE only will differ from production. FIX: Test helper must run full initializeDatabase() migration chain.
 
-5. **Deep links polluting browser history** — Using `history.pushState` for each photo navigation causes users to press back 15 times to exit the lightbox. Use `history.replaceState` for lightbox navigation, `pushState` only when opening.
+4. **Redis module-level connections hang tests** — queues.ts, imageProcessor.ts, rateLimiter.ts all create IORedis at import time. Any test importing these hangs waiting for Redis. FIX: Mock ioredis globally in vitest setup, OR mock @/infrastructure/jobs and @/infrastructure/auth/rateLimiter at module level.
 
-6. **FK constraint mismatch** — Drizzle schema says `albums.coverPhotoId` has `onDelete: "set null"` but actual database has `NO ACTION`. Deleting a photo that is an album cover will fail or leave dangling reference. Fix constraint before building cover selection UI.
+5. **server-only modules crash Vitest** — session.ts and dal.ts import "server-only", which throws at runtime in plain Node.js. Also use cookies()/headers() from next/headers requiring Next.js async context. FIX: Mock server-only, next/headers, next/navigation, next/cache in vitest setup file BEFORE any infrastructure imports.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on combined research, this milestone naturally splits into 5 phases with clear dependency chains. Phase 1 is the critical blocker — all other work depends on test infrastructure being operational.
 
-### Phase 1: EXIF Metadata Pipeline
+### Phase 1: Testing Infrastructure + Schema Audit
 
-**Rationale:** Hardest feature, spans all four layers. Requires database migration which must be done first (v1.0 pattern: ALTER TABLE, never db:push). The EXIF data is needed for Phase 2 (display) and Phase 4 (OG tags). Establishing the migration pattern now prevents rework.
-**Delivers:** EXIF extraction during worker processing, 8 new typed columns in photos table, extracted metadata available to all consumers.
-**Addresses:** EXIF extraction and storage (half of feature 1).
-**Avoids:** GPS privacy leak (Pitfall 1), schema migration errors (Pitfall 2), Sharp EXIF buffer confusion (Pitfall 3).
-**Dependencies:** Install `exifr`, create migration script, update Drizzle schema, extend Photo entity, modify worker.
+**Rationale:** Blocks all other testing work. Addresses pitfalls 1-5 (module imports, Redis hangs, server-only crashes, schema drift). Must be FIRST.
+**Delivers:** Vitest setup with global mocks (server-only, next/headers, next/navigation, next/cache, ioredis), env var setup for tests, test database helper (temp SQLite with full migrations), schema validation tests, Sharp mock for unit tests, test fixture images, testing conventions doc, production DB schema audit.
+**Addresses:** Technical foundation enabling T5, D1, D2
+**Avoids:** Pitfall 1 (DB import), Pitfall 2 (server-only), Pitfall 3 (schema drift), Pitfall 4 (Redis hangs), Pitfall 5 (JSON.parse — fix as part of this phase)
+**Research needed:** No — standard Vitest patterns, well-documented. Skip /gsd:research-phase.
 
-### Phase 2: Lightbox Polish
+### Phase 2: Error Boundaries + API Hardening
 
-**Rationale:** All changes isolated to `PhotoLightbox.tsx`. Grouped together because they modify the same component. EXIF display (second half of feature 1) depends on Phase 1 data. Pure presentation layer, no database changes, no new pages.
-**Delivers:** Fullscreen mode, smooth transitions with responsive srcSet, touch gestures (pull-down-to-close, pinch-to-zoom), EXIF metadata display in lightbox footer.
-**Addresses:** Features 1 (display), 2, 3, 4.
-**Avoids:** Fullscreen iPhone Safari gap (Pitfall 6), custom animation conflicts (Pitfall 10), image quality regression (Pitfall 15).
-**Dependencies:** YARL Fullscreen and Zoom plugins (already installed), EXIF data from Phase 1.
+**Rationale:** Highest risk reduction per effort. All standalone features (no complex dependencies), prevents crashes. Dependency chain: T3 (validation) → T4 (error handling) → T9 (response format).
+**Delivers:** error.tsx files (root, admin, albums), not-found.tsx, loading.tsx, JSON parsing safety fix (P0 bug), API validation with Zod on all routes, consistent error handling wrappers, standard error response format, file size limit on uploads.
+**Addresses:** T1, T2, T3, T4, T7, T8, T9, T10
+**Avoids:** Pitfall 5 (JSON.parse — critical fix), Pitfall 6 (error swallowing — audit existing catch blocks)
+**Research needed:** No — Next.js App Router error.tsx conventions are stable. Skip /gsd:research-phase.
 
-### Phase 3: Album Management
+### Phase 3: Unit + Integration Testing
 
-**Rationale:** Both features 5 and 6 require a new admin album detail page. Building them together avoids creating the page twice. Independent of Phases 1 and 2 (could theoretically run in parallel, but sequential execution recommended). Fixes two unused schema elements: `coverPhotoId` and `sortOrder`.
-**Delivers:** Admin album detail page with photo grid, "Set as Cover" functionality, drag-to-reorder photos, batch sort order API endpoint.
-**Addresses:** Features 5, 6.
-**Avoids:** Photo reorder query bug (Pitfall 4), FK constraint mismatch (Pitfall 11), dnd-kit grid strategy mismatch (Pitfall 14), touch gesture conflicts (Pitfall 7).
-**Dependencies:** Fix `findByAlbumId` ORDER BY, create reorder API route, fix FK constraint on `coverPhotoId`.
+**Rationale:** Depends on Phase 1 infrastructure. Highest-value test targets: repositories (SQL correctness, serialization), image service (Sharp pipeline), auth (JWT lifecycle), API routes (validation + error handling from Phase 2).
+**Delivers:** ~15-20 test files covering infrastructure/database/repositories (integration with in-memory SQLite), infrastructure/services (unit with fixtures/mocks), infrastructure/auth (unit with mocked Redis), infrastructure/storage (integration with temp dirs), app/api routes (integration with mocked auth), @vitest/coverage-v8 reporting.
+**Addresses:** T5, D1
+**Avoids:** Pitfall 7 (mock divergence — use real SQLite), Pitfall 8 (testing Server Components — document policy), Pitfall 10 (toDomain/toDatabase — round-trip tests)
+**Research needed:** No — testing patterns are well-established. Skip /gsd:research-phase.
 
-### Phase 4: Shareability
+### Phase 4: Worker Resilience + Tech Debt
 
-**Rationale:** Deep links (feature 7) establish the URL structure that social sharing (feature 8) relies on. OG tags benefit from EXIF data (Phase 1) being available. Most user-facing polish features. Capstone that ties everything together.
-**Delivers:** Direct photo page route, URL sync in lightbox with `history.replaceState`, `generateMetadata` on all public pages, JPEG OG image derivatives, tested social media previews.
-**Addresses:** Features 7, 8.
-**Avoids:** Browser history pollution (Pitfall 5), OG image crawler compatibility (Pitfall 8).
-**Dependencies:** EXIF data from Phase 1, album photo ordering from Phase 3, generate JPEG derivatives for OG compatibility.
+**Rationale:** Depends on testing infrastructure (can write tests for worker behavior). Addresses photos stuck in "processing" from silent Redis failures and event handler errors.
+**Delivers:** Worker DB update moved to processor function (or retry logic in handler), admin UI filtering for stuck/error photos, retry action for failed photos, stale processing data cleanup (cron/endpoint), FK constraint verification (run PRAGMA foreign_key_list), orphaned file cleanup utility.
+**Addresses:** T6, D3, D6
+**Avoids:** Pitfall 13 (worker event handler no-retry), Pitfall 12 (FK constraint — verify existing migration)
+**Research needed:** Minimal — BullMQ event handler vs processor distinction needs verification. Consider /gsd:research-phase if retry patterns are unclear.
+
+### Phase 5: Performance + Production Polish
+
+**Rationale:** Independent of other phases, can run in parallel with Phase 3/4. Must measure FIRST before optimizing.
+**Delivers:** Performance baselines (Lighthouse on public pages, API timing, worker throughput, EXPLAIN QUERY PLAN), bundle analysis with @next/bundle-analyzer (establish baseline), targeted optimizations (only if measurements justify: WAL mode for SQLite, ETag/304 for image serving, image parallelization with memory monitoring), health check endpoint (GET /api/health), structured logging utility, CI pipeline (lint + typecheck + test in GitHub Actions).
+**Addresses:** D4, D5, D7, performance optimization (measured)
+**Avoids:** Pitfall 11 (performance without baselines — measure first), Pitfall 9 (Sharp parallel memory pressure — monitor)
+**Research needed:** No — standard patterns. Skip /gsd:research-phase.
+
+### Phase 6 (Optional/Stretch): E2E Smoke Tests
+
+**Rationale:** Highest setup cost, lower ROI until unit/integration tests exist. 3-5 targeted tests for critical paths only.
+**Delivers:** Playwright config, test seed script (deterministic DB + storage), isolated test database/storage, 3-5 E2E tests (login flow, upload + processing + gallery display, album creation + publish, public gallery browsing, photo lightbox).
+**Addresses:** D2
+**Avoids:** Pitfall 12 (E2E data dependencies — seed script with known fixtures)
+**Research needed:** Minimal — Playwright is installed but unconfigured. Standard setup. Skip /gsd:research-phase.
 
 ### Phase Ordering Rationale
 
-- **Phase 1 first** because database migrations are risky and learned patterns from v1.0. EXIF data is a dependency for display (Phase 2) and sharing (Phase 4).
-- **Phase 2 second** because lightbox changes are presentation-only and can consume Phase 1 data immediately. Lowest risk phase.
-- **Phase 3 third** because it's independent (no dependencies on Phases 1-2) but Phase 4 benefits from photo ordering working correctly. Fixes schema drift issues before final polish.
-- **Phase 4 last** because it needs direct links working before sharing can work, and it benefits from all other features being complete (EXIF data enriches OG tags, album covers are set, photos are ordered).
+- **Phase 1 must be first:** All testing depends on infrastructure. Module-level imports crash without mocks.
+- **Phase 2 early for safety:** Error boundaries and API hardening have highest risk reduction (prevent crashes) with low complexity (standalone features, no test dependencies).
+- **Phase 3 depends on Phase 1:** Cannot write repository tests without test DB helper and mocks.
+- **Phase 4 can overlap Phase 3:** Worker resilience is independent of API/repository testing.
+- **Phase 5 independent:** Performance baselining and CI setup can run anytime, but measure-first approach means it should not block other work.
+- **Phase 6 deferred:** E2E tests have high setup cost and are fragile. Build functional coverage (unit + integration) first, add E2E as validation smoke tests.
 
-**Dependency graph:**
+**Dependency chains identified:**
 
-```
-Phase 1: EXIF
-    |
-    +-> Phase 2: Lightbox (needs EXIF data)
-    |
-    +-> Phase 4: Shareability (OG tags enriched by EXIF)
-
-Phase 3: Album Management (independent)
-    |
-    +-> Phase 4: Shareability (cover photos used in OG tags)
-```
+- T3 (API validation) → T4 (error handling) → T9 (error format) → D1 (API integration tests)
+- Phase 1 (test infra) → T5 (unit tests) → D7 (CI pipeline)
+- T6 (worker recovery) → D6 (stale cleanup)
+- Phase 1 → Phase 3 (tests) → Phase 6 (E2E)
 
 ### Research Flags
 
-**Phases with standard patterns (skip research-phase):**
+**Skip /gsd:research-phase for all phases:** All patterns are well-established (Next.js error boundaries, Vitest with Next.js, BullMQ worker patterns, performance baselining). The codebase audit provides project-specific details. No novel integrations or niche domains.
 
-- **Phase 1 (EXIF):** exifr library is well-documented, Sharp integration is straightforward, worker pattern already established.
-- **Phase 2 (Lightbox):** YARL plugins are official and documented, configuration-only changes.
-- **Phase 3 (Album Management):** @dnd-kit pattern proven in `SortableAlbumCard`, direct replication with grid strategy.
-- **Phase 4 (Shareability):** Next.js `generateMetadata` is framework built-in, well-documented.
+**Phases with standard patterns:**
 
-**No phases need deeper research.** All features have clear implementation paths with existing patterns or well-documented libraries.
+- **Phase 1:** Vitest + Next.js mocking is documented extensively (next/headers, server-only, better-sqlite3 :memory:)
+- **Phase 2:** Next.js App Router error.tsx/not-found.tsx/loading.tsx are framework conventions since Next.js 13
+- **Phase 3:** Repository testing with in-memory SQLite, API route testing by invoking handlers directly — both standard patterns
+- **Phase 4:** BullMQ retry strategies and event handler vs processor distinctions are in BullMQ docs
+- **Phase 5:** Lighthouse, @next/bundle-analyzer, EXPLAIN QUERY PLAN, performance budgets — all standard tooling
+- **Phase 6:** Playwright E2E testing with seed data — standard pattern
+
+**Potential research during execution:**
+
+- If Phase 4 worker retry patterns prove complex during implementation, targeted BullMQ research may be needed (but not upfront)
+- If Phase 5 performance measurements reveal unexpected bottlenecks (e.g., Sharp processing slower than expected), investigate Sharp optimization patterns
 
 ## Confidence Assessment
 
-| Area         | Confidence | Notes                                                                                                                                                                                                  |
-| ------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Stack        | HIGH       | YARL plugins verified from installed package exports and TypeScript declarations. @dnd-kit proven in codebase. exifr chosen based on npm trends, GitHub activity, and Sharp maintainer recommendation. |
-| Features     | HIGH       | All 8 features verified against YARL docs, Next.js API reference, and existing codebase patterns. EXIF display patterns researched from Flickr/500px.                                                  |
-| Architecture | HIGH       | Integration points mapped to existing Clean Architecture layers. `photo_albums.sortOrder` and `albums.coverPhotoId` verified in schema. YARL v3.28.0 plugin availability confirmed.                    |
-| Pitfalls     | HIGH       | Codebase-specific pitfalls verified by reading actual source code (FK constraint mismatch, unused sortOrder, missing ORDER BY, v1.0 db:push lesson). Library pitfalls verified from official docs.     |
+| Area         | Confidence | Notes                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stack        | HIGH       | Vitest/Playwright already installed (versions verified from package.json), @vitest/coverage-v8 and @next/bundle-analyzer versions verified in npm registry. In-memory SQLite is standard better-sqlite3 feature.                                                                                                                                                                              |
+| Features     | HIGH       | All findings from direct codebase audit (read all API routes, repositories, worker, components). Missing error.txt files verified by directory scan. Zero test gap confirmed.                                                                                                                                                                                                                 |
+| Architecture | HIGH       | Existing Clean Architecture verified from source (domain/application/infrastructure/presentation directories). Test organization follows established colocated **tests**/ pattern. Error boundary placement follows Next.js route hierarchy.                                                                                                                                                  |
+| Pitfalls     | HIGH       | All critical pitfalls verified by reading actual source code: module-level imports (client.ts line 140, repository imports line 1), JSON.parse (SQLitePhotoRepository line 125), Redis connections (queues.ts line 31), server-only imports (session.ts, dal.ts), schema drift (client.ts CREATE TABLE vs schema.ts). Worker event handler issue confirmed (imageProcessor.ts lines 105-132). |
 
 **Overall confidence:** HIGH
 
+All research based on direct codebase analysis (255 files, 6,043 LOC examined) plus installed package versions. WebSearch was unavailable but not needed — Next.js/Vitest/Playwright patterns are well within training data. Project-specific findings (file gaps, latent bugs, module imports) are HIGH confidence from source code inspection.
+
 ### Gaps to Address
 
-- **JPEG derivative generation for OG images:** Current pipeline only generates WebP and AVIF. Need to add JPEG generation for maximum social media crawler compatibility. Sharp already installed, just needs configuration.
-- **FK constraint fix for coverPhotoId:** Schema says `onDelete: "set null"` but database has `NO ACTION` (MEMORY.md documents this mismatch). Must reconcile before building cover selection UI. Options: (a) ALTER TABLE to add ON DELETE SET NULL, or (b) application-level cleanup when deleting photos.
-- **Testing on iPhone Safari:** Fullscreen mode is unsupported. Design must work gracefully without the Fullscreen API. Need real device testing (DevTools emulation insufficient).
-- **OG image absolute URLs:** Need to construct fully-qualified URLs for `og:image` (crawlers require absolute URLs with domain). May need `NEXT_PUBLIC_SITE_URL` env var or use Next.js request headers to infer domain.
+Minor gaps requiring validation during implementation:
+
+- **BullMQ event handler vs processor retry semantics:** The research identifies that event handlers run after job completion (no retry), but the exact API for moving DB updates into the processor function should be verified against BullMQ docs during Phase 4. Mitigation: Start with stuck-processing detection as a pragmatic workaround if processor refactor proves complex.
+
+- **Sharp memory usage with parallelization:** The worker comment says "50MP images use ~144MB each" and concurrency is 2. If parallelizing WebP+AVIF generation for the same width, peak memory doubles (288MB per image). Measure memory before/after parallelization in Phase 5. Mitigation: Only parallelize if measurements show it helps, and reduce concurrency from 2 to 1 to compensate.
+
+- **Playwright auth flow with JWT cookies:** Testing protected routes in Playwright requires setting up session cookies. The auth flow uses jose for JWT encryption. Verify cookie-setting patterns for Playwright in Phase 6 setup. Mitigation: Standard Playwright cookie API, well-documented.
+
+- **FK constraint migration actual state:** The migration in client.ts (lines 96-128) attempts to fix coverPhotoId SET NULL, but only runs if PRAGMA detects the wrong state. Verify on the actual production database with `PRAGMA foreign_key_list(albums)` during Phase 4. Mitigation: Run PRAGMA check, apply explicit ALTER TABLE if needed.
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-- **Installed package analysis:** YARL v3.28.0 package.json exports, TypeScript type declarations for AnimationSettings, ControllerSettings, Fullscreen/Zoom plugin configurations. @dnd-kit/core v6.3.1 and @dnd-kit/sortable v10.0.0 installed.
-- **Codebase verification:** Existing `SortableAlbumCard` pattern, `photo_albums.sortOrder` column in schema, `albums.coverPhotoId` with PATCH API support, Sharp v0.34.5 usage in `imageService.ts`, BullMQ worker pipeline in `imageProcessor.ts`.
-- **Official documentation:** [Sharp metadata API](https://sharp.pixelplumbing.com/api-input/), [YARL Plugins](https://yet-another-react-lightbox.com/plugins), [YARL Fullscreen Plugin](https://yet-another-react-lightbox.com/plugins/fullscreen), [YARL Zoom Plugin](https://yet-another-react-lightbox.com/plugins/zoom), [Next.js generateMetadata](https://nextjs.org/docs/app/api-reference/functions/generate-metadata), [Next.js Metadata and OG Images](https://nextjs.org/docs/app/getting-started/metadata-and-og-images), [dnd-kit Sortable](https://docs.dndkit.com/presets/sortable).
+- Direct codebase analysis: All files under /Users/arxherre/Documents/photo-profile/src/ examined
+- package.json: vitest 4.0.18, @playwright/test 1.58.2, next 16.1.6, zod 4.3.6, better-sqlite3 12.6.2 (installed versions)
+- npm registry: @vitest/coverage-v8@4.0.18 verified, @next/bundle-analyzer@16.1.6 verified
+- infrastructure/database/client.ts: Lines 1-141 (module-level init, migrations, CREATE TABLE statements)
+- infrastructure/database/schema.ts: Drizzle schema (desired state)
+- infrastructure/database/repositories/SQLitePhotoRepository.ts: Line 1 (db import), line 125 (JSON.parse vulnerability)
+- infrastructure/database/repositories/SQLiteAlbumRepository.ts: Line 1 (db import)
+- infrastructure/jobs/queues.ts: Line 31 (IORedis module-level connection)
+- infrastructure/jobs/workers/imageProcessor.ts: Lines 19, 105-132 (Redis connection, event handler DB update)
+- infrastructure/auth/session.ts, dal.ts: server-only imports, cookies() usage
+- infrastructure/auth/rateLimiter.ts: Line 10 (IORedis module-level connection)
+- app/api/admin/upload/route.ts: Lines 81-84 (silent Redis error catch)
+- vitest.config.ts: Existing configuration with path aliases, globals: true
 
 ### Secondary (MEDIUM confidence)
 
-- **Ecosystem research:** [npm trends comparison: exifr vs exifreader vs exif-reader](https://npmtrends.com/exif-reader-vs-exifr-vs-exifreader) — exifr has 497K weekly downloads, exifreader 91K, exif-reader 14K.
-- **Pattern research:** Flickr EXIF display patterns (camera/lens/settings shown, GPS hidden), 500px gear pages (camera metadata as portfolio feature), photography site UX patterns for lightbox transitions and gestures.
+- Next.js App Router error.tsx conventions (training data, MEDIUM-HIGH confidence — stable since Next.js 13, unchanged through 16)
+- Vitest with Next.js mocking patterns (training data, well-established community patterns)
+- BullMQ worker event handling (training data, confirmed by existing code structure)
+- better-sqlite3 :memory: databases (training data, standard SQLite feature)
+- Sharp native binary considerations (training data, common CI issue with C++ addons)
 
 ### Tertiary (LOW confidence)
 
-- None. All findings verified against authoritative sources or codebase inspection.
+- None — WebSearch was unavailable but not required. All critical findings from direct source inspection.
 
 ---
 
-_Research completed: 2026-02-05_
+_Research completed: 2026-02-06_
 _Ready for roadmap: yes_

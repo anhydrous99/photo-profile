@@ -1,436 +1,308 @@
-# Technology Stack: v1.1 Additions
+# Stack Research: Quality Hardening Tools
 
-**Project:** Photography Portfolio Website -- v1.1 Enhancement Milestone
-**Researched:** 2026-02-05
-**Overall Confidence:** HIGH
+**Domain:** Testing, error handling, and performance optimization for Next.js 16 photography portfolio
+**Researched:** 2026-02-06
+**Confidence:** HIGH (versions verified from npm registry and installed packages)
 
-## Executive Summary
+## Current State Assessment
 
-The v1.1 milestone requires surprisingly few new dependencies. The existing stack already covers most needs:
+Before recommending new tools, here is what already exists:
 
-- **YARL (already installed at v3.28.0)** has built-in fullscreen, touch/swipe, and transition plugins -- no new library needed
-- **exifr** was planned in v1.0 research but never installed -- it remains the best choice for EXIF extraction
-- **@dnd-kit (already installed)** handles the photo reordering use case with the same pattern as album reordering
-- **OG images** need no new library -- Next.js `generateMetadata` + the existing image API route covers static OG meta tags; Sharp (already installed) can generate OG images if dynamic generation is desired
+| Already Installed | Version                     | Status                                               |
+| ----------------- | --------------------------- | ---------------------------------------------------- |
+| vitest            | ^4.0.18 (installed: 4.0.18) | Configured in `vitest.config.ts`, zero tests written |
+| @playwright/test  | ^1.58.2 (installed: 1.58.2) | Installed, zero tests written                        |
+| zod               | ^4.3.6                      | Already used for `env.ts` validation                 |
+| eslint + prettier | eslint ^9, prettier ^3.8.1  | Running via lint-staged pre-commit                   |
+| typescript        | ^5                          | Strict mode enabled, `tsc --noEmit` script exists    |
 
-**Net new dependencies: 1 (exifr)**. Everything else is configuration of existing libraries.
+**Key insight:** The project already has the core testing framework (Vitest 4) and E2E framework (Playwright) installed. The quality gap is not missing tools -- it is missing tests, coverage reporting, error boundaries, and performance instrumentation.
 
----
+## Recommended Stack Additions
 
-## Feature-to-Stack Mapping
+### Testing: Coverage Reporting
 
-| Feature                   | Library                                         | Status                            | New Dependency?     |
-| ------------------------- | ----------------------------------------------- | --------------------------------- | ------------------- |
-| EXIF metadata extraction  | exifr ^7.1.3                                    | Not yet installed                 | YES -- only new dep |
-| Fullscreen lightbox       | YARL Fullscreen plugin                          | Installed, unused                 | No                  |
-| Smooth transitions        | YARL core animation config                      | Installed, partially configured   | No                  |
-| Touch/swipe gestures      | YARL core (built-in)                            | Installed, active                 | No                  |
-| Photo reorder (drag-drop) | @dnd-kit/core + @dnd-kit/sortable               | Installed, used for albums        | No                  |
-| Direct photo links        | Next.js URL state + YARL `index` prop           | Framework built-in                | No                  |
-| Album cover selection     | Existing API + UI only                          | Schema already has `coverPhotoId` | No                  |
-| OpenGraph meta tags       | Next.js `generateMetadata` + existing image API | Framework built-in                | No                  |
+| Technology          | Version | Purpose                                  | Why Recommended                                                                                                                                                                                                                                                    |
+| ------------------- | ------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| @vitest/coverage-v8 | ^4.0.18 | Code coverage via V8's built-in coverage | Must match vitest major version (4.x). V8 coverage is faster than Istanbul and requires no source instrumentation. Works out-of-the-box with the existing vitest.config.ts. No configuration changes needed beyond adding `coverage.provider: 'v8'` to the config. |
 
----
+**Why not @vitest/coverage-istanbul:** Istanbul requires code instrumentation which adds overhead. V8 coverage is native to Node.js, faster for CI, and produces identical report formats (lcov, text, html). The only reason to prefer Istanbul is if you need branch-level coverage on code V8 instruments poorly (e.g., decorators) -- not applicable here since this codebase uses plain TypeScript interfaces and functions.
 
-## New Dependencies
+### Testing: Database Test Fixtures
 
-### exifr -- EXIF Metadata Extraction
+No additional library needed. The testing strategy for repositories should use a **real in-memory SQLite database** via better-sqlite3 (already installed). This is superior to mocking Drizzle ORM because:
 
-| Property      | Value                                                    |
-| ------------- | -------------------------------------------------------- |
-| Package       | `exifr`                                                  |
-| Version       | `^7.1.3` (latest, stable)                                |
-| Purpose       | Parse EXIF from uploaded photos (camera, lens, settings) |
-| Bundle impact | Server-side only (worker process), zero client impact    |
-| Confidence    | HIGH                                                     |
+1. Repository tests verify actual SQL execution, not mock behavior
+2. better-sqlite3 supports `:memory:` databases that are instant to create/destroy
+3. Drizzle's type system makes mocking impractical -- you would need to mock the entire query builder chain
 
-**Why exifr over alternatives:**
+**Pattern:** Create a test helper that instantiates `drizzle({ client: new Database(':memory:'), schema })`, runs the table creation SQL, and returns it. Each test file gets a fresh database. This requires zero new dependencies.
 
-| Criterion               | exifr                                | ExifReader                     | exif-reader         | Sharp metadata()      |
-| ----------------------- | ------------------------------------ | ------------------------------ | ------------------- | --------------------- |
-| Parse speed (per photo) | ~2.5ms                               | ~9.5ms                         | Not benchmarked     | N/A (raw buffer only) |
-| Parsed output           | YES -- keyed object                  | YES -- keyed object            | YES -- keyed object | NO -- raw Buffer      |
-| Node.js Buffer input    | YES                                  | YES                            | YES                 | Built-in              |
-| HEIC/AVIF support       | YES                                  | YES                            | Limited             | N/A                   |
-| Weekly npm downloads    | ~497K                                | ~91K                           | ~53 projects        | N/A                   |
-| Maintenance             | Stable (no changes needed -- mature) | Active (maintained since 2012) | Sparse              | N/A                   |
-| Zero dependencies       | YES                                  | YES                            | YES                 | N/A                   |
+### Performance: Bundle Analysis
 
-**Critical decision: exifr vs Sharp's built-in EXIF.** Sharp's `metadata()` returns EXIF as a raw binary `Buffer`, not parsed key-value pairs. You would need a second library (like `exif-reader`) to parse that buffer anyway. Using exifr directly on the file is simpler, faster, and avoids the double-parse.
+| Technology            | Version | Purpose                                 | Why Recommended                                                                                                                                                                                        |
+| --------------------- | ------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| @next/bundle-analyzer | 16.1.6  | Visualize JavaScript bundle composition | Version must match Next.js version (16.1.6). Official Vercel package. Wraps webpack-bundle-analyzer with Next.js integration. One-time setup in next.config.ts, run with `ANALYZE=true npm run build`. |
 
-**Why not parse EXIF via Sharp buffer + exif-reader:**
+**Why this specific version:** @next/bundle-analyzer is published in lockstep with Next.js versions. Using 16.1.6 ensures compatibility with the installed Next.js 16.1.6. Verified via npm registry that 16.1.6 exists.
 
-- Two-step process (Sharp reads file -> get buffer -> exif-reader parses buffer)
-- exifr reads the file directly, only reading the first few hundred bytes where EXIF lives
-- exifr handles the full pipeline in one call with better performance
+### Error Handling: No New Runtime Libraries Needed
 
-**Target EXIF fields for photography portfolio:**
+The project already has zod (validation), Next.js App Router (error.tsx boundaries), and standard try/catch patterns. What is missing is not a library but rather the **implementation** of:
 
-```typescript
-// Fields to extract and store
-interface PhotoExif {
-  cameraMake: string | null; // "Canon", "Sony", "Nikon"
-  cameraModel: string | null; // "EOS R5", "A7 IV"
-  lensModel: string | null; // "RF 24-70mm F2.8 L IS USM"
-  focalLength: number | null; // 50 (mm)
-  aperture: number | null; // 2.8 (f-number)
-  shutterSpeed: string | null; // "1/250" (formatted from ExposureTime)
-  iso: number | null; // 400
-  dateTaken: Date | null; // DateTimeOriginal
-}
-```
+1. **error.tsx** files in route segments (Next.js built-in, zero dependencies)
+2. **not-found.tsx** files for 404 handling (Next.js built-in, zero dependencies)
+3. **global-error.tsx** for root error boundary (Next.js built-in, zero dependencies)
+4. Consistent error response shapes in API routes (use zod for request validation, already installed)
+5. Server action error handling patterns (return `{ error: string }` vs throwing)
 
-**Usage pattern -- extract during image processing worker:**
+Currently, the codebase has ZERO error.tsx, not-found.tsx, or global-error.tsx files. API routes do manual validation without zod (e.g., `const { description } = body as { description: string | null }` in the photo PATCH route -- no validation). These are implementation gaps, not dependency gaps.
 
-```typescript
-import exifr from "exifr";
+## Supporting Libraries
 
-// In the BullMQ worker, after upload, before/alongside derivative generation
-const exif = await exifr.parse(originalFilePath, {
-  pick: [
-    "Make",
-    "Model",
-    "LensModel",
-    "FocalLength",
-    "FNumber",
-    "ExposureTime",
-    "ISO",
-    "DateTimeOriginal",
-  ],
-});
-```
+| Library    | Version | Purpose                      | When to Use                                                                                                                          |
+| ---------- | ------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| @vitest/ui | ^4.0.18 | Browser-based test runner UI | Optional. Useful during initial test authoring to visually browse and debug test results. Run with `vitest --ui`. Not needed for CI. |
 
-**Privacy note:** Do NOT extract or store GPS coordinates (`GPSLatitude`, `GPSLongitude`). These expose the photographer's location. The `pick` option in exifr ensures only whitelisted fields are read.
+## Development Tools (No Install Required)
 
-**Installation:**
+| Tool                         | Purpose                | Notes                                                                                                   |
+| ---------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| `tsc --noEmit`               | Type checking          | Already configured as `npm run typecheck`. Run in CI.                                                   |
+| `ANALYZE=true npm run build` | Bundle analysis        | Requires @next/bundle-analyzer to be added to next.config.ts                                            |
+| SQLite PRAGMA commands       | Schema validation      | `PRAGMA table_info(tableName)`, `PRAGMA foreign_key_check` -- run via better-sqlite3, no new dependency |
+| `npx drizzle-kit check`      | Schema drift detection | Already installed as dev dependency (drizzle-kit ^0.31.8). Validates schema.ts matches actual DB.       |
+
+## Installation
 
 ```bash
-npm install exifr
+# Required additions (dev dependencies only -- no runtime impact)
+npm install -D @vitest/coverage-v8@^4.0.18 @next/bundle-analyzer@16.1.6
+
+# Optional (nice-to-have for local development)
+npm install -D @vitest/ui@^4.0.18
 ```
 
-No `@types/exifr` needed -- exifr ships its own TypeScript declarations.
+Total new dependencies: 2 required, 1 optional. All dev-only.
 
-**Source:** [exifr GitHub](https://github.com/MikeKovarik/exifr), [npm trends comparison](https://npmtrends.com/exif-reader-vs-exifr-vs-exifreader), [Sharp metadata docs](https://sharp.pixelplumbing.com/api-input)
+## Vitest Configuration Update
 
----
-
-## Existing Dependencies: Configuration Changes
-
-### YARL Plugins (yet-another-react-lightbox v3.28.0)
-
-The project already imports YARL at v3.28.0. The current `PhotoLightbox.tsx` uses only the `Captions` plugin. Three additional built-in plugins need to be activated for v1.1 -- all ship with the already-installed package.
-
-#### Fullscreen Plugin
-
-| Property       | Value                                                |
-| -------------- | ---------------------------------------------------- |
-| Import         | `yet-another-react-lightbox/plugins/fullscreen`      |
-| Purpose        | Full-screen lightbox mode via browser Fullscreen API |
-| New dependency | NO -- bundled with YARL                              |
-| Confidence     | HIGH (verified from installed package types)         |
-
-**How it works:** Uses the browser's Fullscreen API. Adds a fullscreen toggle button to the toolbar. On unsupported environments (Safari iOS, iframes), the button is automatically hidden.
-
-**Configuration:**
+The existing `vitest.config.ts` needs minor additions for coverage:
 
 ```typescript
-import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
+import { defineConfig } from "vitest/config";
+import path from "path";
 
-<Lightbox
-  plugins={[Captions, Fullscreen]}
-  fullscreen={{ auto: false }} // user triggers manually
-/>
-```
-
-**Props verified from installed types:**
-
-- `fullscreen.auto` (boolean) -- auto-enter fullscreen on open
-- `fullscreen.ref` (ForwardedRef) -- external control
-- `on.enterFullscreen` / `on.exitFullscreen` -- lifecycle callbacks
-
-#### Touch/Swipe Navigation (Built-in Core)
-
-| Property       | Value                                       |
-| -------------- | ------------------------------------------- |
-| Import         | N/A -- core feature, no plugin needed       |
-| Purpose        | Swipe left/right to navigate, pull to close |
-| New dependency | NO                                          |
-| Confidence     | HIGH (verified from YARL documentation)     |
-
-**Current state:** The existing `PhotoLightbox.tsx` already has swipe navigation working (it is a core YARL feature). The `controller` settings manage gesture behavior:
-
-```typescript
-// Currently configured (intentionally restrictive for v1.0):
-controller={{
-  closeOnBackdropClick: false,
-  closeOnPullDown: false,
-  closeOnPullUp: false,
-}}
-```
-
-**v1.1 changes:** Consider enabling `closeOnPullDown: true` for mobile-friendly dismiss gesture. Swipe left/right for photo navigation is already active by default (controlled by `disableSwipeNavigation`, which defaults to `false`).
-
-No new code needed for swipe -- just configuration adjustments.
-
-#### Smooth Transitions (Built-in Core)
-
-| Property       | Value                                    |
-| -------------- | ---------------------------------------- |
-| Import         | N/A -- core feature via `animation` prop |
-| Purpose        | Smooth slide transitions between photos  |
-| New dependency | NO                                       |
-| Confidence     | HIGH (verified from installed types)     |
-
-**Current state:** Already configured in `PhotoLightbox.tsx`:
-
-```typescript
-animation={{
-  fade: 200,
-  swipe: 300,
-}}
-```
-
-**v1.1 tuning options available:**
-
-- `animation.fade` -- fade-in/fade-out duration (ms)
-- `animation.swipe` -- swipe transition duration (ms)
-- `animation.navigation` -- keyboard/button navigation duration (ms, overrides swipe)
-- `animation.easing.fade` -- timing function for fade (default: "ease")
-- `animation.easing.swipe` -- timing function for swipe (default: "ease-out")
-- `animation.easing.navigation` -- timing function for nav (default: "ease-in-out")
-
-Recommended v1.1 settings for smoother feel:
-
-```typescript
-animation={{
-  fade: 250,
-  swipe: 400,
-  navigation: 350,
-  easing: {
-    fade: "ease",
-    swipe: "cubic-bezier(0.25, 0.1, 0.25, 1)",
-    navigation: "ease-in-out",
-  },
-}}
-```
-
-### @dnd-kit -- Photo Reordering Within Albums
-
-| Property       | Value                                                 |
-| -------------- | ----------------------------------------------------- |
-| Packages       | `@dnd-kit/core` (6.3.1), `@dnd-kit/sortable` (10.0.0) |
-| Purpose        | Drag-to-reorder photos within an album (admin)        |
-| New dependency | NO -- already installed and used for album reordering |
-| Confidence     | HIGH (pattern already proven in codebase)             |
-
-**Current usage:** `AlbumsPageClient.tsx` uses `DndContext` + `SortableContext` + `verticalListSortingStrategy` for album card reordering. `SortableAlbumCard.tsx` uses `useSortable` hook.
-
-**v1.1 reuse:** The exact same pattern applies to photo reordering within an album. The only differences:
-
-- Use a grid layout strategy instead of vertical list (photos displayed as thumbnails in a grid)
-- Import `rectSortingStrategy` instead of `verticalListSortingStrategy` for grid sorting
-- Create a `SortablePhotoCard` component analogous to `SortableAlbumCard`
-
-**Grid sorting strategy (already available):**
-
-```typescript
-import { rectSortingStrategy } from "@dnd-kit/sortable";
-
-<SortableContext
-  items={photos.map(p => p.id)}
-  strategy={rectSortingStrategy}  // For grid layout
->
-```
-
-The `photo_albums` junction table already has a `sortOrder` column, so the database schema is ready.
-
-No new packages, no version changes needed.
-
-### Next.js -- Direct Photo Links and OpenGraph
-
-| Property       | Value                                    |
-| -------------- | ---------------------------------------- |
-| Framework      | Next.js 16.1.6 (already installed)       |
-| Purpose        | URL-based photo deep links, OG meta tags |
-| New dependency | NO                                       |
-| Confidence     | HIGH                                     |
-
-#### Direct Photo Links (URL opens lightbox)
-
-**Approach:** Use URL search params or hash to encode the current photo index/ID. When a user shares a URL like `/albums/abc123?photo=photo456`, the page opens with the lightbox showing that photo.
-
-Implementation is pure application logic -- no new library needed:
-
-- Read `searchParams` in the Server Component or via `useSearchParams()` client-side
-- Pass the initial `index` to `<PhotoLightbox index={initialIndex} />`
-- Update the URL on `onIndexChange` using `router.replace()` or `history.replaceState()`
-
-#### OpenGraph Meta Tags
-
-**Approach:** Use Next.js `generateMetadata` function (App Router built-in) to set OG tags dynamically per page.
-
-Two sub-approaches for the `og:image`:
-
-**Option A (Recommended): Point OG image to existing image API route.**
-
-```typescript
-// In page.tsx or layout.tsx
-export async function generateMetadata({ params }): Promise<Metadata> {
-  const album = await getAlbum(params.id);
-  const coverPhoto = album.coverPhotoId;
-  return {
-    openGraph: {
-      title: album.title,
-      description: album.description,
-      images: [
-        {
-          url: `/api/images/${coverPhoto}/1200w.webp`,
-          width: 1200,
-          type: "image/webp",
-        },
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: "node",
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov", "html"],
+      include: ["src/**/*.ts"],
+      exclude: [
+        "src/app/**", // Next.js pages (tested via E2E/integration)
+        "src/**/*.d.ts",
+        "src/**/index.ts", // Re-export barrels
       ],
     },
-  };
-}
-```
-
-This reuses the existing image serving infrastructure -- the processed 1200w derivatives are already generated and served with immutable caching. No new image generation pipeline needed.
-
-**Option B (If branded OG images desired): Use `next/og` ImageResponse.**
-
-This would generate images with text overlays (album title, site branding) using the Satori engine. This requires more work but produces branded social cards.
-
-```typescript
-// app/albums/[id]/opengraph-image.tsx
-import { ImageResponse } from "next/og";
-
-export default async function Image({ params }) {
-  // Fetch album data, generate branded card
-  return new ImageResponse(/* JSX */);
-}
-```
-
-**Recommendation:** Start with Option A. It is zero-dependency, uses existing infrastructure, and produces better results for a photography portfolio (showing the actual photo is more compelling than a branded text card). Option B can be added later if social media previews need branding.
-
-**Source:** [Next.js Metadata Docs](https://nextjs.org/docs/app/getting-started/metadata-and-og-images), [Next.js generateMetadata API](https://nextjs.org/docs/app/api-reference/functions/generate-metadata)
-
----
-
-## Schema Changes Required
-
-The `photos` table needs new columns for EXIF metadata. No new tables needed.
-
-```sql
-ALTER TABLE photos ADD COLUMN camera_make TEXT;
-ALTER TABLE photos ADD COLUMN camera_model TEXT;
-ALTER TABLE photos ADD COLUMN lens_model TEXT;
-ALTER TABLE photos ADD COLUMN focal_length REAL;
-ALTER TABLE photos ADD COLUMN aperture REAL;
-ALTER TABLE photos ADD COLUMN shutter_speed TEXT;
-ALTER TABLE photos ADD COLUMN iso INTEGER;
-ALTER TABLE photos ADD COLUMN date_taken INTEGER;  -- timestamp_ms, like other date columns
-```
-
-**Important:** Based on the v1.0 lesson learned (documented in MEMORY.md), use `ALTER TABLE` directly for migrations, not `db:push`. The `db:push` command caused runtime errors in Phase 6 of v1.0.
-
-The Drizzle schema in `infrastructure/database/schema.ts` will also need updating:
-
-```typescript
-export const photos = sqliteTable("photos", {
-  // ... existing columns ...
-  cameraMake: text("camera_make"),
-  cameraModel: text("camera_model"),
-  lensModel: text("lens_model"),
-  focalLength: real("focal_length"),
-  aperture: real("aperture"),
-  shutterSpeed: text("shutter_speed"),
-  iso: integer("iso"),
-  dateTaken: integer("date_taken", { mode: "timestamp_ms" }),
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      "@/domain": path.resolve(__dirname, "./src/domain"),
+      "@/application": path.resolve(__dirname, "./src/application"),
+      "@/infrastructure": path.resolve(__dirname, "./src/infrastructure"),
+      "@/presentation": path.resolve(__dirname, "./src/presentation"),
+    },
+  },
 });
 ```
 
-The `Photo` domain entity will need matching fields. All new fields are nullable since not all images contain EXIF data (screenshots, scans, edited exports).
+## next.config.ts Update for Bundle Analyzer
 
----
+```typescript
+import type { NextConfig } from "next";
+import withBundleAnalyzer from "@next/bundle-analyzer";
 
-## What NOT to Add
+const nextConfig: NextConfig = {
+  output: "standalone",
+  images: {
+    loader: "custom",
+    loaderFile: "./src/lib/imageLoader.ts",
+  },
+};
 
-| Library/Approach         | Why Not                                                                                                                                                                                                 |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@hello-pangea/dnd`      | Project already uses `@dnd-kit`. No reason to add a second DnD library.                                                                                                                                 |
-| `framer-motion`          | YARL already handles lightbox animations. Adding framer-motion for transitions would conflict with YARL's internal animation system and bloat the bundle.                                               |
-| `react-swipeable`        | YARL has built-in swipe/touch gesture support. Adding a second gesture library would create conflicts.                                                                                                  |
-| `@vercel/og` or `satori` | `next/og` (built into Next.js) already wraps Satori. No separate install needed if dynamic OG images are desired.                                                                                       |
-| `sharp` for OG images    | Sharp is already installed for image processing. If needed for OG image generation, it can be reused without a new dependency. However, the recommended approach (Option A) needs no generation at all. |
-| `exif-reader`            | Only useful as a companion to Sharp's raw EXIF buffer. exifr reads files directly and is faster -- no need for the two-step approach.                                                                   |
-| `zustand`                | Was considered in v1.0 research but never installed. Lightbox state (current photo index, URL sync) can be managed with React `useState` + URL params. No global store needed.                          |
-| `photoswipe`             | YARL is already installed and working. Switching lightbox libraries for v1.1 would be a major rewrite for marginal benefit.                                                                             |
+const analyzer = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
 
----
-
-## Installation Summary
-
-```bash
-# Only ONE new dependency
-npm install exifr
+export default analyzer(nextConfig);
 ```
 
-That is it. All other v1.1 features use existing dependencies with configuration changes.
+## Package.json Script Additions
 
----
+```json
+{
+  "scripts": {
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "analyze": "ANALYZE=true npm run build"
+  }
+}
+```
 
-## Integration Points with Existing Stack
+## Alternatives Considered
 
-| v1.1 Feature    | Touches                                         | Integration Strategy                                                              |
-| --------------- | ----------------------------------------------- | --------------------------------------------------------------------------------- |
-| EXIF extraction | BullMQ worker, Photo entity, DB schema          | Extract in worker alongside derivative generation. Store in photos table.         |
-| EXIF display    | PhotoLightbox, Captions plugin, API routes      | Add EXIF to photo API response. Display via YARL Captions or custom slide footer. |
-| Fullscreen      | PhotoLightbox component                         | Add Fullscreen to plugins array. One line change.                                 |
-| Transitions     | PhotoLightbox component                         | Tune existing animation prop. Config change only.                                 |
-| Touch gestures  | PhotoLightbox component                         | Adjust controller settings. Config change only.                                   |
-| Photo reorder   | New admin page/component, photo_albums table    | Clone album reorder pattern. Use existing sortOrder column.                       |
-| Deep links      | Gallery pages, PhotoLightbox                    | URL searchParams -> lightbox index. Framework feature.                            |
-| Album covers    | Album admin page, albums table                  | Schema already has coverPhotoId. Just needs UI for selection.                     |
-| OG meta tags    | Page-level generateMetadata, existing image API | generateMetadata returns image URL pointing to existing derivatives.              |
+| Recommended                     | Alternative                    | When to Use Alternative                                                                                                                                                                     |
+| ------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| @vitest/coverage-v8             | @vitest/coverage-istanbul      | Only if you need coverage of decorator-heavy code or runtime-transpiled code. Not applicable here.                                                                                          |
+| @next/bundle-analyzer           | source-map-explorer            | If you want to analyze a single chunk file rather than the full build. Bundle analyzer gives the better overview for initial investigation.                                                 |
+| In-memory SQLite for tests      | Mocking Drizzle with vi.mock() | Never for repository tests. Mocking the ORM means you are testing mock behavior, not SQL correctness. Use mocks only for things that are expensive or external (Redis, Sharp, file system). |
+| Zod for API validation          | No validation (current state)  | Never. The current `as` type assertions in API routes provide zero runtime safety.                                                                                                          |
+| No dedicated error tracking lib | Sentry / PostHog               | Only if deploying publicly and needing production error monitoring. For a self-hosted single-user app, structured console logging is sufficient.                                            |
 
----
+## What NOT to Use
+
+| Avoid                                     | Why                                                                                                                                                                                                       | Use Instead                                                             |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Jest                                      | Vitest 4 is already installed and configured. Jest requires separate ts-jest or babel config. Vitest is faster and uses the same config as Vite.                                                          | Vitest 4 (already installed)                                            |
+| Cypress                                   | Already have Playwright installed. Adding Cypress duplicates E2E capability with a heavier runtime. Playwright is faster and supports all major browsers.                                                 | Playwright (already installed)                                          |
+| React Testing Library                     | Out of scope for this milestone. The focus is business logic and infrastructure testing, not component rendering. RTL can be added later if component tests are needed.                                   | Vitest for pure logic tests                                             |
+| msw (Mock Service Worker)                 | This app does not call external HTTP APIs. All data comes from SQLite and local filesystem. MSW is for mocking fetch calls to external services.                                                          | Direct function testing                                                 |
+| Supertest / node-test-helpers             | Next.js API routes are not Express handlers. They use the Web Fetch API (Request/Response). Testing them requires either calling the handler function directly or using Playwright for integration tests. | Direct handler invocation in Vitest, or Playwright for HTTP-level tests |
+| ts-node for test execution                | Vitest 4 handles TypeScript natively via esbuild. No separate TypeScript execution runtime needed.                                                                                                        | Vitest's built-in TypeScript support                                    |
+| nyc (Istanbul CLI)                        | Legacy coverage tool. @vitest/coverage-v8 integrates directly with Vitest's test runner.                                                                                                                  | @vitest/coverage-v8                                                     |
+| webpack-bundle-analyzer (standalone)      | @next/bundle-analyzer wraps this with Next.js-specific configuration. Using it standalone requires manual webpack config extraction.                                                                      | @next/bundle-analyzer                                                   |
+| Dedicated logging library (winston, pino) | Single-user self-hosted app. Console logging is sufficient. Adding a logging framework adds complexity without proportional benefit at this scale.                                                        | console.error/console.log with structured messages                      |
+| Error tracking SaaS (Sentry, Bugsnag)     | Self-hosted single-admin app. No external users to monitor. Error boundaries + console logging covers the use case.                                                                                       | Next.js error.tsx + console.error                                       |
+
+## Testing Strategy by Layer
+
+This informs what gets tested and how:
+
+| Layer                                | What to Test                                                   | How to Test                                | Mocking Strategy                              |
+| ------------------------------------ | -------------------------------------------------------------- | ------------------------------------------ | --------------------------------------------- |
+| domain/entities                      | Interface definitions only -- nothing to test                  | Skip (no logic)                            | N/A                                           |
+| domain/repositories                  | Interface definitions only -- nothing to test                  | Skip (no logic)                            | N/A                                           |
+| infrastructure/database/repositories | SQL queries, toDomain/toDatabase mapping, transaction behavior | Vitest + in-memory SQLite                  | Real DB, no mocks                             |
+| infrastructure/services/imageService | Derivative generation, blur placeholder, metadata extraction   | Vitest + fixture images (small test JPEGs) | Real Sharp (fast on small images)             |
+| infrastructure/services/exifService  | EXIF parsing, field mapping, null handling                     | Vitest + fixture images with known EXIF    | Real exif-reader + Sharp                      |
+| infrastructure/auth                  | Session creation/verification, password hashing, rate limiting | Vitest                                     | Mock Redis for rate limiter, real jose/bcrypt |
+| infrastructure/storage               | File save/delete operations                                    | Vitest + temp directories (os.tmpdir())    | Real filesystem                               |
+| infrastructure/jobs                  | Job enqueueing, worker event handlers                          | Vitest                                     | Mock BullMQ/Redis (external service)          |
+| app/api routes                       | HTTP request/response, auth checks, validation                 | Vitest (call handler functions directly)   | Mock repositories (inject via constructor)    |
+| presentation components              | Not in scope for this milestone                                | Defer                                      | N/A                                           |
+
+**Key observation:** The application/services layer is empty (.gitkeep files only). Business logic currently lives directly in API routes and infrastructure services. This is a tech debt item -- consider extracting shared logic into application services as part of this milestone to make it testable.
+
+## Testing Architecture: Repository Test Helper Pattern
+
+The single most important test infrastructure to build is the in-memory database helper. Here is the recommended pattern:
+
+```typescript
+// src/__tests__/helpers/test-db.ts
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import * as schema from "@/infrastructure/database/schema";
+
+export function createTestDb() {
+  const sqlite = new Database(":memory:");
+  sqlite.pragma("foreign_keys = ON");
+
+  // Create tables (same SQL as client.ts initializeDatabase)
+  sqlite.exec(`
+    CREATE TABLE photos (
+      id TEXT PRIMARY KEY,
+      title TEXT,
+      description TEXT,
+      original_filename TEXT NOT NULL,
+      blur_data_url TEXT,
+      exif_data TEXT,
+      width INTEGER,
+      height INTEGER,
+      status TEXT NOT NULL DEFAULT 'processing',
+      created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+    );
+    CREATE TABLE albums (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      tags TEXT,
+      cover_photo_id TEXT REFERENCES photos(id) ON DELETE SET NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_published INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+    );
+    CREATE TABLE photo_albums (
+      photo_id TEXT NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
+      album_id TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (photo_id, album_id)
+    );
+    CREATE INDEX photo_albums_photo_idx ON photo_albums(photo_id);
+    CREATE INDEX photo_albums_album_idx ON photo_albums(album_id);
+  `);
+
+  return drizzle({ client: sqlite, schema });
+}
+```
+
+**Challenge:** The current repository implementations import `db` directly from `../client` at module scope. To make them testable with an injected database, the repositories need refactoring to accept the database instance via constructor injection instead of importing it. This is the key refactoring that unblocks repository testing.
+
+## Error Handling Gap Analysis
+
+Current state vs desired state:
+
+| Area                      | Current                                     | Desired                                                            | Tool Needed                |
+| ------------------------- | ------------------------------------------- | ------------------------------------------------------------------ | -------------------------- |
+| Route error boundaries    | None (zero error.tsx files)                 | error.tsx in admin, public, and root layouts                       | None (Next.js built-in)    |
+| 404 pages                 | None (zero not-found.tsx)                   | Custom not-found.tsx for public routes                             | None (Next.js built-in)    |
+| Global error boundary     | None                                        | global-error.tsx at app root                                       | None (Next.js built-in)    |
+| API request validation    | Type assertions (`as`)                      | Zod schemas for all request bodies                                 | Zod (already installed)    |
+| Upload error recovery     | Silent failure (empty catch)                | User-facing error messages, retry UI                               | None (implementation only) |
+| Image processing failures | Status set to "error", no user notification | Admin UI shows error state with retry option                       | None (implementation only) |
+| Database errors           | Unhandled (thrown to framework)             | Caught and mapped to user-friendly responses                       | None (implementation only) |
+| Redis unavailability      | Silently swallowed (empty catch block)      | Logged with structured message, graceful degradation already works | None (implementation only) |
+
+## Performance Optimization: What to Measure
+
+| Metric                   | How to Measure                                              | Tool                               |
+| ------------------------ | ----------------------------------------------------------- | ---------------------------------- |
+| Client JS bundle size    | `ANALYZE=true npm run build`                                | @next/bundle-analyzer (new)        |
+| Image serving latency    | Already has immutable cache headers; measure cache hit rate | Browser DevTools / Lighthouse      |
+| SQLite query performance | `EXPLAIN QUERY PLAN` on critical queries                    | better-sqlite3 (already installed) |
+| Build time               | `time npm run build`                                        | None needed                        |
+| Largest Contentful Paint | Lighthouse audit                                            | Browser DevTools                   |
+
+**Notable finding:** The image serving route reads files from disk on every request (`readFile`). For a self-hosted single-user app this is fine, but the immutable cache headers (`max-age=31536000, immutable`) mean the browser will cache aggressively after first load. No CDN or in-memory cache needed at this scale.
 
 ## Confidence Assessment
 
-| Component                    | Confidence | Reasoning                                                                                               |
-| ---------------------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
-| exifr                        | HIGH       | Verified via GitHub README, npm trends, installed types. Planned in v1.0, still best choice.            |
-| YARL Fullscreen plugin       | HIGH       | Verified from installed package.json exports and TypeScript declarations.                               |
-| YARL touch/swipe             | HIGH       | Verified from installed types (ControllerSettings) and official documentation. Already working in v1.0. |
-| YARL transitions             | HIGH       | Verified from installed types (AnimationSettings). Already partially configured.                        |
-| @dnd-kit photo reorder       | HIGH       | Exact same pattern already proven in album reorder (AlbumsPageClient.tsx).                              |
-| Next.js generateMetadata     | HIGH       | Standard Next.js App Router feature, well-documented.                                                   |
-| Next.js URL-based deep links | HIGH       | Standard web pattern, searchParams already available in framework.                                      |
-| Schema migration for EXIF    | HIGH       | Approach validated in v1.0 (ALTER TABLE). Column types straightforward.                                 |
-
----
+| Area                      | Level  | Reason                                                                            |
+| ------------------------- | ------ | --------------------------------------------------------------------------------- |
+| Vitest + coverage-v8      | HIGH   | Already installed, versions verified from npm registry                            |
+| In-memory SQLite testing  | HIGH   | better-sqlite3 `:memory:` is well-documented, standard pattern                    |
+| @next/bundle-analyzer     | HIGH   | Version 16.1.6 verified in npm registry, matches Next.js version                  |
+| Error boundary patterns   | HIGH   | Standard Next.js App Router conventions, well-documented                          |
+| Zod for API validation    | HIGH   | Already installed and used in env.ts, same pattern applies to routes              |
+| Repository DI refactoring | MEDIUM | Pattern is sound but requires touching all repository imports across the codebase |
 
 ## Sources
 
-### Verified from Installed Packages (HIGH confidence)
+- npm registry: `npm view @vitest/coverage-v8@4.0.18 version` -- verified 4.0.18 exists
+- npm registry: `npm view @next/bundle-analyzer@16.1.6 version` -- verified 16.1.6 exists
+- npm registry: `npm view vitest@4 peerDependencies` -- verified @types/node ^20 compatibility
+- Installed packages: vitest 4.0.18, @playwright/test 1.58.2, next 16.1.6 (from node_modules)
+- Project source: vitest.config.ts (existing config with path aliases)
+- Project source: infrastructure/database/client.ts (DB initialization pattern)
+- Project source: infrastructure/database/repositories/\*.ts (current import pattern)
+- Project source: app/api/admin/upload/route.ts (current error handling pattern)
+- Project source: infrastructure/config/env.ts (existing Zod validation pattern)
 
-- YARL v3.28.0 package.json: exports for fullscreen, captions, counter, download, share, slideshow, thumbnails, zoom, inline, video plugins
-- YARL types.d.ts: AnimationSettings (fade, swipe, navigation, easing), ControllerSettings (swipe/gesture options)
-- YARL plugins/fullscreen/index.d.ts: auto mode, ref control, enter/exit callbacks
-- @dnd-kit/core v6.3.1 and @dnd-kit/sortable v10.0.0: installed and working in AlbumsPageClient.tsx
-- Database schema: photos table (ready for EXIF columns), photo_albums.sortOrder (ready for photo reorder)
+---
 
-### Official Documentation (HIGH confidence)
-
-- [Sharp metadata API](https://sharp.pixelplumbing.com/api-input/) -- returns raw EXIF buffer, not parsed
-- [exifr GitHub](https://github.com/MikeKovarik/exifr) -- Buffer input, parsed output, field picking
-- [YARL Documentation](https://yet-another-react-lightbox.com/documentation) -- touch/swipe/animation built-in
-- [YARL Fullscreen Plugin](https://yet-another-react-lightbox.com/plugins/fullscreen) -- browser Fullscreen API
-- [YARL Plugins Overview](https://yet-another-react-lightbox.com/plugins) -- 10 bundled plugins
-- [Next.js Metadata and OG Images](https://nextjs.org/docs/app/getting-started/metadata-and-og-images) -- generateMetadata approach
-- [Next.js opengraph-image Convention](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/opengraph-image) -- file-based and dynamic
-
-### Ecosystem Research (MEDIUM confidence)
-
-- [npm trends: exifr vs exifreader vs exif-reader](https://npmtrends.com/exif-reader-vs-exifr-vs-exifreader) -- exifr leads in downloads
-- [dnd-kit documentation](https://docs.dndkit.com/presets/sortable) -- sortable presets including grid strategy
+_Stack research for: Quality hardening of Next.js 16 photography portfolio_
+_Researched: 2026-02-06_
