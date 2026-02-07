@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 16 of 19 (Error Boundaries & API Hardening)
-Plan: 1 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-07 -- Completed 16-01-PLAN.md (Error Boundaries and Loading States)
+Plan: 3 of 3 in current phase
+Status: In progress (16-02 SUMMARY pending)
+Last activity: 2026-02-07 -- Completed 16-03-PLAN.md (Data Layer Safety and Upload UX)
 
-Progress: [██░░░░░░░░] 21% (3/14 plans)
+Progress: [██░░░░░░░░] 28% (4/14 plans)
 
 ## Performance Metrics
 
@@ -32,9 +32,9 @@ Progress: [██░░░░░░░░] 21% (3/14 plans)
 
 **v1.2 Velocity:**
 
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 3 min
-- Total execution time: 10 min
+- Total execution time: 13 min
 
 ## Accumulated Context
 
@@ -49,6 +49,8 @@ All decisions logged in PROJECT.md Key Decisions table.
 | D-15-01-03 | test-db.ts replays exact migration chain from client.ts                          | 15-01      |
 | D-16-01-01 | global-error.tsx uses inline styles (not Tailwind) since root layout is replaced | 16-01      |
 | D-16-01-02 | Admin loading uses spinner (animate-spin) not skeleton grid                      | 16-01      |
+| D-16-03-01 | safeParseExifJson returns ExifData (not Record<string, unknown>) for type safety | 16-03      |
+| D-16-03-02 | Tailwind red utility classes for rejection UI (not semantic status tokens)       | 16-03      |
 
 ### Pending Todos
 
@@ -58,9 +60,10 @@ None.
 
 - Docker not installed on development machine -- Redis service not tested (docker-compose.yml created and ready)
 - coverPhotoId FK constraint mismatch: schema says SET NULL, DB has NO ACTION (tracked as DEBT-01)
+- Pre-existing TS error in mocks.smoke.test.ts (Property 'get' does not exist on type 'Promise<ReadonlyRequestCookies>') -- does not affect builds
 
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 16-01-PLAN.md (Error Boundaries and Loading States)
-Resume file: .planning/phases/16-error-boundaries-api-hardening/16-02-PLAN.md
+Stopped at: Completed 16-03-PLAN.md (Data Layer Safety and Upload UX)
+Resume file: .planning/phases/16-error-boundaries-api-hardening/16-02-PLAN.md (needs SUMMARY)
