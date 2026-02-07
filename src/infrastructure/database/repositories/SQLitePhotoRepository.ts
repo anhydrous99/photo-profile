@@ -24,7 +24,8 @@ export class SQLitePhotoRepository implements PhotoRepository {
       .select({ photo: photos })
       .from(photos)
       .innerJoin(photoAlbums, eq(photos.id, photoAlbums.photoId))
-      .where(eq(photoAlbums.albumId, albumId));
+      .where(eq(photoAlbums.albumId, albumId))
+      .orderBy(photoAlbums.sortOrder);
     return results.map((r) => this.toDomain(r.photo));
   }
 
@@ -51,9 +52,16 @@ export class SQLitePhotoRepository implements PhotoRepository {
   }
 
   async addToAlbum(photoId: string, albumId: string): Promise<void> {
+    const [{ maxOrder }] = await db
+      .select({
+        maxOrder: sql<number | null>`max(${photoAlbums.sortOrder})`,
+      })
+      .from(photoAlbums)
+      .where(eq(photoAlbums.albumId, albumId));
+    const nextOrder = (maxOrder ?? -1) + 1;
     await db
       .insert(photoAlbums)
-      .values({ photoId, albumId, sortOrder: 0 })
+      .values({ photoId, albumId, sortOrder: nextOrder })
       .onConflictDoNothing();
   }
 

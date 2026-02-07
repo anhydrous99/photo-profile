@@ -92,6 +92,44 @@ export function initializeDatabase() {
       sqlite.prepare("ALTER TABLE photos ADD COLUMN height INTEGER").run();
       console.log("[DB] Added width and height columns to photos table");
     }
+
+    // Migration: Fix coverPhotoId FK constraint to ON DELETE SET NULL (Phase 13)
+    const fkInfo = sqlite
+      .prepare("PRAGMA foreign_key_list(albums)")
+      .all() as Array<{
+      table: string;
+      from: string;
+      on_delete: string;
+    }>;
+    const coverFk = fkInfo.find((fk) => fk.from === "cover_photo_id");
+    if (coverFk && coverFk.on_delete !== "SET NULL") {
+      sqlite.pragma("foreign_keys = OFF");
+      sqlite.exec(`
+        BEGIN TRANSACTION;
+        ALTER TABLE albums RENAME TO _albums_old;
+        CREATE TABLE albums (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          description TEXT,
+          tags TEXT,
+          cover_photo_id TEXT REFERENCES photos(id) ON DELETE SET NULL,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          is_published INTEGER NOT NULL DEFAULT 0,
+          created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+        );
+        INSERT INTO albums SELECT id, title, description, tags, cover_photo_id, sort_order, is_published, created_at FROM _albums_old;
+        DROP TABLE _albums_old;
+        COMMIT;
+      `);
+      sqlite.pragma("foreign_keys = ON");
+      console.log(
+        "[DB] Fixed coverPhotoId FK constraint to ON DELETE SET NULL",
+      );
+    }
+
+    // Enable foreign key enforcement
+    sqlite.pragma("foreign_keys = ON");
+    console.log("[DB] Foreign key enforcement enabled");
   } catch (error) {
     console.error("Failed to initialize database schema:", error);
     throw new Error("Database initialization failed");
