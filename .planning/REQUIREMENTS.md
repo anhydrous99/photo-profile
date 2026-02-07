@@ -9,11 +9,11 @@ Requirements for v1.2 milestone. Each maps to roadmap phases.
 
 ### Testing Infrastructure
 
-- [ ] **TEST-01**: Vitest setup file mocks Next.js server APIs (server-only, cookies, headers, navigation, cache) so infrastructure imports do not crash
-- [ ] **TEST-02**: Vitest setup file mocks IORedis so tests do not hang on Redis connections
-- [ ] **TEST-03**: Test database helper creates in-memory SQLite with full migration chain matching production schema
-- [ ] **TEST-04**: Test fixture images exist for Sharp/EXIF testing (tiny programmatically-generated images, not large files)
-- [ ] **TEST-05**: Coverage reporting configured via @vitest/coverage-v8 targeting infrastructure layer
+- [x] **TEST-01**: Vitest setup file mocks Next.js server APIs (server-only, cookies, headers, navigation, cache) so infrastructure imports do not crash
+- [x] **TEST-02**: Vitest setup file mocks IORedis so tests do not hang on Redis connections
+- [x] **TEST-03**: Test database helper creates in-memory SQLite with full migration chain matching production schema
+- [x] **TEST-04**: Test fixture images exist for Sharp/EXIF testing (tiny programmatically-generated images, not large files)
+- [x] **TEST-05**: Coverage reporting configured via @vitest/coverage-v8 targeting infrastructure layer
 
 ### Unit & Integration Testing
 

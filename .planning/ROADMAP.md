@@ -42,8 +42,8 @@
 
 Plans:
 
-- [ ] 15-01-PLAN.md -- Vitest setup mocks and test database helper
-- [ ] 15-02-PLAN.md -- Test fixtures, coverage config, and smoke tests
+- [x] 15-01-PLAN.md -- Vitest setup mocks and test database helper
+- [x] 15-02-PLAN.md -- Test fixtures, coverage config, and smoke tests
 
 #### Phase 16: Error Boundaries & API Hardening
 
@@ -130,10 +130,10 @@ Plans:
 **Execution Order:**
 Phases 15 and 16 can execute in parallel (no dependency). Phase 17 depends on both 15 and 16. Phase 18 depends on 15. Phase 19 is independent.
 
-| Phase                                | Milestone | Plans Complete | Status      | Completed |
-| ------------------------------------ | --------- | -------------- | ----------- | --------- |
-| 15. Testing Infrastructure           | v1.2      | 0/2            | Not started | -         |
-| 16. Error Boundaries & API Hardening | v1.2      | 0/3            | Not started | -         |
-| 17. Unit & Integration Testing       | v1.2      | 0/3            | Not started | -         |
-| 18. Worker Resilience & Tech Debt    | v1.2      | 0/3            | Not started | -         |
-| 19. Performance & Production         | v1.2      | 0/3            | Not started | -         |
+| Phase                                | Milestone | Plans Complete | Status      | Completed  |
+| ------------------------------------ | --------- | -------------- | ----------- | ---------- |
+| 15. Testing Infrastructure           | v1.2      | 2/2            | Complete    | 2026-02-07 |
+| 16. Error Boundaries & API Hardening | v1.2      | 0/3            | Not started | -          |
+| 17. Unit & Integration Testing       | v1.2      | 0/3            | Not started | -          |
+| 18. Worker Resilience & Tech Debt    | v1.2      | 0/3            | Not started | -          |
+| 19. Performance & Production         | v1.2      | 0/3            | Not started | -          |
