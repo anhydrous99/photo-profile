@@ -2,7 +2,7 @@ import { and, eq, like, sql } from "drizzle-orm";
 import { db } from "../client";
 import { photos, photoAlbums, albums } from "../schema";
 import type { PhotoRepository } from "@/domain/repositories/PhotoRepository";
-import type { Photo } from "@/domain/entities/Photo";
+import type { Photo, ExifData } from "@/domain/entities/Photo";
 
 export class SQLitePhotoRepository implements PhotoRepository {
   async findById(id: string): Promise<Photo | null> {
@@ -115,6 +115,15 @@ export class SQLitePhotoRepository implements PhotoRepository {
     return results.map((r) => this.toDomain(r.photo));
   }
 
+  private safeParseExifJson(json: string): ExifData | null {
+    try {
+      return JSON.parse(json) as ExifData;
+    } catch {
+      console.error("[SQLitePhotoRepository] Failed to parse exifData JSON");
+      return null;
+    }
+  }
+
   private toDomain(row: typeof photos.$inferSelect): Photo {
     return {
       id: row.id,
@@ -122,7 +131,7 @@ export class SQLitePhotoRepository implements PhotoRepository {
       description: row.description,
       originalFilename: row.originalFilename,
       blurDataUrl: row.blurDataUrl,
-      exifData: row.exifData ? JSON.parse(row.exifData) : null,
+      exifData: row.exifData ? this.safeParseExifJson(row.exifData) : null,
       width: row.width ?? null,
       height: row.height ?? null,
       status: row.status,
