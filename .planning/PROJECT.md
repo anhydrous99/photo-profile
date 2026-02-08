@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A self-hosted photography portfolio website where visitors browse random photos on the homepage, explore albums, and view individual photos in a full-screen lightbox with EXIF metadata display. Photos can be shared via deep links with rich OpenGraph social previews. The owner manages content through a password-protected admin panel with drag-drop uploads, automatic image optimization, album cover selection, and drag-to-reorder.
+A self-hosted photography portfolio website where visitors browse random photos on the homepage, explore albums, and view individual photos in a full-screen lightbox with EXIF metadata display. Photos can be shared via deep links with rich OpenGraph social previews. The owner manages content through a password-protected admin panel with drag-drop uploads, automatic image optimization, album cover selection, and drag-to-reorder. The application includes comprehensive error handling, 179 automated tests, structured logging, and production observability.
 
 ## Core Value
 
@@ -33,21 +33,17 @@ Let the photos speak for themselves — a clean, distraction-free experience whe
 - Drag to reorder photos within album — v1.1
 - Direct links to specific photos (URL opens lightbox directly) — v1.1
 - OpenGraph meta tags for social sharing — v1.1
+- Error boundaries on all route segments with recovery UI — v1.2
+- Zod validation on all API routes with consistent error responses — v1.2
+- 179 automated tests (repositories, services, auth, API routes) — v1.2
+- Worker resilience with stale detection and admin reprocessing — v1.2
+- Structured logging with JSON output and health check endpoint — v1.2
+- SQLite WAL mode and ETag/304 image caching — v1.2
+- FK constraint and schema drift fixes — v1.2
 
 ### Active
 
-#### Current Milestone: v1.2 Quality & Hardening
-
-**Goal:** Make the portfolio solid, tested, and resilient — unit tests for core logic, error handling across all surfaces, performance optimization, and tech debt cleanup.
-
-**Target features:**
-
-- Unit tests for domain entities, application services, and repository implementations
-- Upload failure recovery and retry mechanisms
-- Admin UX error handling (forms, network failures, loading states)
-- Public site resilience (missing images, broken albums, graceful 404s)
-- Performance audit and optimization (bundle size, image serving, query efficiency)
-- Tech debt cleanup (FK constraint fix, stale comments, schema drift, unused code)
+No active requirements. Next milestone not yet planned.
 
 ### Out of Scope
 
@@ -61,18 +57,26 @@ Let the photos speak for themselves — a clean, distraction-free experience whe
 - Camera serial number display — privacy: identifies specific device
 - Auto-enter fullscreen on lightbox open — surprising and intrusive UX
 - Dynamic OG image generation — the actual photo is a better OG image than a generated card
+- 100% test coverage target — focus on high-value tests, not coverage metrics
+- Sentry/Datadog integration — self-hosted single-admin app, structured logging sufficient
+- Component-level React testing — presentation layer deferred, infrastructure tested first
 
 ## Context
 
-Shipped v1.1 with 6,043 LOC TypeScript across ~255 files.
+Shipped v1.2 with 9,963 LOC TypeScript across ~154 modified files.
 Tech stack: Next.js 16, TypeScript, SQLite/Drizzle, Sharp, BullMQ/Redis, Tailwind CSS v4.
 Architecture: Clean Architecture (domain/application/infrastructure/presentation).
-Docker deployment configured but not yet tested locally.
+Docker deployment configured but not yet tested locally (Docker not installed on dev machine).
 
-Known tech debt:
+Test suite: 179 tests passing in <2s (repositories, services, auth, API routes).
+Production observability: structured logging (16 server files), health check endpoint, bundle analysis.
+Performance: SQLite WAL mode, ETag/304 image caching.
 
-- Stale comment in imageProcessor.ts (says JPEG, generates AVIF)
+Known remaining items:
+
 - Docker build untested (Docker not installed on dev machine)
+- Lighthouse baselines as template (requires running server with data)
+- findByStatus repo method exported but not yet consumed by UI filtering
 
 ## Constraints
 
@@ -81,6 +85,7 @@ Known tech debt:
 - **Performance**: Homepage random photos and album grids must load quickly despite large source images
 - **Code Quality**: Follow Clean Code principles (Robert C. Martin) — meaningful names, small functions, single responsibility, etc.
 - **Self-Hosted**: Must be deployable to a personal server (Docker-friendly preferred)
+- **Testing**: Core infrastructure has automated test coverage (179 tests)
 
 ## Key Decisions
 
@@ -104,7 +109,13 @@ Known tech debt:
 | WebP 1200w for OG images           | AVIF unsupported by social media crawlers                 | Good    |
 | React cache() for generateMetadata | Deduplicates DB queries between metadata and page         | Good    |
 | dnd-kit for drag-to-reorder        | Accessible, composable, works with CSS Grid               | Good    |
+| Migration replay for test DB       | Exact production schema match including ALTER TABLEs      | Good    |
+| Vitest + vi.mock() for test setup  | 7-module mock prevents crashes/hangs on server imports    | Good    |
+| Structured logger (not console)    | JSON in prod, levels, component tags, error serialization | Good    |
+| WAL mode for SQLite                | Concurrent reads during worker writes, no blocking        | Good    |
+| ETag from mtime+size (not content) | Cheap generation, detects reprocessed images              | Good    |
+| Health check is public (no auth)   | Operational endpoint for load balancers/monitoring        | Good    |
 
 ---
 
-_Last updated: 2026-02-06 after v1.2 milestone started_
+_Last updated: 2026-02-08 after v1.2 milestone_

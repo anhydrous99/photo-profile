@@ -71,7 +71,7 @@ Each task was committed atomically:
 1. **Task 1: Refactor imageProcessor to move DB updates into processor function** - `805ab2d` (feat)
 2. **Task 2: Add findByStatus, findStaleProcessing repo methods and findOriginalFile helper** - `b8fb252` (feat)
 
-**Plan metadata:** TBD (docs: complete plan)
+**Plan metadata:** `9ff38f9` (docs: complete plan)
 
 ## Files Created/Modified
 

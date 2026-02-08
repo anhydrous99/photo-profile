@@ -1,5 +1,33 @@
 # Project Milestones: Photo Portfolio
 
+## v1.2 Quality & Hardening (Shipped: 2026-02-08)
+
+**Delivered:** Comprehensive test suite (179 tests), error boundaries on all route segments, Zod validation on all API routes, worker resilience with stale photo recovery, structured logging, health check endpoint, and performance optimizations (WAL mode, ETag/304).
+
+**Phases completed:** 15-19 (14 plans total)
+
+**Key accomplishments:**
+
+- Test infrastructure from scratch: Vitest with 7-module mock setup, in-memory SQLite with full migration replay, Sharp fixture images, V8 coverage
+- Comprehensive error handling: error boundaries for all routes, Zod validation on all API routes, consistent error responses, upload safeguards
+- 179 automated tests: repository CRUD, serialization edge cases, image processing, JWT auth, API route integration tests (all passing in <2s)
+- Worker resilience: in-processor DB updates with BullMQ retry, stale photo detection, admin reprocess UI
+- Tech debt resolved: FK constraint ON DELETE SET NULL in initial CREATE, schema drift eliminated, stale comments fixed
+- Production observability: structured logging (16 files), health check endpoint, bundle analysis, SQLite WAL mode, ETag/304 image caching
+
+**Stats:**
+
+- 154 files created/modified
+- 9,963 lines of TypeScript (total codebase)
+- 5 phases, 14 plans, 179 tests
+- 3 days from 2026-02-06 to 2026-02-08
+
+**Git range:** `feat(15-01)` → `perf(19-03)`
+
+**What's next:** TBD
+
+---
+
 ## v1.1 Enhancement (Shipped: 2026-02-06)
 
 **Delivered:** EXIF metadata extraction and display, responsive lightbox with zoom/gestures/fullscreen, album cover photos with drag-to-reorder, and shareable photo URLs with OpenGraph social previews.
