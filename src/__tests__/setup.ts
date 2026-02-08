@@ -12,12 +12,12 @@ vi.mock("server-only", () => ({}));
 
 // 2. next/headers: Mock cookies() and headers()
 vi.mock("next/headers", () => ({
-  cookies: vi.fn(() => ({
+  cookies: vi.fn(async () => ({
     get: vi.fn(),
     set: vi.fn(),
     delete: vi.fn(),
   })),
-  headers: vi.fn(() => new Map()),
+  headers: vi.fn(async () => new Map()),
 }));
 
 // 3. next/navigation: Mock routing utilities
