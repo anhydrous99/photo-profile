@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Let the photos speak for themselves -- a clean, distraction-free experience where the photography is the focus
-**Current focus:** Phase 16 - Error Handling Hardening
+**Current focus:** Phase 17 - Unit and Integration Testing
 
 ## Current Position
 
-Phase: 16 of 19 (Error Boundaries & API Hardening)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-07 -- Completed 16-02-PLAN.md (API Route Validation and Error Wrapping)
+Phase: 17 of 19 (Unit & Integration Testing)
+Plan: 2 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-08 -- Completed 17-02-PLAN.md (Image Service, EXIF, and Auth Unit Tests)
 
-Progress: [███░░░░░░░] 35% (5/14 plans)
+Progress: [████░░░░░░] 43% (6/14 plans)
 
 ## Performance Metrics
 
@@ -32,9 +32,9 @@ Progress: [███░░░░░░░] 35% (5/14 plans)
 
 **v1.2 Velocity:**
 
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: 3 min
-- Total execution time: 18 min
+- Total execution time: 20 min
 
 ## Accumulated Context
 
@@ -53,6 +53,9 @@ All decisions logged in PROJECT.md Key Decisions table.
 | D-16-02-02 | Standardized validation error message to "Validation failed" across all routes   | 16-02      |
 | D-16-03-01 | safeParseExifJson returns ExifData (not Record<string, unknown>) for type safety | 16-03      |
 | D-16-03-02 | Tailwind red utility classes for rejection UI (not semantic status tokens)       | 16-03      |
+| D-17-02-01 | Runtime-generated 400x300 JPEG for derivative tests (avoid repo bloat)           | 17-02      |
+| D-17-02-02 | Test bcrypt via direct bcrypt.compare (avoid env.ADMIN_PASSWORD_HASH coupling)   | 17-02      |
+| D-17-02-03 | Expired token test uses 0s expiry + 1.1s delay for reliable detection            | 17-02      |
 
 ### Pending Todos
 
@@ -66,6 +69,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-07
-Stopped at: Completed 16-02-PLAN.md (Phase 16 complete)
+Last session: 2026-02-08
+Stopped at: Completed 17-02-PLAN.md (Image Service, EXIF, and Auth Unit Tests)
 Resume file: None
