@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Let the photos speak for themselves -- a clean, distraction-free experience where the photography is the focus
-**Current focus:** Phase 18 - Worker Resilience & Tech Debt (Complete)
+**Current focus:** Phase 19 - Performance & Production (In Progress)
 
 ## Current Position
 
-Phase: 18 of 19 (Worker Resilience & Tech Debt)
-Plan: 3 of 3 in current phase (all plans complete)
-Status: Phase complete
-Last activity: 2026-02-08 -- Completed 18-02-PLAN.md (Admin Stuck Photos UI)
+Phase: 19 of 19 (Performance & Production)
+Plan: 1 of 3 in current phase (19-01 complete)
+Status: In progress
+Last activity: 2026-02-08 -- Completed 19-01-PLAN.md (Performance Baselines)
 
-Progress: [████████░░░] 79% (11/14 v1.2 plans -- phase 18 complete, phase 19 remaining)
+Progress: [█████████░░] 86% (12/14 v1.2 plans -- phase 19 plan 1 of 3 complete)
 
 ## Performance Metrics
 
@@ -57,6 +57,8 @@ All decisions logged in PROJECT.md Key Decisions table.
 | D-17-02-02 | Test bcrypt via direct bcrypt.compare (avoid env.ADMIN_PASSWORD_HASH coupling)   | 17-02      |
 | D-17-02-03 | Expired token test uses 0s expiry + 1.1s delay for reliable detection            | 17-02      |
 | D-17-01-01 | Fixed async transaction callbacks to synchronous (better-sqlite3 v12 rejects)    | 17-01      |
+| D-19-01-01 | Use --webpack flag for bundle analyzer (Turbopack incompatible)                  | 19-01      |
+| D-19-01-02 | Lighthouse baselines as template (requires running server with data)             | 19-01      |
 
 ### Pending Todos
 
@@ -70,5 +72,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 18 complete (all 3 plans). Phase 19 next.
-Resume file: None -- next phase not yet planned
+Stopped at: Phase 19, plan 1 complete. Plans 19-02 and 19-03 remaining.
+Resume file: .planning/phases/19-performance-production/19-02-PLAN.md
