@@ -77,7 +77,7 @@ let albumCounter = 0;
 function makePhoto(overrides: Partial<Photo> = {}): Photo {
   photoCounter++;
   return {
-    id: `test-photo-${photoCounter}`,
+    id: crypto.randomUUID(),
     title: null,
     description: null,
     originalFilename: "test.jpg",
@@ -95,7 +95,7 @@ function makePhoto(overrides: Partial<Photo> = {}): Photo {
 function makeAlbum(overrides: Partial<Album> = {}): Album {
   albumCounter++;
   return {
-    id: `test-album-${albumCounter}`,
+    id: crypto.randomUUID(),
     title: `Test Album ${albumCounter}`,
     description: null,
     tags: null,

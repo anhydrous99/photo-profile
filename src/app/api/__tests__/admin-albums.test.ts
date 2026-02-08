@@ -72,7 +72,7 @@ let photoCounter = 0;
 function makeAlbum(overrides: Partial<Album> = {}): Album {
   albumCounter++;
   return {
-    id: `test-album-${albumCounter}`,
+    id: crypto.randomUUID(),
     title: `Test Album ${albumCounter}`,
     description: null,
     tags: null,
@@ -102,7 +102,7 @@ function insertAlbum(album: Album) {
 
 function insertPhoto(id?: string) {
   photoCounter++;
-  const photoId = id ?? `test-photo-${photoCounter}`;
+  const photoId = id ?? crypto.randomUUID();
   testDb
     .insert(schema.photos)
     .values({
