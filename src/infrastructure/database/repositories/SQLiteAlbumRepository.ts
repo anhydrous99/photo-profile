@@ -62,12 +62,12 @@ export class SQLiteAlbumRepository implements AlbumRepository {
    * albumIds[0] gets sortOrder 0, albumIds[1] gets sortOrder 1, etc.
    */
   async updateSortOrders(albumIds: string[]): Promise<void> {
-    await db.transaction(async (tx) => {
+    db.transaction((tx) => {
       for (let i = 0; i < albumIds.length; i++) {
-        await tx
-          .update(albums)
+        tx.update(albums)
           .set({ sortOrder: i })
-          .where(eq(albums.id, albumIds[i]));
+          .where(eq(albums.id, albumIds[i]))
+          .run();
       }
     });
   }

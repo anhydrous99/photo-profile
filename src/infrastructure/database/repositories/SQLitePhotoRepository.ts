@@ -77,17 +77,17 @@ export class SQLitePhotoRepository implements PhotoRepository {
     albumId: string,
     photoIds: string[],
   ): Promise<void> {
-    await db.transaction(async (tx) => {
+    db.transaction((tx) => {
       for (let i = 0; i < photoIds.length; i++) {
-        await tx
-          .update(photoAlbums)
+        tx.update(photoAlbums)
           .set({ sortOrder: i })
           .where(
             and(
               eq(photoAlbums.albumId, albumId),
               eq(photoAlbums.photoId, photoIds[i]),
             ),
-          );
+          )
+          .run();
       }
     });
   }
