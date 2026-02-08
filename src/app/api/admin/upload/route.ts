@@ -4,6 +4,7 @@ import { saveOriginalFile } from "@/infrastructure/storage";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
 import type { Photo } from "@/domain/entities";
+import { logger } from "@/infrastructure/logging/logger";
 
 export const maxDuration = 300;
 
@@ -110,10 +111,14 @@ export async function POST(request: NextRequest) {
         ),
       ]);
     } catch (enqueueError) {
-      console.error(
-        `[Upload] Failed to enqueue processing for photo ${photoId}:`,
-        enqueueError instanceof Error ? enqueueError.message : enqueueError,
-      );
+      logger.error(`Failed to enqueue processing for photo ${photoId}`, {
+        component: "upload",
+        photoId,
+        error:
+          enqueueError instanceof Error
+            ? { message: enqueueError.message, stack: enqueueError.stack }
+            : enqueueError,
+      });
       // Photo saved with "processing" status - will need manual requeue when Redis is available
     }
 
@@ -122,7 +127,12 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
   } catch (error) {
-    console.error("[API] POST /api/admin/upload:", error);
+    logger.error("POST /api/admin/upload failed", {
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

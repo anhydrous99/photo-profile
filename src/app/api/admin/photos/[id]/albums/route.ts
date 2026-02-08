@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
 import { z } from "zod";
+import { logger } from "@/infrastructure/logging/logger";
 
 const photoRepository = new SQLitePhotoRepository();
 
@@ -33,7 +34,12 @@ export async function GET(
 
     return NextResponse.json({ albumIds });
   } catch (error) {
-    console.error("[API] GET /api/admin/photos/[id]/albums:", error);
+    logger.error("GET /api/admin/photos/[id]/albums failed", {
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
@@ -83,7 +89,12 @@ export async function POST(
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
-    console.error("[API] POST /api/admin/photos/[id]/albums:", error);
+    logger.error("POST /api/admin/photos/[id]/albums failed", {
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
@@ -127,7 +138,12 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error("[API] DELETE /api/admin/photos/[id]/albums:", error);
+    logger.error("DELETE /api/admin/photos/[id]/albums failed", {
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

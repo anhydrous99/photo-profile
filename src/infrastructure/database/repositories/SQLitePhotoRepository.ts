@@ -3,6 +3,7 @@ import { db } from "../client";
 import { photos, photoAlbums, albums } from "../schema";
 import type { PhotoRepository } from "@/domain/repositories/PhotoRepository";
 import type { Photo, ExifData } from "@/domain/entities/Photo";
+import { logger } from "@/infrastructure/logging/logger";
 
 export class SQLitePhotoRepository implements PhotoRepository {
   async findById(id: string): Promise<Photo | null> {
@@ -138,7 +139,9 @@ export class SQLitePhotoRepository implements PhotoRepository {
     try {
       return JSON.parse(json) as ExifData;
     } catch {
-      console.error("[SQLitePhotoRepository] Failed to parse exifData JSON");
+      logger.error("Failed to parse exifData JSON", {
+        component: "photo-repository",
+      });
       return null;
     }
   }

@@ -3,6 +3,7 @@ import { verifySession } from "@/infrastructure/auth";
 import { deletePhotoFiles } from "@/infrastructure/storage";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
 import { z } from "zod";
+import { logger } from "@/infrastructure/logging/logger";
 
 const photoRepository = new SQLitePhotoRepository();
 
@@ -60,7 +61,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json(photo);
   } catch (error) {
-    console.error("[API] PATCH /api/admin/photos/[id]:", error);
+    logger.error("PATCH /api/admin/photos/[id] failed", {
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
@@ -106,7 +112,12 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error("[API] DELETE /api/admin/photos/[id]:", error);
+    logger.error("DELETE /api/admin/photos/[id] failed", {
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

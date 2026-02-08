@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import path from "path";
 import * as schema from "./schema";
 import { env } from "@/infrastructure/config/env";
+import { logger } from "@/infrastructure/logging/logger";
 
 const dbPath = path.resolve(process.cwd(), env.DATABASE_PATH);
 const sqlite = new Database(dbPath);
@@ -80,7 +81,9 @@ export function initializeDatabase() {
     const hasExifData = tableInfo.some((col) => col.name === "exif_data");
     if (!hasExifData) {
       sqlite.prepare("ALTER TABLE photos ADD COLUMN exif_data TEXT").run();
-      console.log("[DB] Added exif_data column to photos table");
+      logger.info("Added exif_data column to photos table", {
+        component: "db",
+      });
     }
 
     // Migration: Add width/height columns (Phase 12)
@@ -91,7 +94,9 @@ export function initializeDatabase() {
     if (!hasWidth) {
       sqlite.prepare("ALTER TABLE photos ADD COLUMN width INTEGER").run();
       sqlite.prepare("ALTER TABLE photos ADD COLUMN height INTEGER").run();
-      console.log("[DB] Added width and height columns to photos table");
+      logger.info("Added width and height columns to photos table", {
+        component: "db",
+      });
     }
 
     // Migration: Fix coverPhotoId FK constraint to ON DELETE SET NULL (Phase 13)
@@ -143,16 +148,22 @@ export function initializeDatabase() {
         COMMIT;
       `);
       sqlite.pragma("foreign_keys = ON");
-      console.log(
-        "[DB] Fixed coverPhotoId FK constraint to ON DELETE SET NULL",
-      );
+      logger.info("Fixed coverPhotoId FK constraint to ON DELETE SET NULL", {
+        component: "db",
+      });
     }
 
     // Enable foreign key enforcement
     sqlite.pragma("foreign_keys = ON");
-    console.log("[DB] Foreign key enforcement enabled");
+    logger.info("Foreign key enforcement enabled", { component: "db" });
   } catch (error) {
-    console.error("Failed to initialize database schema:", error);
+    logger.error("Failed to initialize database schema", {
+      component: "db",
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     throw new Error("Database initialization failed");
   }
 }

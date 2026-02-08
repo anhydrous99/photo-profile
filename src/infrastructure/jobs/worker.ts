@@ -3,9 +3,10 @@ import "./load-env";
 
 import { imageWorker } from "./workers/imageProcessor";
 import { imageQueue } from "./queues";
+import { logger } from "@/infrastructure/logging/logger";
 
-console.log("[Worker] Starting image processing worker...");
-console.log("[Worker] Listening on queue: image-processing");
+logger.info("Starting image processing worker", { component: "worker" });
+logger.info("Listening on queue: image-processing", { component: "worker" });
 
 /**
  * Graceful shutdown handler
@@ -14,13 +15,15 @@ console.log("[Worker] Listening on queue: image-processing");
  * before closing connections and exiting.
  */
 async function gracefulShutdown(signal: string): Promise<void> {
-  console.log(`[Worker] Received ${signal}, closing gracefully...`);
+  logger.info(`Received ${signal}, closing gracefully`, {
+    component: "worker",
+  });
 
   // Stop accepting new jobs, wait for current jobs to finish
   await imageWorker.close();
   await imageQueue.close();
 
-  console.log("[Worker] Shutdown complete");
+  logger.info("Shutdown complete", { component: "worker" });
   process.exit(0);
 }
 
@@ -30,6 +33,10 @@ process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 // Handle uncaught errors with graceful shutdown
 process.on("unhandledRejection", (err) => {
-  console.error("[Worker] Unhandled rejection:", err);
+  logger.error("Unhandled rejection", {
+    component: "worker",
+    error:
+      err instanceof Error ? { message: err.message, stack: err.stack } : err,
+  });
   gracefulShutdown("unhandledRejection");
 });

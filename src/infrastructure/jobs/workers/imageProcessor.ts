@@ -4,6 +4,7 @@ import path from "path";
 import IORedis from "ioredis";
 import sharp from "sharp";
 import { env } from "@/infrastructure/config/env";
+import { logger } from "@/infrastructure/logging/logger";
 import {
   generateDerivatives,
   generateBlurPlaceholder,
@@ -39,7 +40,13 @@ async function retryDbUpdate(
       await fn();
       return;
     } catch (err) {
-      console.error(`[ImageWorker] DB update retry ${i + 1}/${attempts}:`, err);
+      logger.error(`DB update retry ${i + 1}/${attempts}`, {
+        component: "image-worker",
+        error:
+          err instanceof Error
+            ? { message: err.message, stack: err.stack }
+            : err,
+      });
       if (i < attempts - 1)
         await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
     }
@@ -65,7 +72,11 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
     const { photoId, originalPath } = job.data;
     const outputDir = path.join(env.STORAGE_PATH, "processed", photoId);
 
-    console.log(`[ImageWorker] Processing job ${job.id} for photo ${photoId}`);
+    logger.info(`Processing job ${job.id} for photo ${photoId}`, {
+      component: "image-worker",
+      jobId: job.id,
+      photoId,
+    });
 
     // Update progress - starting
     await job.updateProgress(10);
@@ -93,8 +104,15 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
     // Update progress - complete
     await job.updateProgress(100);
 
-    console.log(
-      `[ImageWorker] Generated ${derivatives.length} files + blur placeholder + EXIF + dimensions (${width}x${height}) for photo ${photoId}`,
+    logger.info(
+      `Generated ${derivatives.length} files + blur placeholder + EXIF + dimensions (${width}x${height}) for photo ${photoId}`,
+      {
+        component: "image-worker",
+        photoId,
+        derivativeCount: derivatives.length,
+        width,
+        height,
+      },
     );
 
     // Update photo status to "ready" in DB
@@ -109,9 +127,15 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
       photo.height = height;
       photo.updatedAt = new Date();
       await repository.save(photo);
-      console.log(`[ImageWorker] Updated photo ${photoId} to 'ready'`);
+      logger.info(`Updated photo ${photoId} to 'ready'`, {
+        component: "image-worker",
+        photoId,
+      });
     } else {
-      console.error(`[ImageWorker] Photo not found: ${photoId}`);
+      logger.error(`Photo not found: ${photoId}`, {
+        component: "image-worker",
+        photoId,
+      });
     }
 
     return { photoId, derivatives, blurDataUrl, exifData, width, height };
@@ -125,13 +149,21 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
 // Error handlers - CRITICAL: worker fails silently without these
 
 imageWorker.on("error", (err) => {
-  console.error("[ImageWorker] Error:", err);
+  logger.error("Worker error", {
+    component: "image-worker",
+    error:
+      err instanceof Error ? { message: err.message, stack: err.stack } : err,
+  });
 });
 
 // Failed handler fires only after ALL BullMQ retry attempts are exhausted (final failure)
 // Uses retryDbUpdate wrapper since this is outside the processor function
 imageWorker.on("failed", async (job, err) => {
-  console.error(`[ImageWorker] Job ${job?.id} failed:`, err.message);
+  logger.error(`Job ${job?.id} failed: ${err.message}`, {
+    component: "image-worker",
+    jobId: job?.id,
+    error: { message: err.message, stack: err.stack },
+  });
   if (job?.data.photoId) {
     await retryDbUpdate(async () => {
       const repository = new SQLitePhotoRepository();
@@ -146,7 +178,9 @@ imageWorker.on("failed", async (job, err) => {
 
 // Completed handler - logging only (DB update moved into processor function)
 imageWorker.on("completed", async (job, result) => {
-  console.log(
-    `[ImageWorker] Job ${job.id} completed: ${result.derivatives.length} files`,
-  );
+  logger.info(`Job ${job.id} completed: ${result.derivatives.length} files`, {
+    component: "image-worker",
+    jobId: job.id,
+    derivativeCount: result.derivatives.length,
+  });
 });

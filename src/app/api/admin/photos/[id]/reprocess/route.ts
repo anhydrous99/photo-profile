@@ -3,6 +3,7 @@ import { verifySession } from "@/infrastructure/auth";
 import { findOriginalFile } from "@/infrastructure/storage";
 import { imageQueue, enqueueImageProcessing } from "@/infrastructure/jobs";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
+import { logger } from "@/infrastructure/logging/logger";
 
 const photoRepository = new SQLitePhotoRepository();
 
@@ -84,16 +85,25 @@ export async function POST(_request: NextRequest, context: RouteContext) {
         ),
       ]);
     } catch (enqueueError) {
-      console.error(
-        `[Reprocess] Failed to enqueue for photo ${id}:`,
-        enqueueError instanceof Error ? enqueueError.message : enqueueError,
-      );
+      logger.error(`Failed to enqueue reprocess for photo ${id}`, {
+        component: "reprocess",
+        photoId: id,
+        error:
+          enqueueError instanceof Error
+            ? { message: enqueueError.message, stack: enqueueError.stack }
+            : enqueueError,
+      });
       // Status already set to "processing" - will appear as stale if worker never picks it up
     }
 
     return NextResponse.json({ id, status: "processing" });
   } catch (error) {
-    console.error("[API] POST /api/admin/photos/[id]/reprocess:", error);
+    logger.error("POST /api/admin/photos/[id]/reprocess failed", {
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

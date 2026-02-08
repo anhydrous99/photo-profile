@@ -4,6 +4,7 @@
  */
 import { config } from "dotenv";
 import { resolve, join } from "path";
+import { logger } from "@/infrastructure/logging/logger";
 
 // Load .env files from project root
 const projectRoot = resolve(__dirname, "../../..");
@@ -11,8 +12,8 @@ const projectRoot = resolve(__dirname, "../../..");
 config({ path: join(projectRoot, ".env") });
 config({ path: join(projectRoot, ".env.local"), override: true });
 
-console.log("[EnvLoader] Loaded .env files from:", projectRoot);
-console.log(
-  "[EnvLoader] DATABASE_PATH:",
-  process.env.DATABASE_PATH ? "✓" : "✗",
-);
+logger.info("Loaded .env files", { component: "env-loader", projectRoot });
+logger.debug("DATABASE_PATH present", {
+  component: "env-loader",
+  present: !!process.env.DATABASE_PATH,
+});

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
 import { SQLiteAlbumRepository } from "@/infrastructure/database/repositories";
 import { z } from "zod";
+import { logger } from "@/infrastructure/logging/logger";
 
 const albumRepository = new SQLiteAlbumRepository();
 
@@ -40,7 +41,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[API] POST /api/admin/albums/reorder:", error);
+    logger.error("POST /api/admin/albums/reorder failed", {
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logger } from "@/infrastructure/logging/logger";
 
 const envSchema = z.object({
   DATABASE_PATH: z.string().min(1, "DATABASE_PATH is required"),
@@ -17,10 +18,9 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error(
-    "Invalid environment variables:",
-    z.flattenError(parsed.error).fieldErrors,
-  );
+  logger.error("Invalid environment variables", {
+    fields: z.flattenError(parsed.error).fieldErrors,
+  });
   throw new Error("Invalid environment variables");
 }
 

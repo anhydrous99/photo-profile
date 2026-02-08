@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
 import { SQLiteAlbumRepository } from "@/infrastructure/database/repositories";
 import { z } from "zod";
+import { logger } from "@/infrastructure/logging/logger";
 
 const albumRepository = new SQLiteAlbumRepository();
 
@@ -36,7 +37,12 @@ export async function GET() {
 
     return NextResponse.json(albumsWithCounts);
   } catch (error) {
-    console.error("[API] GET /api/admin/albums:", error);
+    logger.error("GET /api/admin/albums failed", {
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
@@ -89,7 +95,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(album, { status: 201 });
   } catch (error) {
-    console.error("[API] POST /api/admin/albums:", error);
+    logger.error("POST /api/admin/albums failed", {
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

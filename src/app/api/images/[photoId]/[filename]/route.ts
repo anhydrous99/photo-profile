@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readFile, readdir, stat } from "fs/promises";
 import { join } from "path";
 import { env } from "@/infrastructure/config/env";
+import { logger } from "@/infrastructure/logging/logger";
 
 const MIME_TYPES: Record<string, string> = {
   ".webp": "image/webp",
@@ -119,7 +120,12 @@ export async function GET(
       throw error;
     }
   } catch (error) {
-    console.error("[API] GET /api/images/[photoId]/[filename]:", error);
+    logger.error("GET /api/images/[photoId]/[filename] failed", {
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     return new NextResponse("Internal server error", { status: 500 });
   }
 }

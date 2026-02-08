@@ -1,6 +1,7 @@
 import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
 import IORedis from "ioredis";
 import { env } from "@/infrastructure/config/env";
+import { logger } from "@/infrastructure/logging/logger";
 
 /**
  * Redis client for rate limiting
@@ -39,10 +40,10 @@ export async function checkRateLimit(
   } catch (rateLimiterRes) {
     // Redis connection error - allow request but warn
     if (rateLimiterRes instanceof Error) {
-      console.warn(
-        "[Rate Limiter] Redis unavailable, rate limiting disabled:",
-        rateLimiterRes.message,
-      );
+      logger.warn("Redis unavailable, rate limiting disabled", {
+        component: "rate-limiter",
+        error: rateLimiterRes.message,
+      });
       return { allowed: true };
     }
     // Rate limit exceeded
@@ -65,7 +66,9 @@ export async function resetRateLimit(ip: string): Promise<void> {
   } catch (error) {
     // Redis unavailable - silent no-op in development
     if (error instanceof Error) {
-      console.warn("[Rate Limiter] Redis unavailable, skip reset");
+      logger.warn("Redis unavailable, skip reset", {
+        component: "rate-limiter",
+      });
     }
   }
 }

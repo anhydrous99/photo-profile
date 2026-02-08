@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
 import { z } from "zod";
+import { logger } from "@/infrastructure/logging/logger";
 
 const photoRepository = new SQLitePhotoRepository();
 
@@ -46,7 +47,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[API] POST /api/admin/albums/[id]/photos/reorder:", error);
+    logger.error("POST /api/admin/albums/[id]/photos/reorder failed", {
+      error:
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
