@@ -13,6 +13,14 @@ const envSchema = z.object({
     .min(32, "AUTH_SECRET must be at least 32 characters for security"),
   ADMIN_PASSWORD_HASH: z.string().min(1, "ADMIN_PASSWORD_HASH is required"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).optional(),
+  TRUSTED_PROXIES: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      return val.split(",").map((ip) => ip.trim()).filter((ip) => ip.length > 0);
+    })
+    .describe("Comma-separated list of trusted proxy IP addresses"),
 });
 
 const parsed = envSchema.safeParse(process.env);

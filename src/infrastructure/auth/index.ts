@@ -7,6 +7,7 @@
  * - Rate Limiter: Login attempt limiting
  * - DAL: Data Access Layer for session verification
  * - Timing: Timing attack prevention utilities
+ * - IP Extraction: Secure client IP extraction with spoofing protection
  */
 
 // Session management
@@ -24,3 +25,6 @@ export { verifySession } from "./dal";
 
 // Timing attack prevention
 export { enforceMinimumDuration, addRandomJitter } from "./timing";
+
+// IP extraction
+export { getClientIP, getClientIPSimple } from "./ipExtractor";
