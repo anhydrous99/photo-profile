@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     try {
       // Add timeout to prevent hanging when Redis is unavailable
       await Promise.race([
-        enqueueImageProcessing(photoId, filePath),
+        enqueueImageProcessing(photoId, filePath), // filePath is S3 key or filesystem path
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error("Job enqueue timeout")), 10000),
         ),

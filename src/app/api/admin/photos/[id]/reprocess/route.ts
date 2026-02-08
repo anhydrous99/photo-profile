@@ -88,7 +88,7 @@ export async function POST(_request: NextRequest, context: RouteContext) {
 
     try {
       await Promise.race([
-        enqueueImageProcessing(id, originalPath),
+        enqueueImageProcessing(id, originalPath), // originalPath is S3 key or filesystem path
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error("Job enqueue timeout")), 10000),
         ),

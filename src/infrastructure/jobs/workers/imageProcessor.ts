@@ -69,7 +69,7 @@ async function retryDbUpdate(
 export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
   "image-processing",
   async (job: Job<ImageJobData>) => {
-    const { photoId, originalPath } = job.data;
+    const { photoId, originalKey } = job.data;
     const outputDir = path.join(env.STORAGE_PATH, "processed", photoId);
 
     logger.info(`Processing job ${job.id} for photo ${photoId}`, {
@@ -82,24 +82,24 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
     await job.updateProgress(10);
 
     // Generate all derivatives (WebP + AVIF at each size)
-    const derivatives = await generateDerivatives(originalPath, outputDir);
+    const derivatives = await generateDerivatives(originalKey, outputDir);
 
     // Update progress - derivatives done
     await job.updateProgress(80);
 
     // Get post-rotation dimensions for accurate srcSet
-    const rotatedMeta = await sharp(originalPath).rotate().metadata();
+    const rotatedMeta = await sharp(originalKey).rotate().metadata();
     const width = rotatedMeta.width!;
     const height = rotatedMeta.height!;
 
     // Extract EXIF metadata from original image
-    const exifData = await extractExifData(originalPath);
+    const exifData = await extractExifData(originalKey);
 
     // Update progress - EXIF done
     await job.updateProgress(90);
 
     // Generate blur placeholder from original image
-    const blurDataUrl = await generateBlurPlaceholder(originalPath);
+    const blurDataUrl = await generateBlurPlaceholder(originalKey);
 
     // Update progress - complete
     await job.updateProgress(100);

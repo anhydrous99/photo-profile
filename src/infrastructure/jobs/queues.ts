@@ -8,7 +8,7 @@ import type { ExifData } from "@/domain/entities/Photo";
  */
 export interface ImageJobData {
   photoId: string;
-  originalPath: string;
+  originalKey: string;
 }
 
 /**
@@ -65,16 +65,16 @@ export const imageQueue = new Queue<ImageJobData, ImageJobResult>(
  * Helper to enqueue an image processing job
  *
  * @param photoId - Unique identifier for the photo
- * @param originalPath - Path to the original uploaded image
+ * @param originalKey - S3 key or filesystem path to the original uploaded image
  * @returns The job ID (used to track status)
  */
 export async function enqueueImageProcessing(
   photoId: string,
-  originalPath: string,
+  originalKey: string,
 ): Promise<string> {
   const job = await imageQueue.add(
     "process-image",
-    { photoId, originalPath },
+    { photoId, originalKey },
     { jobId: `photo-${photoId}` }, // Prevent duplicate jobs for same photo
   );
   return job.id!;
