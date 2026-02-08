@@ -5,10 +5,12 @@ import { enqueueImageProcessing } from "@/infrastructure/jobs";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
 import type { Photo } from "@/domain/entities";
 
+export const maxDuration = 300;
+
 const photoRepository = new SQLitePhotoRepository();
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-const MULTIPART_OVERHEAD = 1 * 1024 * 1024; // 1MB
+const MULTIPART_OVERHEAD = 5 * 1024 * 1024; // 5MB
 
 /**
  * POST /api/admin/upload
@@ -104,7 +106,7 @@ export async function POST(request: NextRequest) {
       await Promise.race([
         enqueueImageProcessing(photoId, filePath),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Job enqueue timeout")), 2000),
+          setTimeout(() => reject(new Error("Job enqueue timeout")), 10000),
         ),
       ]);
     } catch (enqueueError) {

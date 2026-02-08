@@ -80,8 +80,18 @@ export function uploadFile(
       reject(new Error("Upload cancelled"));
     });
 
+    // Handle timeout
+    xhr.addEventListener("timeout", () => {
+      reject(
+        new Error(
+          "Upload timed out — the file may be too large for your connection speed. Please try again.",
+        ),
+      );
+    });
+
     // Send request
     xhr.open("POST", "/api/admin/upload");
+    xhr.timeout = 600000;
     xhr.send(formData);
   });
 
