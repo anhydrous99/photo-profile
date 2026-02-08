@@ -298,13 +298,14 @@ describe("Admin Album API Routes", () => {
     });
 
     it("returns 404 for non-existent album ID", async () => {
+      const nonExistentId = crypto.randomUUID();
       const req = makeJsonRequest(
-        "http://localhost/api/admin/albums/non-existent",
+        `http://localhost/api/admin/albums/${nonExistentId}`,
         "PATCH",
         { title: "Updated" },
       );
       const res = await PATCH(req, {
-        params: Promise.resolve({ id: "non-existent" }),
+        params: Promise.resolve({ id: nonExistentId }),
       });
 
       expect(res.status).toBe(404);
@@ -374,12 +375,13 @@ describe("Admin Album API Routes", () => {
     });
 
     it("returns 404 for non-existent album ID", async () => {
+      const nonExistentId = crypto.randomUUID();
       const req = makeJsonRequest(
-        "http://localhost/api/admin/albums/non-existent",
+        `http://localhost/api/admin/albums/${nonExistentId}`,
         "DELETE",
       );
       const res = await DELETE(req, {
-        params: Promise.resolve({ id: "non-existent" }),
+        params: Promise.resolve({ id: nonExistentId }),
       });
 
       expect(res.status).toBe(404);
