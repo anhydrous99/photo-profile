@@ -33,13 +33,14 @@ export function createTestDb() {
     )
   `);
 
-  // 2. Create albums table (base, without tags, with NO ACTION FK — matches initial schema)
+  // 2. Create albums table (with tags and ON DELETE SET NULL — matches client.ts initial schema)
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS albums (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       description TEXT,
-      cover_photo_id TEXT REFERENCES photos(id),
+      tags TEXT,
+      cover_photo_id TEXT REFERENCES photos(id) ON DELETE SET NULL,
       sort_order INTEGER NOT NULL DEFAULT 0,
       is_published INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
@@ -71,8 +72,10 @@ export function createTestDb() {
   sqlite.exec(`ALTER TABLE photos ADD COLUMN width INTEGER`);
   sqlite.exec(`ALTER TABLE photos ADD COLUMN height INTEGER`);
 
-  // 7. Migration: Fix coverPhotoId FK constraint + add tags column (Phase 13)
-  //    Rebuild albums table with ON DELETE SET NULL and tags TEXT column
+  // 7. Migration: Fix coverPhotoId FK constraint (Phase 13)
+  //    In production, this migrates old DBs without SET NULL or tags.
+  //    Here it runs as a no-op since step 2 already has both.
+  //    Kept to verify migration chain doesn't break on already-correct schemas.
   sqlite.pragma("foreign_keys = OFF");
   sqlite.exec(`
     ALTER TABLE albums RENAME TO _albums_old;
@@ -86,7 +89,7 @@ export function createTestDb() {
       is_published INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
     );
-    INSERT INTO albums SELECT id, title, description, NULL, cover_photo_id, sort_order, is_published, created_at FROM _albums_old;
+    INSERT INTO albums SELECT id, title, description, tags, cover_photo_id, sort_order, is_published, created_at FROM _albums_old;
     DROP TABLE _albums_old;
   `);
 
