@@ -1,0 +1,102 @@
+import { NextRequest, NextResponse } from "next/server";
+import { verifySession } from "@/infrastructure/auth";
+import { findOriginalFile } from "@/infrastructure/storage";
+import { imageQueue, enqueueImageProcessing } from "@/infrastructure/jobs";
+import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
+
+const photoRepository = new SQLitePhotoRepository();
+
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
+
+/**
+ * POST /api/admin/photos/[id]/reprocess
+ *
+ * Re-enqueues a failed or stale photo for image processing.
+ *
+ * Steps:
+ * 1. Verify admin session
+ * 2. Fetch photo by ID
+ * 3. Guard against reprocessing already-ready photos
+ * 4. Discover original file path
+ * 5. Reset status to "processing"
+ * 6. Remove old BullMQ job (prevent ID collision)
+ * 7. Re-enqueue processing job
+ *
+ * Returns: { id, status: "processing" }
+ */
+export async function POST(_request: NextRequest, context: RouteContext) {
+  try {
+    // 1. Verify admin session
+    const session = await verifySession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // 2. Get photo ID
+    const { id } = await context.params;
+
+    // 3. Fetch photo
+    const photo = await photoRepository.findById(id);
+    if (!photo) {
+      return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+    }
+
+    // 4. Only allow reprocessing of error or processing (stale) photos
+    if (photo.status === "ready") {
+      return NextResponse.json(
+        { error: "Photo is already processed" },
+        { status: 400 },
+      );
+    }
+
+    // 5. Find original file
+    const originalPath = await findOriginalFile(id);
+    if (!originalPath) {
+      return NextResponse.json(
+        { error: "Original file not found" },
+        { status: 404 },
+      );
+    }
+
+    // 6. Reset photo status
+    photo.status = "processing";
+    photo.updatedAt = new Date();
+    await photoRepository.save(photo);
+
+    // 7. Remove old job (prevents job ID collision) and re-enqueue
+    try {
+      const oldJobId = `photo-${id}`;
+      const oldJob = await imageQueue.getJob(oldJobId);
+      if (oldJob) {
+        await oldJob.remove();
+      }
+    } catch {
+      // Old job may not exist or already removed - safe to ignore
+    }
+
+    try {
+      await Promise.race([
+        enqueueImageProcessing(id, originalPath),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Job enqueue timeout")), 10000),
+        ),
+      ]);
+    } catch (enqueueError) {
+      console.error(
+        `[Reprocess] Failed to enqueue for photo ${id}:`,
+        enqueueError instanceof Error ? enqueueError.message : enqueueError,
+      );
+      // Status already set to "processing" - will appear as stale if worker never picks it up
+    }
+
+    return NextResponse.json({ id, status: "processing" });
+  } catch (error) {
+    console.error("[API] POST /api/admin/photos/[id]/reprocess:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
