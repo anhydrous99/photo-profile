@@ -1,3 +1,4 @@
+/// <reference types="vitest/globals" />
 /**
  * Integration tests for SQLiteAlbumRepository.
  *

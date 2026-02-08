@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    name: Lint, Type Check, Build, and Test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check code formatting
+        run: npm run format:check
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+        env:
+          # Minimal env vars needed for build (not for runtime)
+          DATABASE_PATH: ./data/test.db
+          STORAGE_PATH: ./storage
+          AUTH_SECRET: test-secret-key-at-least-32-characters-long-min
+          ADMIN_PASSWORD_HASH: $2b$10$test
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30

@@ -21,7 +21,7 @@ describe("Mock smoke tests", () => {
 
   it("can import next/headers and call cookies()", async () => {
     const { cookies } = await import("next/headers");
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     expect(cookieStore.get).toBeDefined();
   });
 
