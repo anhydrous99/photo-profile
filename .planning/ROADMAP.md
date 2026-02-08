@@ -102,7 +102,7 @@ Plans:
 Plans:
 
 - [x] 18-01-PLAN.md -- Worker resilience (in-processor DB updates, findByStatus/findStaleProcessing repo methods, findOriginalFile helper)
-- [ ] 18-02-PLAN.md -- Admin UI for stuck/failed photos (status filter dropdown, stale detection, reprocess API endpoint)
+- [x] 18-02-PLAN.md -- Admin UI for stuck/failed photos (status filter dropdown, stale detection, reprocess API endpoint)
 - [x] 18-03-PLAN.md -- Tech debt cleanup (FK constraint SET NULL in initial CREATE, schema drift fix, stale comment correction)
 
 #### Phase 19: Performance & Production
@@ -135,5 +135,5 @@ Phases 15 and 16 can execute in parallel (no dependency). Phase 17 depends on bo
 | 15. Testing Infrastructure           | v1.2      | 2/2            | Complete    | 2026-02-07 |
 | 16. Error Boundaries & API Hardening | v1.2      | 3/3            | Complete    | 2026-02-07 |
 | 17. Unit & Integration Testing       | v1.2      | 3/3            | Complete    | 2026-02-08 |
-| 18. Worker Resilience & Tech Debt    | v1.2      | 2/3            | In progress | -          |
+| 18. Worker Resilience & Tech Debt    | v1.2      | 3/3            | Complete    | 2026-02-08 |
 | 19. Performance & Production         | v1.2      | 0/3            | Not started | -          |
