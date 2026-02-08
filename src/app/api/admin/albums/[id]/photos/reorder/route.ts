@@ -3,11 +3,12 @@ import { verifySession } from "@/infrastructure/auth";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
+import { isValidUUID } from "@/infrastructure/validation";
 
 const photoRepository = new SQLitePhotoRepository();
 
 const reorderSchema = z.object({
-  photoIds: z.array(z.string()),
+  photoIds: z.array(z.string().uuid("Invalid photo ID format")),
 });
 
 interface RouteContext {
@@ -31,6 +32,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const { id: albumId } = await context.params;
+
+    // Validate album ID format
+    if (!isValidUUID(albumId)) {
+      return NextResponse.json(
+        { error: "Invalid album ID format" },
+        { status: 400 },
+      );
+    }
 
     const body = await request.json();
     const result = reorderSchema.safeParse(body);

@@ -1,6 +1,7 @@
 import { mkdir, writeFile, rm, readdir } from "fs/promises";
 import { join, extname } from "path";
 import { env } from "@/infrastructure/config/env";
+import { assertValidUUID } from "@/infrastructure/validation";
 
 /**
  * Save an uploaded file to the originals storage directory
@@ -15,6 +16,9 @@ export async function saveOriginalFile(
   photoId: string,
   file: File,
 ): Promise<string> {
+  // Validate photoId to prevent path traversal attacks
+  assertValidUUID(photoId, "photoId");
+
   const ext = extname(file.name).toLowerCase() || ".jpg";
   const dir = join(env.STORAGE_PATH, "originals", photoId);
   const filePath = join(dir, `original${ext}`);
@@ -39,6 +43,9 @@ export async function saveOriginalFile(
 export async function findOriginalFile(
   photoId: string,
 ): Promise<string | null> {
+  // Validate photoId to prevent path traversal attacks
+  assertValidUUID(photoId, "photoId");
+
   const dir = join(env.STORAGE_PATH, "originals", photoId);
   try {
     const files = await readdir(dir);
@@ -58,6 +65,9 @@ export async function findOriginalFile(
  * @param photoId - Unique identifier for the photo
  */
 export async function deletePhotoFiles(photoId: string): Promise<void> {
+  // Validate photoId to prevent path traversal attacks
+  assertValidUUID(photoId, "photoId");
+
   const originalsDir = join(env.STORAGE_PATH, "originals", photoId);
   const processedDir = join(env.STORAGE_PATH, "processed", photoId);
 

@@ -4,6 +4,7 @@ import { join } from "path";
 import { createHash } from "crypto";
 import { env } from "@/infrastructure/config/env";
 import { logger } from "@/infrastructure/logging/logger";
+import { isValidUUID } from "@/infrastructure/validation";
 
 const MIME_TYPES: Record<string, string> = {
   ".webp": "image/webp",
@@ -103,6 +104,13 @@ export async function GET(
 ): Promise<NextResponse> {
   try {
     const { photoId, filename } = await params;
+
+    // Validate photoId to prevent path traversal attacks
+    if (!isValidUUID(photoId)) {
+      return new NextResponse("Invalid photo ID format", {
+        status: 400,
+      });
+    }
 
     // Validate filename to prevent directory traversal
     if (!isValidFilename(filename)) {

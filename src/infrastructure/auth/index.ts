@@ -6,6 +6,7 @@
  * - Password: Bcrypt hashing and verification
  * - Rate Limiter: Login attempt limiting
  * - DAL: Data Access Layer for session verification
+ * - Timing: Timing attack prevention utilities
  */
 
 // Session management
@@ -20,3 +21,6 @@ export { checkRateLimit, resetRateLimit } from "./rateLimiter";
 
 // Data Access Layer
 export { verifySession } from "./dal";
+
+// Timing attack prevention
+export { enforceMinimumDuration, addRandomJitter } from "./timing";

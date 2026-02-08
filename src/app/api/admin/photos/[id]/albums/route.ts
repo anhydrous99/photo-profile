@@ -3,11 +3,12 @@ import { verifySession } from "@/infrastructure/auth";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
+import { isValidUUID } from "@/infrastructure/validation";
 
 const photoRepository = new SQLitePhotoRepository();
 
 const albumIdSchema = z.object({
-  albumId: z.string().min(1),
+  albumId: z.string().uuid("Invalid album ID format"),
 });
 
 interface RouteParams {
@@ -30,6 +31,15 @@ export async function GET(
     }
 
     const { id: photoId } = await params;
+
+    // Validate photo ID format
+    if (!isValidUUID(photoId)) {
+      return NextResponse.json(
+        { error: "Invalid photo ID format" },
+        { status: 400 },
+      );
+    }
+
     const albumIds = await photoRepository.getAlbumIds(photoId);
 
     return NextResponse.json({ albumIds });
@@ -64,6 +74,14 @@ export async function POST(
     }
 
     const { id: photoId } = await params;
+
+    // Validate photo ID format
+    if (!isValidUUID(photoId)) {
+      return NextResponse.json(
+        { error: "Invalid photo ID format" },
+        { status: 400 },
+      );
+    }
 
     // Verify photo exists
     const photo = await photoRepository.findById(photoId);
@@ -119,6 +137,14 @@ export async function DELETE(
     }
 
     const { id: photoId } = await params;
+
+    // Validate photo ID format
+    if (!isValidUUID(photoId)) {
+      return NextResponse.json(
+        { error: "Invalid photo ID format" },
+        { status: 400 },
+      );
+    }
 
     // Parse and validate request body
     const body = await request.json();
