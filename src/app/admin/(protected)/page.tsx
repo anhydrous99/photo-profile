@@ -5,6 +5,8 @@ import {
 } from "@/infrastructure/database/repositories";
 import { AdminDashboardClient } from "./AdminDashboardClient";
 
+export const dynamic = "force-dynamic";
+
 const photoRepository = new SQLitePhotoRepository();
 const albumRepository = new SQLiteAlbumRepository();
 

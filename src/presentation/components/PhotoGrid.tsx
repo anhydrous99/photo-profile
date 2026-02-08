@@ -143,11 +143,24 @@ function PhotoCard({
         </div>
       )}
 
-      {/* Placeholder for thumbnail - will be added in Phase 7 */}
-      <div className="flex h-32 items-center justify-center bg-surface-secondary">
-        <span className="text-sm text-text-tertiary">
-          {photo.status === "processing" ? "Processing..." : "No preview"}
-        </span>
+      <div className="aspect-[4/3] overflow-hidden bg-surface-secondary">
+        {photo.status === "ready" && photo.blurDataUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/images/${photo.id}/300w.webp`}
+              alt={photo.originalFilename}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          </>
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <span className="text-sm text-text-tertiary">
+              {photo.status === "processing" ? "Processing..." : "No preview"}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="p-3">

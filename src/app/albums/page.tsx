@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { SQLiteAlbumRepository } from "@/infrastructure/database/repositories/SQLiteAlbumRepository";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
+import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 import type { Album } from "@/domain/entities/Album";
 
 // Placeholder icon for albums without photos
@@ -60,6 +61,7 @@ export default async function AlbumsPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
+      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Albums" }]} />
       <h1 className="mb-8 text-2xl font-semibold text-text-primary">Albums</h1>
 
       {albumsWithCovers.length === 0 ? (

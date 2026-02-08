@@ -6,7 +6,6 @@ import { useDropzone, FileRejection } from "react-dropzone";
 interface DropZoneProps {
   onFilesAccepted: (files: File[]) => void;
   onFilesRejected?: (rejections: FileRejection[]) => void;
-  maxFiles?: number;
   maxSize?: number;
   disabled?: boolean;
 }
@@ -19,14 +18,12 @@ interface DropZoneProps {
  *
  * @param onFilesAccepted - Called with accepted File array
  * @param onFilesRejected - Called with rejected files (wrong type/size)
- * @param maxFiles - Maximum files per drop (default: 20)
  * @param maxSize - Maximum file size in bytes (default: 100MB)
  * @param disabled - Disable interaction during upload
  */
 export function DropZone({
   onFilesAccepted,
   onFilesRejected,
-  maxFiles = 20,
   maxSize = 100 * 1024 * 1024,
   disabled = false,
 }: DropZoneProps) {
@@ -50,7 +47,6 @@ export function DropZone({
       "image/webp": [".webp"],
       "image/heic": [".heic"],
     },
-    maxFiles,
     maxSize,
     disabled,
   });

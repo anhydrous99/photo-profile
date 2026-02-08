@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   const photoRepository = new SQLitePhotoRepository();
-  const photos = await photoRepository.findRandomFromPublishedAlbums(8);
+  const photos = await photoRepository.findRandomFromPublishedAlbums(10);
 
   return (
     <>

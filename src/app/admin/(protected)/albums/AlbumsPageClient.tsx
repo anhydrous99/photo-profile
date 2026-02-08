@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   DndContext,
   closestCenter,
@@ -140,7 +141,15 @@ export function AlbumsPageClient({
     <>
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Albums</h1>
+        <div>
+          <Link
+            href="/admin"
+            className="text-sm text-text-secondary hover:text-text-primary"
+          >
+            &larr; Back to Dashboard
+          </Link>
+          <h1 className="mt-1 text-2xl font-bold">Albums</h1>
+        </div>
         <button
           type="button"
           onClick={() => setIsCreateModalOpen(true)}

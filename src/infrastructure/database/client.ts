@@ -107,6 +107,8 @@ export function initializeDatabase() {
       sqlite.pragma("foreign_keys = OFF");
       sqlite.exec(`
         BEGIN TRANSACTION;
+
+        -- Rebuild albums with ON DELETE SET NULL FK
         ALTER TABLE albums RENAME TO _albums_old;
         CREATE TABLE albums (
           id TEXT PRIMARY KEY,
@@ -120,6 +122,23 @@ export function initializeDatabase() {
         );
         INSERT INTO albums SELECT id, title, description, tags, cover_photo_id, sort_order, is_published, created_at FROM _albums_old;
         DROP TABLE _albums_old;
+
+        -- Rebuild photo_albums to fix stale FK reference to _albums_old
+        -- (SQLite updates FK references in other tables during ALTER TABLE RENAME)
+        DROP INDEX IF EXISTS photo_albums_photo_idx;
+        DROP INDEX IF EXISTS photo_albums_album_idx;
+        ALTER TABLE photo_albums RENAME TO _photo_albums_old;
+        CREATE TABLE photo_albums (
+          photo_id TEXT NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
+          album_id TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (photo_id, album_id)
+        );
+        INSERT INTO photo_albums SELECT photo_id, album_id, sort_order FROM _photo_albums_old;
+        DROP TABLE _photo_albums_old;
+        CREATE INDEX photo_albums_photo_idx ON photo_albums(photo_id);
+        CREATE INDEX photo_albums_album_idx ON photo_albums(album_id);
+
         COMMIT;
       `);
       sqlite.pragma("foreign_keys = ON");
