@@ -18,16 +18,21 @@ const albumRepository = new SQLiteAlbumRepository();
  * - Grid of uploaded photos with selection support
  * - Batch operations (add to album, delete)
  */
+const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+
 export default async function AdminDashboard() {
-  const [photos, albums] = await Promise.all([
+  const [photos, albums, stalePhotos] = await Promise.all([
     photoRepository.findAll(),
     albumRepository.findAll(),
+    photoRepository.findStaleProcessing(STALE_THRESHOLD_MS),
   ]);
 
   // Sort photos by newest first
   const sortedPhotos = [...photos].sort(
     (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
   );
+
+  const stalePhotoIds = stalePhotos.map((p) => p.id);
 
   return (
     <div className="p-8">
@@ -53,7 +58,11 @@ export default async function AdminDashboard() {
         Photos ({photos.length})
       </h2>
 
-      <AdminDashboardClient photos={sortedPhotos} albums={albums} />
+      <AdminDashboardClient
+        photos={sortedPhotos}
+        albums={albums}
+        stalePhotoIds={stalePhotoIds}
+      />
     </div>
   );
 }
