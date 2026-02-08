@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { StorageAdapter } from "@/infrastructure/storage/types";
 import { GET } from "../health/route";
+
+// Type definitions for mocks
+type MockDbRunResult = { changes: number; lastInsertRowid: number | bigint };
 
 vi.mock("@/infrastructure/database/client", () => ({
   db: {
@@ -34,8 +38,12 @@ describe("GET /api/health", () => {
       const mockAdapter = {
         listFiles: vi.fn().mockResolvedValue([]),
       };
-      vi.mocked(getStorageAdapter).mockReturnValue(mockAdapter as any);
-      vi.mocked(db.run).mockReturnValue({ changes: 0 } as any);
+      vi.mocked(getStorageAdapter).mockReturnValue(
+        mockAdapter as unknown as StorageAdapter,
+      );
+      vi.mocked(db.run).mockReturnValue({
+        changes: 0,
+      } as unknown as MockDbRunResult);
 
       // Act
       const response = await GET();
@@ -53,7 +61,9 @@ describe("GET /api/health", () => {
       const mockAdapter = {
         listFiles: vi.fn().mockResolvedValue([]),
       };
-      vi.mocked(getStorageAdapter).mockReturnValue(mockAdapter as any);
+      vi.mocked(getStorageAdapter).mockReturnValue(
+        mockAdapter as unknown as StorageAdapter,
+      );
       const dbError = new Error("Database connection failed");
       vi.mocked(db.run).mockImplementation(() => {
         throw dbError;
@@ -76,8 +86,13 @@ describe("GET /api/health", () => {
       const mockAdapter = {
         listFiles: vi.fn().mockRejectedValue(storageError),
       };
-      vi.mocked(getStorageAdapter).mockReturnValue(mockAdapter as any);
-      vi.mocked(db.run).mockReturnValue({ changes: 0 } as any);
+      vi.mocked(getStorageAdapter).mockReturnValue(
+        mockAdapter as unknown as StorageAdapter,
+      );
+      vi.mocked(db.run).mockReturnValue({
+        changes: 0,
+        lastInsertRowid: 0,
+      } as unknown as MockDbRunResult);
 
       // Act
       const response = await GET();
@@ -97,7 +112,9 @@ describe("GET /api/health", () => {
       const mockAdapter = {
         listFiles: vi.fn().mockRejectedValue(storageError),
       };
-      vi.mocked(getStorageAdapter).mockReturnValue(mockAdapter as any);
+      vi.mocked(getStorageAdapter).mockReturnValue(
+        mockAdapter as unknown as StorageAdapter,
+      );
       vi.mocked(db.run).mockImplementation(() => {
         throw dbError;
       });
@@ -124,8 +141,13 @@ describe("GET /api/health", () => {
       const mockAdapter = {
         listFiles: vi.fn().mockResolvedValue([]),
       };
-      vi.mocked(getStorageAdapter).mockReturnValue(mockAdapter as any);
-      vi.mocked(db.run).mockReturnValue({ changes: 0 } as any);
+      vi.mocked(getStorageAdapter).mockReturnValue(
+        mockAdapter as unknown as StorageAdapter,
+      );
+      vi.mocked(db.run).mockReturnValue({
+        changes: 0,
+        lastInsertRowid: 0,
+      } as unknown as MockDbRunResult);
 
       // Act
       const response = await GET();
@@ -145,8 +167,13 @@ describe("GET /api/health", () => {
       const mockAdapter = {
         listFiles: vi.fn().mockRejectedValue(s3Error),
       };
-      vi.mocked(getStorageAdapter).mockReturnValue(mockAdapter as any);
-      vi.mocked(db.run).mockReturnValue({ changes: 0 } as any);
+      vi.mocked(getStorageAdapter).mockReturnValue(
+        mockAdapter as unknown as StorageAdapter,
+      );
+      vi.mocked(db.run).mockReturnValue({
+        changes: 0,
+        lastInsertRowid: 0,
+      } as unknown as MockDbRunResult);
 
       // Act
       const response = await GET();
@@ -166,8 +193,13 @@ describe("GET /api/health", () => {
       const mockAdapter = {
         listFiles: vi.fn().mockResolvedValue([]),
       };
-      vi.mocked(getStorageAdapter).mockReturnValue(mockAdapter as any);
-      vi.mocked(db.run).mockReturnValue({ changes: 0 } as any);
+      vi.mocked(getStorageAdapter).mockReturnValue(
+        mockAdapter as unknown as StorageAdapter,
+      );
+      vi.mocked(db.run).mockReturnValue({
+        changes: 0,
+        lastInsertRowid: 0,
+      } as unknown as MockDbRunResult);
 
       // Act
       const response = await GET();
@@ -185,8 +217,13 @@ describe("GET /api/health", () => {
       const mockAdapter = {
         listFiles: vi.fn().mockResolvedValue([]),
       };
-      vi.mocked(getStorageAdapter).mockReturnValue(mockAdapter as any);
-      vi.mocked(db.run).mockReturnValue({ changes: 0 } as any);
+      vi.mocked(getStorageAdapter).mockReturnValue(
+        mockAdapter as unknown as StorageAdapter,
+      );
+      vi.mocked(db.run).mockReturnValue({
+        changes: 0,
+        lastInsertRowid: 0,
+      } as unknown as MockDbRunResult);
 
       // Act
       const response = await GET();
@@ -199,8 +236,13 @@ describe("GET /api/health", () => {
       const mockAdapter = {
         listFiles: vi.fn().mockRejectedValue(new Error("Storage error")),
       };
-      vi.mocked(getStorageAdapter).mockReturnValue(mockAdapter as any);
-      vi.mocked(db.run).mockReturnValue({ changes: 0 } as any);
+      vi.mocked(getStorageAdapter).mockReturnValue(
+        mockAdapter as unknown as StorageAdapter,
+      );
+      vi.mocked(db.run).mockReturnValue({
+        changes: 0,
+        lastInsertRowid: 0,
+      } as unknown as MockDbRunResult);
 
       // Act
       const response = await GET();
@@ -215,7 +257,9 @@ describe("GET /api/health", () => {
       const mockAdapter = {
         listFiles: vi.fn().mockResolvedValue([]),
       };
-      vi.mocked(getStorageAdapter).mockReturnValue(mockAdapter as any);
+      vi.mocked(getStorageAdapter).mockReturnValue(
+        mockAdapter as unknown as StorageAdapter,
+      );
       vi.mocked(db.run).mockImplementation(() => {
         throw "not an error object";
       });
@@ -233,8 +277,13 @@ describe("GET /api/health", () => {
       const mockAdapter = {
         listFiles: vi.fn().mockRejectedValue("not an error object"),
       };
-      vi.mocked(getStorageAdapter).mockReturnValue(mockAdapter as any);
-      vi.mocked(db.run).mockReturnValue({ changes: 0 } as any);
+      vi.mocked(getStorageAdapter).mockReturnValue(
+        mockAdapter as unknown as StorageAdapter,
+      );
+      vi.mocked(db.run).mockReturnValue({
+        changes: 0,
+        lastInsertRowid: 0,
+      } as unknown as MockDbRunResult);
 
       // Act
       const response = await GET();
