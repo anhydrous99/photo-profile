@@ -73,7 +73,9 @@ export async function enforceMinimumDuration<T>(
  *   return result;
  * }, 1000);
  */
-export async function addRandomJitter(maxJitterMs: number = 100): Promise<void> {
+export async function addRandomJitter(
+  maxJitterMs: number = 100,
+): Promise<void> {
   const jitter = Math.random() * maxJitterMs;
   await new Promise((resolve) => setTimeout(resolve, jitter));
 }

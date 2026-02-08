@@ -18,7 +18,10 @@ const envSchema = z.object({
     .optional()
     .transform((val) => {
       if (!val) return [];
-      return val.split(",").map((ip) => ip.trim()).filter((ip) => ip.length > 0);
+      return val
+        .split(",")
+        .map((ip) => ip.trim())
+        .filter((ip) => ip.length > 0);
     })
     .describe("Comma-separated list of trusted proxy IP addresses"),
 });

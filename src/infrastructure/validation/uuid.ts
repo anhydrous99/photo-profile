@@ -47,10 +47,7 @@ export function isValidUUID(value: string): boolean {
  * @example
  * assertValidUUID(photoId, "photoId") // throws if invalid
  */
-export function assertValidUUID(
-  value: string,
-  fieldName: string = "ID",
-): void {
+export function assertValidUUID(value: string, fieldName: string = "ID"): void {
   if (!isValidUUID(value)) {
     throw new Error(`Invalid ${fieldName} format. Expected UUID v4.`);
   }
