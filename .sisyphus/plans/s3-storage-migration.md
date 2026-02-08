@@ -437,7 +437,7 @@ Critical Path: Task 1 → Task 4 → Task 8 → Task 14
 
 ---
 
-- [ ] 4. Implement S3 storage adapter
+- [x] 4. Implement S3 storage adapter
 
   **What to do**:
   - **RED**: Write comprehensive tests for `S3StorageAdapter` implementing `StorageAdapter`:
@@ -534,7 +534,7 @@ Critical Path: Task 1 → Task 4 → Task 8 → Task 14
 
 ---
 
-- [ ] 5. Refactor filesystem storage into FilesystemStorageAdapter
+- [x] 5. Refactor filesystem storage into FilesystemStorageAdapter
 
   **What to do**:
   - **RED**: Write tests for `FilesystemStorageAdapter` implementing `StorageAdapter` interface
@@ -715,7 +715,7 @@ Critical Path: Task 1 → Task 4 → Task 8 → Task 14
 
 ---
 
-- [ ] 7. Update BullMQ job interface (originalPath → originalKey)
+- [x] 7. Update BullMQ job interface (originalPath → originalKey)
 
   **What to do**:
   - **RED**: Write test verifying `ImageJobData` has `originalKey` (not `originalPath`)
