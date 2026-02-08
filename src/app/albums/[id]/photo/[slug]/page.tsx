@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { AlbumGalleryClient } from "@/presentation/components/AlbumGalleryClient";
 import { SQLiteAlbumRepository } from "@/infrastructure/database/repositories/SQLiteAlbumRepository";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
+import { getImageUrl } from "@/infrastructure/storage";
 
 interface PageProps {
   params: Promise<{ id: string; slug: string }>;
@@ -55,7 +56,7 @@ export async function generateMetadata({
     }
   }
 
-  const ogImageUrl = `/api/images/${photo.id}/1200w.webp`;
+  const ogImageUrl = getImageUrl(photo.id, "1200w.webp");
 
   return {
     title: photo.title || album.title,

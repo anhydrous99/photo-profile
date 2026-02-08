@@ -2,6 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { getClientImageUrl } from "@/lib/imageLoader";
 
 interface SortablePhotoCardProps {
   photo: {
@@ -56,7 +57,7 @@ export function SortablePhotoCard({
         <div className="aspect-square overflow-hidden rounded-lg border border-border">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/api/images/${photo.id}/300w.webp`}
+            src={getClientImageUrl(photo.id, "300w.webp")}
             alt={photo.title || photo.originalFilename}
             className="h-full w-full object-cover"
           />

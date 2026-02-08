@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
+import { getImageUrl } from "@/infrastructure/storage";
 import { Header } from "@/presentation/components/Header";
 import { HomepageClient } from "@/presentation/components/HomepageClient";
 
@@ -39,7 +40,7 @@ export async function generateMetadata({
     }
   }
 
-  const ogImageUrl = `/api/images/${photo.id}/1200w.webp`;
+  const ogImageUrl = getImageUrl(photo.id, "1200w.webp");
 
   return {
     title: photo.title || "Photo",

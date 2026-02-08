@@ -9,6 +9,7 @@ import "yet-another-react-lightbox/styles.css";
 import "yet-another-react-lightbox/plugins/captions.css";
 import type { ExifData } from "@/domain/entities/Photo";
 import { ExifPanel } from "./ExifPanel";
+import { getClientImageUrl } from "@/lib/imageLoader";
 
 export interface PhotoData {
   id: string;
@@ -32,7 +33,7 @@ const DERIVATIVE_WIDTHS = [300, 600, 1200, 2400] as const;
 function buildSrcSet(photoId: string, width: number, height: number) {
   const aspectRatio = height / width;
   return DERIVATIVE_WIDTHS.map((w) => ({
-    src: `/api/images/${photoId}/${w}w.webp`,
+    src: getClientImageUrl(photoId, `${w}w.webp`),
     width: w,
     height: Math.round(w * aspectRatio),
   }));
@@ -57,7 +58,7 @@ export function PhotoLightbox({
   // Use 600w as baseline - guaranteed to exist for all photos
   // Only include srcSet when dimensions are known (graceful fallback for legacy photos)
   const slides = photos.map((photo) => ({
-    src: `/api/images/${photo.id}/600w.webp`,
+    src: getClientImageUrl(photo.id, "600w.webp"),
     alt: photo.title || photo.originalFilename,
     ...(photo.width && photo.height
       ? {

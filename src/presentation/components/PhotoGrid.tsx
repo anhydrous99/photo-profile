@@ -1,5 +1,6 @@
 import type { Photo } from "@/domain/entities";
 import Link from "next/link";
+import { getClientImageUrl } from "@/lib/imageLoader";
 
 interface PhotoGridProps {
   photos: Photo[];
@@ -148,7 +149,7 @@ function PhotoCard({
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`/api/images/${photo.id}/300w.webp`}
+              src={getClientImageUrl(photo.id, "300w.webp")}
               alt={photo.originalFilename}
               className="h-full w-full object-cover"
               loading="lazy"

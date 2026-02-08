@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { AlbumGalleryClient } from "@/presentation/components/AlbumGalleryClient";
 import { SQLiteAlbumRepository } from "@/infrastructure/database/repositories/SQLiteAlbumRepository";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
+import { getImageUrl } from "@/infrastructure/storage";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -39,18 +40,17 @@ export async function generateMetadata({
 
   // Use cover photo or first photo as OG image
   if (album.coverPhotoId) {
-    const ogImageUrl = `/api/images/${album.coverPhotoId}/1200w.webp`;
+    const ogImageUrl = getImageUrl(album.coverPhotoId, "1200w.webp");
     metadata.openGraph!.images = [
       { url: ogImageUrl, width: 1200, type: "image/webp" },
     ];
     metadata.twitter!.images = [ogImageUrl];
   } else {
-    // Fallback: use first ready photo from album
     const photoRepo = new SQLitePhotoRepository();
     const photos = await photoRepo.findByAlbumId(id);
     const firstReady = photos.find((p) => p.status === "ready");
     if (firstReady) {
-      const ogImageUrl = `/api/images/${firstReady.id}/1200w.webp`;
+      const ogImageUrl = getImageUrl(firstReady.id, "1200w.webp");
       metadata.openGraph!.images = [
         { url: ogImageUrl, width: 1200, type: "image/webp" },
       ];

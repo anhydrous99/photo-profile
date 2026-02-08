@@ -20,6 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import type { Album } from "@/domain/entities";
 import { SortablePhotoCard } from "@/presentation/components";
+import { getClientImageUrl } from "@/lib/imageLoader";
 
 interface AlbumPhoto {
   id: string;
@@ -197,7 +198,7 @@ export function AlbumDetailClient({
                 <div className="aspect-square overflow-hidden rounded-lg border border-border">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={`/api/images/${activePhoto.id}/300w.webp`}
+                    src={getClientImageUrl(activePhoto.id, "300w.webp")}
                     alt={activePhoto.title || activePhoto.originalFilename}
                     className="h-full w-full object-cover"
                   />
