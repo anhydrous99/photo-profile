@@ -8,6 +8,7 @@ export default defineConfig({
     env: {
       DATABASE_PATH: ":memory:",
       STORAGE_PATH: "/tmp/test-storage",
+      STORAGE_BACKEND: "filesystem",
       AUTH_SECRET: "test-secret-key-must-be-at-least-32-chars-long!!",
       ADMIN_PASSWORD_HASH:
         "$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVW",
