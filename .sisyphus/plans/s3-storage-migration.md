@@ -1161,7 +1161,7 @@ Critical Path: Task 1 → Task 4 → Task 8 → Task 14
 
 ---
 
-- [ ] 12. Update health check for S3 connectivity
+- [x] 12. Update health check for S3 connectivity
 
   **What to do**:
   - **RED**: Write test for updated health check:
@@ -1230,7 +1230,7 @@ Critical Path: Task 1 → Task 4 → Task 8 → Task 14
 
 ---
 
-- [ ] 13. Update Docker config for S3 deployment
+- [x] 13. Update Docker config for S3 deployment
 
   **What to do**:
   - Update `docker-compose.yml`:
@@ -1297,7 +1297,7 @@ Critical Path: Task 1 → Task 4 → Task 8 → Task 14
 
 ---
 
-- [ ] 14. Integration test and full regression check
+- [x] 14. Integration test and full regression check
 
   **What to do**:
   - Write an integration test that verifies the full upload→process→serve pipeline with mocked S3:

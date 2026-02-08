@@ -5,13 +5,19 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_PATH=/app/data/portfolio.db
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-filesystem}
       - STORAGE_PATH=/app/storage
       - REDIS_URL=redis://redis:6379
       - AUTH_SECRET=${AUTH_SECRET}
       - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - AWS_CLOUDFRONT_DOMAIN=${AWS_CLOUDFRONT_DOMAIN}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - NEXT_PUBLIC_CLOUDFRONT_DOMAIN=${NEXT_PUBLIC_CLOUDFRONT_DOMAIN}
     volumes:
       - ./data:/app/data
-      - ./storage:/app/storage
     depends_on:
       redis:
         condition: service_healthy
@@ -23,13 +29,20 @@ services:
     command: npx tsx src/infrastructure/jobs/worker.ts
     environment:
       - DATABASE_PATH=/app/data/portfolio.db
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-filesystem}
       - STORAGE_PATH=/app/storage
       - REDIS_URL=redis://redis:6379
       - AUTH_SECRET=${AUTH_SECRET}
       - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - AWS_CLOUDFRONT_DOMAIN=${AWS_CLOUDFRONT_DOMAIN}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     volumes:
       - ./data:/app/data
-      - ./storage:/app/storage
+    tmpfs:
+      - /tmp
     depends_on:
       redis:
         condition: service_healthy

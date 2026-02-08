@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/infrastructure/database/client";
 import { sql } from "drizzle-orm";
-import { access, constants } from "fs/promises";
-import { env } from "@/infrastructure/config/env";
+import { getStorageAdapter } from "@/infrastructure/storage";
 
 export async function GET() {
   const checks: Record<string, { status: string; error?: string }> = {
@@ -20,7 +19,8 @@ export async function GET() {
   }
 
   try {
-    await access(env.STORAGE_PATH, constants.R_OK | constants.W_OK);
+    const adapter = getStorageAdapter();
+    await adapter.listFiles("health-check/");
   } catch (e) {
     checks.storage = {
       status: "error",
