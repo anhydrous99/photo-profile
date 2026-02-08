@@ -77,13 +77,13 @@ Plans:
 3. Image service tests verify derivative generation produces expected output formats and sizes using fixture images
 4. Auth tests verify JWT session creation returns a valid token, verification accepts valid tokens and rejects expired/tampered ones
 5. API route tests verify that invalid input returns 400, unauthenticated requests return 401/404, and valid requests return expected data
-   **Plans**: TBD
+   **Plans:** 3 plans
 
 Plans:
 
-- [ ] 17-01: Repository integration tests (CRUD, serialization, edge cases)
-- [ ] 17-02: Service and auth unit tests (image processing, JWT lifecycle)
-- [ ] 17-03: API route integration tests (validation, auth, responses)
+- [ ] 17-01-PLAN.md -- Photo & album repository integration tests (CRUD, junction ops, serialization edge cases)
+- [ ] 17-02-PLAN.md -- Image service, EXIF service, and auth unit tests (derivatives, blur, JWT, bcrypt)
+- [ ] 17-03-PLAN.md -- Admin API route integration tests (auth checks, Zod validation, CRUD responses)
 
 #### Phase 18: Worker Resilience & Tech Debt
 
