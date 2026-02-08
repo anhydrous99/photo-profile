@@ -16,6 +16,7 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    mem_limit: 2g
 
   worker:
     build: .
@@ -33,6 +34,7 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    mem_limit: 2g
 
   redis:
     image: redis:7-alpine
@@ -46,6 +48,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    mem_limit: 512m
 
 volumes:
   redis_data:
