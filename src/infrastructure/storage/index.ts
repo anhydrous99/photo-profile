@@ -1,1 +1,5 @@
-export { saveOriginalFile, deletePhotoFiles } from "./fileStorage";
+export {
+  saveOriginalFile,
+  deletePhotoFiles,
+  findOriginalFile,
+} from "./fileStorage";

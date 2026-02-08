@@ -1,4 +1,4 @@
-import { mkdir, writeFile, rm } from "fs/promises";
+import { mkdir, writeFile, rm, readdir } from "fs/promises";
 import { join, extname } from "path";
 import { env } from "@/infrastructure/config/env";
 
@@ -25,6 +25,28 @@ export async function saveOriginalFile(
   await writeFile(filePath, Buffer.from(bytes));
 
   return filePath;
+}
+
+/**
+ * Find the original file path for a given photoId
+ *
+ * Scans the originals directory for files starting with "original."
+ * Returns the full path if found, null otherwise.
+ *
+ * @param photoId - Unique identifier for the photo
+ * @returns Full path to the original file, or null if not found
+ */
+export async function findOriginalFile(
+  photoId: string,
+): Promise<string | null> {
+  const dir = join(env.STORAGE_PATH, "originals", photoId);
+  try {
+    const files = await readdir(dir);
+    const original = files.find((f) => f.startsWith("original."));
+    return original ? join(dir, original) : null;
+  } catch {
+    return null; // Directory doesn't exist
+  }
 }
 
 /**

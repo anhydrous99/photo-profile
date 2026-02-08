@@ -1,4 +1,4 @@
-import { and, eq, like, sql } from "drizzle-orm";
+import { and, eq, like, lt, sql } from "drizzle-orm";
 import { db } from "../client";
 import { photos, photoAlbums, albums } from "../schema";
 import type { PhotoRepository } from "@/domain/repositories/PhotoRepository";
@@ -113,6 +113,25 @@ export class SQLitePhotoRepository implements PhotoRepository {
       .limit(limit);
 
     return results.map((r) => this.toDomain(r.photo));
+  }
+
+  async findByStatus(status: Photo["status"]): Promise<Photo[]> {
+    const results = await db
+      .select()
+      .from(photos)
+      .where(eq(photos.status, status));
+    return results.map((row) => this.toDomain(row));
+  }
+
+  async findStaleProcessing(thresholdMs: number): Promise<Photo[]> {
+    const cutoff = new Date(Date.now() - thresholdMs);
+    const results = await db
+      .select()
+      .from(photos)
+      .where(
+        and(eq(photos.status, "processing"), lt(photos.createdAt, cutoff)),
+      );
+    return results.map((row) => this.toDomain(row));
   }
 
   private safeParseExifJson(json: string): ExifData | null {

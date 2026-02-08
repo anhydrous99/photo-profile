@@ -18,4 +18,8 @@ export interface PhotoRepository {
 
   // Slug-based lookup (first 8 chars of UUID)
   findBySlugPrefix(slug: string): Promise<Photo | null>;
+
+  // Status filtering and stale detection
+  findByStatus(status: Photo["status"]): Promise<Photo[]>;
+  findStaleProcessing(thresholdMs: number): Promise<Photo[]>;
 }
