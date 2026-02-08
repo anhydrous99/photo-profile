@@ -81,9 +81,9 @@ Plans:
 
 Plans:
 
-- [ ] 17-01-PLAN.md -- Photo & album repository integration tests (CRUD, junction ops, serialization edge cases)
-- [ ] 17-02-PLAN.md -- Image service, EXIF service, and auth unit tests (derivatives, blur, JWT, bcrypt)
-- [ ] 17-03-PLAN.md -- Admin API route integration tests (auth checks, Zod validation, CRUD responses)
+- [x] 17-01-PLAN.md -- Photo & album repository integration tests (CRUD, junction ops, serialization edge cases)
+- [x] 17-02-PLAN.md -- Image service, EXIF service, and auth unit tests (derivatives, blur, JWT, bcrypt)
+- [x] 17-03-PLAN.md -- Admin API route integration tests (auth checks, Zod validation, CRUD responses)
 
 #### Phase 18: Worker Resilience & Tech Debt
 
@@ -134,6 +134,6 @@ Phases 15 and 16 can execute in parallel (no dependency). Phase 17 depends on bo
 | ------------------------------------ | --------- | -------------- | ----------- | ---------- |
 | 15. Testing Infrastructure           | v1.2      | 2/2            | Complete    | 2026-02-07 |
 | 16. Error Boundaries & API Hardening | v1.2      | 3/3            | Complete    | 2026-02-07 |
-| 17. Unit & Integration Testing       | v1.2      | 0/3            | Not started | -          |
+| 17. Unit & Integration Testing       | v1.2      | 3/3            | Complete    | 2026-02-08 |
 | 18. Worker Resilience & Tech Debt    | v1.2      | 0/3            | Not started | -          |
 | 19. Performance & Production         | v1.2      | 0/3            | Not started | -          |
