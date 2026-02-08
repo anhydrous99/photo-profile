@@ -19,7 +19,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "exif:backfill": "npx tsx --require dotenv/config scripts/backfill-exif.ts",
-    "dimensions:backfill": "npx tsx --require dotenv/config scripts/backfill-dimensions.ts"
+    "dimensions:backfill": "npx tsx --require dotenv/config scripts/backfill-dimensions.ts",
+    "analyze": "ANALYZE=true next build --webpack"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -52,6 +53,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.1.6",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/bcrypt": "^6.0.0",
