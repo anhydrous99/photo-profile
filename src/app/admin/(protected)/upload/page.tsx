@@ -39,14 +39,31 @@ export default function UploadPage() {
       // Update to uploading
       setItems((prev) =>
         prev.map((i) =>
-          i.id === item.id ? { ...i, status: "uploading" as const } : i,
+          i.id === item.id
+            ? { ...i, status: "uploading" as const, startedAt: Date.now() }
+            : i,
         ),
       );
 
       try {
         const controller = uploadFile(item.file, (progress) => {
           setItems((prev) =>
-            prev.map((i) => (i.id === item.id ? { ...i, progress } : i)),
+            prev.map((i) => {
+              if (i.id !== item.id) return i;
+
+              const update: Partial<UploadItem> = { progress };
+
+              // Calculate ETA only after 10% progress
+              if (progress >= 10 && i.startedAt) {
+                const elapsedMs = Date.now() - i.startedAt;
+                const bytesUploaded = (progress / 100) * i.file.size;
+                const speedBps = bytesUploaded / (elapsedMs / 1000);
+                const remainingBytes = i.file.size - bytesUploaded;
+                update.estimatedSecondsRemaining = remainingBytes / speedBps;
+              }
+
+              return { ...i, ...update };
+            }),
           );
         });
 

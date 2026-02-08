@@ -15,6 +15,8 @@ export interface UploadItem {
   progress: number;
   photoId?: string;
   error?: string;
+  startedAt?: number;
+  estimatedSecondsRemaining?: number;
 }
 
 interface UploadQueueProps {
@@ -81,9 +83,14 @@ function UploadItemRow({
                 style={{ width: `${item.progress}%` }}
               />
             </div>
-            <span className="text-xs text-text-secondary">
-              {item.progress}%
-            </span>
+            <div className="flex flex-col text-xs text-text-secondary">
+              <span>{item.progress}%</span>
+              {item.estimatedSecondsRemaining !== undefined && (
+                <span className="text-text-tertiary">
+                  {formatETA(item.estimatedSecondsRemaining)}
+                </span>
+              )}
+            </div>
           </div>
         )}
 
@@ -113,4 +120,12 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatETA(seconds: number): string {
+  if (seconds >= 60) {
+    const minutes = Math.ceil(seconds / 60);
+    return `~${minutes} min remaining`;
+  }
+  return `~${Math.ceil(seconds)} sec remaining`;
 }
