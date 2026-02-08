@@ -122,18 +122,18 @@ Plans:
 Plans:
 
 - [x] 19-01-PLAN.md -- Bundle analysis configuration and Lighthouse baseline measurement infrastructure
-- [ ] 19-02-PLAN.md -- Health check endpoint, structured logging utility, and console.\* migration
-- [ ] 19-03-PLAN.md -- Targeted optimizations (SQLite WAL mode, image ETag/304) with documented justification
+- [x] 19-02-PLAN.md -- Health check endpoint, structured logging utility, and console.\* migration
+- [x] 19-03-PLAN.md -- Targeted optimizations (SQLite WAL mode, image ETag/304) with documented justification
 
 ## Progress
 
 **Execution Order:**
 Phases 15 and 16 can execute in parallel (no dependency). Phase 17 depends on both 15 and 16. Phase 18 depends on 15. Phase 19 is independent.
 
-| Phase                                | Milestone | Plans Complete | Status      | Completed  |
-| ------------------------------------ | --------- | -------------- | ----------- | ---------- |
-| 15. Testing Infrastructure           | v1.2      | 2/2            | Complete    | 2026-02-07 |
-| 16. Error Boundaries & API Hardening | v1.2      | 3/3            | Complete    | 2026-02-07 |
-| 17. Unit & Integration Testing       | v1.2      | 3/3            | Complete    | 2026-02-08 |
-| 18. Worker Resilience & Tech Debt    | v1.2      | 3/3            | Complete    | 2026-02-08 |
-| 19. Performance & Production         | v1.2      | 0/3            | Not started | -          |
+| Phase                                | Milestone | Plans Complete | Status   | Completed  |
+| ------------------------------------ | --------- | -------------- | -------- | ---------- |
+| 15. Testing Infrastructure           | v1.2      | 2/2            | Complete | 2026-02-07 |
+| 16. Error Boundaries & API Hardening | v1.2      | 3/3            | Complete | 2026-02-07 |
+| 17. Unit & Integration Testing       | v1.2      | 3/3            | Complete | 2026-02-08 |
+| 18. Worker Resilience & Tech Debt    | v1.2      | 3/3            | Complete | 2026-02-08 |
+| 19. Performance & Production         | v1.2      | 3/3            | Complete | 2026-02-08 |

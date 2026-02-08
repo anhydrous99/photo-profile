@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Let the photos speak for themselves -- a clean, distraction-free experience where the photography is the focus
-**Current focus:** Phase 19 - Performance & Production (In Progress)
+**Current focus:** Phase 19 - Performance & Production (Complete)
 
 ## Current Position
 
 Phase: 19 of 19 (Performance & Production)
-Plan: 2 of 3 in current phase (19-01, 19-02 complete)
-Status: In progress
-Last activity: 2026-02-08 -- Completed 19-02-PLAN.md (Health Check & Structured Logging)
+Plan: 3 of 3 in current phase (19-01, 19-02, 19-03 complete)
+Status: Phase complete -- v1.2 milestone complete
+Last activity: 2026-02-08 -- Completed 19-03-PLAN.md (Targeted Performance Optimizations)
 
-Progress: [██████████░] 93% (13/14 v1.2 plans -- phase 19 plan 2 of 3 complete)
+Progress: [███████████] 100% (14/14 v1.2 plans -- phase 19 complete)
 
 ## Performance Metrics
 
@@ -32,9 +32,9 @@ Progress: [██████████░] 93% (13/14 v1.2 plans -- phase 19 
 
 **v1.2 Velocity:**
 
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: 3 min
-- Total execution time: 36 min
+- Total execution time: 38 min
 
 ## Accumulated Context
 
@@ -61,6 +61,8 @@ All decisions logged in PROJECT.md Key Decisions table.
 | D-19-01-02 | Lighthouse baselines as template (requires running server with data)               | 19-01      |
 | D-19-02-01 | Logger reads process.env.LOG_LEVEL directly (not env config) to avoid circular dep | 19-02      |
 | D-19-02-02 | Health check endpoint is public (no auth) -- operational endpoint                  | 19-02      |
+| D-19-03-01 | ETag uses MD5 of mtime+size (not file content) for cheap generation                | 19-03      |
+| D-19-03-02 | Omitted synchronous=normal pragma to preserve data safety                          | 19-03      |
 
 ### Pending Todos
 
@@ -74,5 +76,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 19, plan 2 complete. Plan 19-03 remaining.
-Resume file: .planning/phases/19-performance-production/19-03-PLAN.md
+Stopped at: Phase 19 complete. All v1.2 plans executed. Milestone complete.
+Resume file: N/A -- all phases complete
