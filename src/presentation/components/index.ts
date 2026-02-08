@@ -11,3 +11,4 @@ export type { AlbumWithCount } from "./SortableAlbumCard";
 export { AlbumCreateModal } from "./AlbumCreateModal";
 export { DeleteAlbumModal } from "./DeleteAlbumModal";
 export { SortablePhotoCard } from "./SortablePhotoCard";
+export { Pagination } from "./Pagination";

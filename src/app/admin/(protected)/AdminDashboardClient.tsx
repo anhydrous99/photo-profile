@@ -1,37 +1,89 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Photo, Album } from "@/domain/entities";
-import { PhotoGrid, BatchActions } from "@/presentation/components";
+import { PhotoGrid, BatchActions, Pagination } from "@/presentation/components";
 
 type StatusFilter = "all" | "processing" | "ready" | "error";
+type AlbumFilter = "all" | "none";
 
 interface AdminDashboardClientProps {
   photos: Photo[];
   albums: Album[];
   stalePhotoIds: string[];
+  currentPage: number;
+  totalPages: number;
+  statusFilter: StatusFilter;
+  albumFilter: AlbumFilter;
 }
 
-/**
- * Client-side interactive portion of admin dashboard
- *
- * Manages:
- * - Photo selection state
- * - Batch operations (via BatchActions)
- * - Navigation to photo detail page
- * - Status filtering (all / processing / ready / error)
- * - Stale photo notification and reprocess controls
- */
 export function AdminDashboardClient({
   photos,
   albums,
   stalePhotoIds,
+  currentPage,
+  totalPages,
+  statusFilter,
+  albumFilter,
 }: AdminDashboardClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [reprocessing, setReprocessing] = useState(false);
+
+  const buildUrl = useCallback(
+    (params: { page?: number; status?: string; album?: string }) => {
+      const newParams = new URLSearchParams(searchParams.toString());
+
+      if (params.page && params.page > 1) {
+        newParams.set("page", String(params.page));
+      } else {
+        newParams.delete("page");
+      }
+
+      if (params.status !== undefined) {
+        if (params.status === "all") {
+          newParams.delete("status");
+        } else {
+          newParams.set("status", params.status);
+        }
+      }
+
+      if (params.album !== undefined) {
+        if (params.album === "all") {
+          newParams.delete("album");
+        } else {
+          newParams.set("album", params.album);
+        }
+      }
+
+      const qs = newParams.toString();
+      return qs ? `/admin?${qs}` : "/admin";
+    },
+    [searchParams],
+  );
+
+  const handlePageChange = (page: number) => {
+    setSelectedIds(new Set());
+    router.push(
+      buildUrl({
+        page,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        album: albumFilter === "all" ? undefined : albumFilter,
+      }),
+    );
+  };
+
+  const handleStatusChange = (status: StatusFilter) => {
+    setSelectedIds(new Set());
+    router.push(buildUrl({ page: 1, status }));
+  };
+
+  const handleAlbumFilterChange = (album: AlbumFilter) => {
+    setSelectedIds(new Set());
+    router.push(buildUrl({ page: 1, album }));
+  };
 
   const handleSelectionChange = (newSelectedIds: Set<string>) => {
     setSelectedIds(newSelectedIds);
@@ -42,7 +94,6 @@ export function AdminDashboardClient({
   };
 
   const handleBatchComplete = () => {
-    // Clear selection and refresh the page to show updated photo list
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -79,29 +130,22 @@ export function AdminDashboardClient({
     }
   };
 
-  // Filter photos by selected status
-  const filteredPhotos =
-    statusFilter === "all"
-      ? photos
-      : photos.filter((p) => p.status === statusFilter);
-
   const errorCount = photos.filter((p) => p.status === "error").length;
   const hasActionablePhotos = stalePhotoIds.length > 0 || errorCount > 0;
 
   return (
     <>
-      {/* Status filter and count */}
       <div className="mb-4 flex items-center gap-3">
         <label
           htmlFor="status-filter"
           className="text-sm font-medium text-text-secondary"
         >
-          Filter by status:
+          Status:
         </label>
         <select
           id="status-filter"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+          onChange={(e) => handleStatusChange(e.target.value as StatusFilter)}
           className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text-primary"
         >
           <option value="all">All statuses</option>
@@ -109,13 +153,45 @@ export function AdminDashboardClient({
           <option value="ready">Ready</option>
           <option value="error">Error</option>
         </select>
+        <label
+          htmlFor="album-filter"
+          className="text-sm font-medium text-text-secondary"
+        >
+          Album:
+        </label>
+        <select
+          id="album-filter"
+          value={albumFilter}
+          onChange={(e) =>
+            handleAlbumFilterChange(e.target.value as AlbumFilter)
+          }
+          className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text-primary"
+        >
+          <option value="all">All photos</option>
+          <option value="none">Not in any album</option>
+        </select>
         <span className="text-sm text-text-tertiary">
-          {filteredPhotos.length}{" "}
-          {filteredPhotos.length === 1 ? "photo" : "photos"}
+          {photos.length} {photos.length === 1 ? "photo" : "photos"}
+          {statusFilter !== "all" ? ` (${statusFilter})` : ""}
+          {albumFilter === "none" ? " · unassigned" : ""}
         </span>
+        {photos.length > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              if (selectedIds.size === photos.length) {
+                setSelectedIds(new Set());
+              } else {
+                setSelectedIds(new Set(photos.map((p) => p.id)));
+              }
+            }}
+            className="ml-auto text-sm font-medium text-accent hover:text-blue-700"
+          >
+            {selectedIds.size === photos.length ? "Deselect all" : "Select all"}
+          </button>
+        )}
       </div>
 
-      {/* Stale/error notification bar */}
       {hasActionablePhotos && (
         <div className="mb-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
           <div className="flex items-start justify-between gap-4">
@@ -151,12 +227,19 @@ export function AdminDashboardClient({
         onComplete={handleBatchComplete}
       />
       <PhotoGrid
-        photos={filteredPhotos}
+        photos={photos}
         selectable={true}
         selectedIds={selectedIds}
         onSelectionChange={handleSelectionChange}
         onPhotoClick={handlePhotoClick}
       />
+      <div className="mt-6">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onChange={handlePageChange}
+        />
+      </div>
     </>
   );
 }

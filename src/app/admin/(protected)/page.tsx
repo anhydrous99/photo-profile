@@ -4,34 +4,60 @@ import {
   SQLiteAlbumRepository,
 } from "@/infrastructure/database/repositories";
 import { AdminDashboardClient } from "./AdminDashboardClient";
+import type { Photo } from "@/domain/entities";
 
 export const dynamic = "force-dynamic";
 
 const photoRepository = new SQLitePhotoRepository();
 const albumRepository = new SQLiteAlbumRepository();
 
+const PAGE_SIZE = 24;
+const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+
+const VALID_STATUSES: Photo["status"][] = ["processing", "ready", "error"];
+const VALID_ALBUM_FILTERS = ["all", "none"] as const;
+type AlbumFilter = (typeof VALID_ALBUM_FILTERS)[number];
+
+interface PageProps {
+  searchParams: Promise<{ page?: string; status?: string; album?: string }>;
+}
+
 /**
  * Admin Dashboard
  *
  * Shows:
  * - Link to upload page
- * - Grid of uploaded photos with selection support
+ * - Paginated grid of uploaded photos with selection support
  * - Batch operations (add to album, delete)
+ * - Server-side status filtering and pagination via query params
  */
-const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+export default async function AdminDashboard({ searchParams }: PageProps) {
+  const params = await searchParams;
 
-export default async function AdminDashboard() {
-  const [photos, albums, stalePhotos] = await Promise.all([
-    photoRepository.findAll(),
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const statusFilter = VALID_STATUSES.includes(params.status as Photo["status"])
+    ? (params.status as Photo["status"])
+    : undefined;
+  const albumFilter: AlbumFilter = VALID_ALBUM_FILTERS.includes(
+    params.album as AlbumFilter,
+  )
+    ? (params.album as AlbumFilter)
+    : "all";
+
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const [{ data: photos, total }, albums, stalePhotos] = await Promise.all([
+    photoRepository.findPaginated({
+      limit: PAGE_SIZE,
+      offset,
+      status: statusFilter,
+      albumFilter: albumFilter === "all" ? undefined : albumFilter,
+    }),
     albumRepository.findAll(),
     photoRepository.findStaleProcessing(STALE_THRESHOLD_MS),
   ]);
 
-  // Sort photos by newest first
-  const sortedPhotos = [...photos].sort(
-    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-  );
-
+  const totalPages = Math.ceil(total / PAGE_SIZE);
   const stalePhotoIds = stalePhotos.map((p) => p.id);
 
   return (
@@ -55,13 +81,17 @@ export default async function AdminDashboard() {
       </div>
 
       <h2 className="mb-4 text-lg font-medium text-text-primary">
-        Photos ({photos.length})
+        Photos ({total})
       </h2>
 
       <AdminDashboardClient
-        photos={sortedPhotos}
+        photos={photos}
         albums={albums}
         stalePhotoIds={stalePhotoIds}
+        currentPage={page}
+        totalPages={totalPages}
+        statusFilter={statusFilter ?? "all"}
+        albumFilter={albumFilter}
       />
     </div>
   );

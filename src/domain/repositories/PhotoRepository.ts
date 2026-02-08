@@ -1,8 +1,21 @@
 import type { Photo } from "../entities/Photo";
 
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+}
+
+export interface PaginationOptions {
+  limit: number;
+  offset: number;
+  status?: Photo["status"];
+  albumFilter?: "all" | "none";
+}
+
 export interface PhotoRepository {
   findById(id: string): Promise<Photo | null>;
   findAll(): Promise<Photo[]>;
+  findPaginated(options: PaginationOptions): Promise<PaginatedResult<Photo>>;
   findByAlbumId(albumId: string): Promise<Photo[]>;
   save(photo: Photo): Promise<void>;
   delete(id: string): Promise<void>;

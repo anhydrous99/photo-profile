@@ -428,4 +428,335 @@ describe("SQLitePhotoRepository", () => {
       expect(result!.blurDataUrl).toBe(blurData);
     });
   });
+
+  // ---- findPaginated ----
+
+  describe("findPaginated", () => {
+    it("returns correct page of results with limit and offset", async () => {
+      const p1 = makePhoto({
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        updatedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+      const p2 = makePhoto({
+        createdAt: new Date("2024-01-02T00:00:00Z"),
+        updatedAt: new Date("2024-01-02T00:00:00Z"),
+      });
+      const p3 = makePhoto({
+        createdAt: new Date("2024-01-03T00:00:00Z"),
+        updatedAt: new Date("2024-01-03T00:00:00Z"),
+      });
+      await repo.save(p1);
+      await repo.save(p2);
+      await repo.save(p3);
+
+      const result = await repo.findPaginated({ limit: 2, offset: 0 });
+      expect(result.data).toHaveLength(2);
+      expect(result.total).toBe(3);
+    });
+
+    it("returns total count of all photos not just the page", async () => {
+      const p1 = makePhoto({
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        updatedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+      const p2 = makePhoto({
+        createdAt: new Date("2024-01-02T00:00:00Z"),
+        updatedAt: new Date("2024-01-02T00:00:00Z"),
+      });
+      const p3 = makePhoto({
+        createdAt: new Date("2024-01-03T00:00:00Z"),
+        updatedAt: new Date("2024-01-03T00:00:00Z"),
+      });
+      const p4 = makePhoto({
+        createdAt: new Date("2024-01-04T00:00:00Z"),
+        updatedAt: new Date("2024-01-04T00:00:00Z"),
+      });
+      await repo.save(p1);
+      await repo.save(p2);
+      await repo.save(p3);
+      await repo.save(p4);
+
+      const result = await repo.findPaginated({ limit: 2, offset: 0 });
+      expect(result.data).toHaveLength(2);
+      expect(result.total).toBe(4);
+    });
+
+    it("results are ordered by createdAt descending (newest first)", async () => {
+      const p1 = makePhoto({
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        updatedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+      const p2 = makePhoto({
+        createdAt: new Date("2024-01-02T00:00:00Z"),
+        updatedAt: new Date("2024-01-02T00:00:00Z"),
+      });
+      const p3 = makePhoto({
+        createdAt: new Date("2024-01-03T00:00:00Z"),
+        updatedAt: new Date("2024-01-03T00:00:00Z"),
+      });
+      await repo.save(p1);
+      await repo.save(p2);
+      await repo.save(p3);
+
+      const result = await repo.findPaginated({ limit: 10, offset: 0 });
+      expect(result.data).toHaveLength(3);
+      expect(result.data[0].id).toBe(p3.id);
+      expect(result.data[1].id).toBe(p2.id);
+      expect(result.data[2].id).toBe(p1.id);
+    });
+
+    it("status filter returns only photos with matching status and correct filtered count", async () => {
+      const ready1 = makePhoto({
+        status: "ready",
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        updatedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+      const processing = makePhoto({
+        status: "processing",
+        createdAt: new Date("2024-01-02T00:00:00Z"),
+        updatedAt: new Date("2024-01-02T00:00:00Z"),
+      });
+      const ready2 = makePhoto({
+        status: "ready",
+        createdAt: new Date("2024-01-03T00:00:00Z"),
+        updatedAt: new Date("2024-01-03T00:00:00Z"),
+      });
+      await repo.save(ready1);
+      await repo.save(processing);
+      await repo.save(ready2);
+
+      const result = await repo.findPaginated({
+        limit: 10,
+        offset: 0,
+        status: "ready",
+      });
+      expect(result.data).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect(result.data[0].status).toBe("ready");
+      expect(result.data[1].status).toBe("ready");
+    });
+
+    it("returns empty data array and total=0 when no photos exist", async () => {
+      const result = await repo.findPaginated({ limit: 10, offset: 0 });
+      expect(result.data).toHaveLength(0);
+      expect(result.total).toBe(0);
+    });
+
+    it("offset beyond total returns empty data but correct total count", async () => {
+      const p1 = makePhoto({
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        updatedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+      const p2 = makePhoto({
+        createdAt: new Date("2024-01-02T00:00:00Z"),
+        updatedAt: new Date("2024-01-02T00:00:00Z"),
+      });
+      await repo.save(p1);
+      await repo.save(p2);
+
+      const result = await repo.findPaginated({ limit: 10, offset: 100 });
+      expect(result.data).toHaveLength(0);
+      expect(result.total).toBe(2);
+    });
+
+    it("status filter with no matching photos returns empty data and total=0", async () => {
+      const ready = makePhoto({
+        status: "ready",
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        updatedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+      await repo.save(ready);
+
+      const result = await repo.findPaginated({
+        limit: 10,
+        offset: 0,
+        status: "processing",
+      });
+      expect(result.data).toHaveLength(0);
+      expect(result.total).toBe(0);
+    });
+
+    it("albumFilter 'none' returns only photos not in any album", async () => {
+      const assigned = makePhoto({
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        updatedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+      const unassigned = makePhoto({
+        createdAt: new Date("2024-01-02T00:00:00Z"),
+        updatedAt: new Date("2024-01-02T00:00:00Z"),
+      });
+      await repo.save(assigned);
+      await repo.save(unassigned);
+
+      const album = makeAlbumValues();
+      testDb.insert(schema.albums).values(album).run();
+      await repo.addToAlbum(assigned.id, album.id);
+
+      const result = await repo.findPaginated({
+        limit: 10,
+        offset: 0,
+        albumFilter: "none",
+      });
+      expect(result.data).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(result.data[0].id).toBe(unassigned.id);
+    });
+
+    it("albumFilter 'none' returns all photos when none are in albums", async () => {
+      const p1 = makePhoto({
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        updatedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+      const p2 = makePhoto({
+        createdAt: new Date("2024-01-02T00:00:00Z"),
+        updatedAt: new Date("2024-01-02T00:00:00Z"),
+      });
+      await repo.save(p1);
+      await repo.save(p2);
+
+      const result = await repo.findPaginated({
+        limit: 10,
+        offset: 0,
+        albumFilter: "none",
+      });
+      expect(result.data).toHaveLength(2);
+      expect(result.total).toBe(2);
+    });
+
+    it("albumFilter 'none' returns empty when all photos are in albums", async () => {
+      const p1 = makePhoto({
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        updatedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+      await repo.save(p1);
+
+      const album = makeAlbumValues();
+      testDb.insert(schema.albums).values(album).run();
+      await repo.addToAlbum(p1.id, album.id);
+
+      const result = await repo.findPaginated({
+        limit: 10,
+        offset: 0,
+        albumFilter: "none",
+      });
+      expect(result.data).toHaveLength(0);
+      expect(result.total).toBe(0);
+    });
+
+    it("albumFilter 'none' excludes photo in multiple albums", async () => {
+      const multiAlbum = makePhoto({
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        updatedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+      const orphan = makePhoto({
+        createdAt: new Date("2024-01-02T00:00:00Z"),
+        updatedAt: new Date("2024-01-02T00:00:00Z"),
+      });
+      await repo.save(multiAlbum);
+      await repo.save(orphan);
+
+      const album1 = makeAlbumValues();
+      const album2 = makeAlbumValues();
+      testDb.insert(schema.albums).values(album1).run();
+      testDb.insert(schema.albums).values(album2).run();
+      await repo.addToAlbum(multiAlbum.id, album1.id);
+      await repo.addToAlbum(multiAlbum.id, album2.id);
+
+      const result = await repo.findPaginated({
+        limit: 10,
+        offset: 0,
+        albumFilter: "none",
+      });
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].id).toBe(orphan.id);
+    });
+
+    it("albumFilter 'none' combined with status filter narrows both", async () => {
+      const readyOrphan = makePhoto({
+        status: "ready",
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        updatedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+      const processingOrphan = makePhoto({
+        status: "processing",
+        createdAt: new Date("2024-01-02T00:00:00Z"),
+        updatedAt: new Date("2024-01-02T00:00:00Z"),
+      });
+      const readyAssigned = makePhoto({
+        status: "ready",
+        createdAt: new Date("2024-01-03T00:00:00Z"),
+        updatedAt: new Date("2024-01-03T00:00:00Z"),
+      });
+      await repo.save(readyOrphan);
+      await repo.save(processingOrphan);
+      await repo.save(readyAssigned);
+
+      const album = makeAlbumValues();
+      testDb.insert(schema.albums).values(album).run();
+      await repo.addToAlbum(readyAssigned.id, album.id);
+
+      const result = await repo.findPaginated({
+        limit: 10,
+        offset: 0,
+        status: "ready",
+        albumFilter: "none",
+      });
+      expect(result.data).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(result.data[0].id).toBe(readyOrphan.id);
+    });
+
+    it("albumFilter 'none' respects pagination limit and offset", async () => {
+      const album = makeAlbumValues();
+      testDb.insert(schema.albums).values(album).run();
+
+      const orphans = [];
+      for (let i = 0; i < 3; i++) {
+        const p = makePhoto({
+          createdAt: new Date(`2024-01-0${i + 1}T00:00:00Z`),
+          updatedAt: new Date(`2024-01-0${i + 1}T00:00:00Z`),
+        });
+        await repo.save(p);
+        orphans.push(p);
+      }
+      const assigned = makePhoto({
+        createdAt: new Date("2024-01-04T00:00:00Z"),
+        updatedAt: new Date("2024-01-04T00:00:00Z"),
+      });
+      await repo.save(assigned);
+      await repo.addToAlbum(assigned.id, album.id);
+
+      const result = await repo.findPaginated({
+        limit: 2,
+        offset: 0,
+        albumFilter: "none",
+      });
+      expect(result.data).toHaveLength(2);
+      expect(result.total).toBe(3);
+    });
+
+    it("omitting albumFilter returns all photos (default behavior)", async () => {
+      const assigned = makePhoto({
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        updatedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+      const unassigned = makePhoto({
+        createdAt: new Date("2024-01-02T00:00:00Z"),
+        updatedAt: new Date("2024-01-02T00:00:00Z"),
+      });
+      await repo.save(assigned);
+      await repo.save(unassigned);
+
+      const album = makeAlbumValues();
+      testDb.insert(schema.albums).values(album).run();
+      await repo.addToAlbum(assigned.id, album.id);
+
+      const result = await repo.findPaginated({
+        limit: 10,
+        offset: 0,
+      });
+      expect(result.data).toHaveLength(2);
+      expect(result.total).toBe(2);
+    });
+  });
 });

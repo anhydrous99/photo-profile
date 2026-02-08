@@ -1,7 +1,11 @@
-import { and, eq, like, lt, sql } from "drizzle-orm";
+import { and, eq, like, lt, desc, notExists, sql } from "drizzle-orm";
 import { db } from "../client";
 import { photos, photoAlbums, albums } from "../schema";
-import type { PhotoRepository } from "@/domain/repositories/PhotoRepository";
+import type {
+  PhotoRepository,
+  PaginatedResult,
+  PaginationOptions,
+} from "@/domain/repositories/PhotoRepository";
 import type { Photo, ExifData } from "@/domain/entities/Photo";
 import { logger } from "@/infrastructure/logging/logger";
 
@@ -18,6 +22,48 @@ export class SQLitePhotoRepository implements PhotoRepository {
   async findAll(): Promise<Photo[]> {
     const results = await db.select().from(photos);
     return results.map((row) => this.toDomain(row));
+  }
+
+  async findPaginated(
+    options: PaginationOptions,
+  ): Promise<PaginatedResult<Photo>> {
+    const conditions = [];
+
+    if (options.status) {
+      conditions.push(eq(photos.status, options.status));
+    }
+
+    if (options.albumFilter === "none") {
+      conditions.push(
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(photoAlbums)
+            .where(eq(photoAlbums.photoId, photos.id)),
+        ),
+      );
+    }
+
+    const condition = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [results, [{ count }]] = await Promise.all([
+      db
+        .select()
+        .from(photos)
+        .where(condition)
+        .orderBy(desc(photos.createdAt))
+        .limit(options.limit)
+        .offset(options.offset),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(photos)
+        .where(condition),
+    ]);
+
+    return {
+      data: results.map((row) => this.toDomain(row)),
+      total: count,
+    };
   }
 
   async findByAlbumId(albumId: string): Promise<Photo[]> {
