@@ -4,6 +4,7 @@ import { findOriginalFile } from "@/infrastructure/storage";
 import { imageQueue, enqueueImageProcessing } from "@/infrastructure/jobs";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
 import { logger } from "@/infrastructure/logging/logger";
+import { isValidUUID } from "@/infrastructure/validation";
 
 const photoRepository = new SQLitePhotoRepository();
 
@@ -37,6 +38,14 @@ export async function POST(_request: NextRequest, context: RouteContext) {
 
     // 2. Get photo ID
     const { id } = await context.params;
+
+    // 2.1 Validate photo ID format
+    if (!isValidUUID(id)) {
+      return NextResponse.json(
+        { error: "Invalid photo ID format" },
+        { status: 400 },
+      );
+    }
 
     // 3. Fetch photo
     const photo = await photoRepository.findById(id);

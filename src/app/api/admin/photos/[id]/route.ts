@@ -4,6 +4,7 @@ import { deletePhotoFiles } from "@/infrastructure/storage";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
+import { isValidUUID } from "@/infrastructure/validation";
 
 const photoRepository = new SQLitePhotoRepository();
 
@@ -33,6 +34,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     // 2. Get photo ID from route params
     const { id } = await context.params;
+
+    // 2.1 Validate photo ID format
+    if (!isValidUUID(id)) {
+      return NextResponse.json(
+        { error: "Invalid photo ID format" },
+        { status: 400 },
+      );
+    }
 
     // 3. Fetch existing photo
     const photo = await photoRepository.findById(id);
@@ -97,6 +106,14 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
 
     // 2. Get photo ID from route params
     const { id } = await context.params;
+
+    // 2.1 Validate photo ID format
+    if (!isValidUUID(id)) {
+      return NextResponse.json(
+        { error: "Invalid photo ID format" },
+        { status: 400 },
+      );
+    }
 
     // 3. Fetch existing photo
     const photo = await photoRepository.findById(id);

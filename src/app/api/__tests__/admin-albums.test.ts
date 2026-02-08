@@ -72,7 +72,7 @@ let photoCounter = 0;
 function makeAlbum(overrides: Partial<Album> = {}): Album {
   albumCounter++;
   return {
-    id: `test-album-${albumCounter}`,
+    id: crypto.randomUUID(),
     title: `Test Album ${albumCounter}`,
     description: null,
     tags: null,
@@ -102,7 +102,7 @@ function insertAlbum(album: Album) {
 
 function insertPhoto(id?: string) {
   photoCounter++;
-  const photoId = id ?? `test-photo-${photoCounter}`;
+  const photoId = id ?? crypto.randomUUID();
   testDb
     .insert(schema.photos)
     .values({
@@ -298,13 +298,14 @@ describe("Admin Album API Routes", () => {
     });
 
     it("returns 404 for non-existent album ID", async () => {
+      const nonExistentId = crypto.randomUUID();
       const req = makeJsonRequest(
-        "http://localhost/api/admin/albums/non-existent",
+        `http://localhost/api/admin/albums/${nonExistentId}`,
         "PATCH",
         { title: "Updated" },
       );
       const res = await PATCH(req, {
-        params: Promise.resolve({ id: "non-existent" }),
+        params: Promise.resolve({ id: nonExistentId }),
       });
 
       expect(res.status).toBe(404);
@@ -374,12 +375,13 @@ describe("Admin Album API Routes", () => {
     });
 
     it("returns 404 for non-existent album ID", async () => {
+      const nonExistentId = crypto.randomUUID();
       const req = makeJsonRequest(
-        "http://localhost/api/admin/albums/non-existent",
+        `http://localhost/api/admin/albums/${nonExistentId}`,
         "DELETE",
       );
       const res = await DELETE(req, {
-        params: Promise.resolve({ id: "non-existent" }),
+        params: Promise.resolve({ id: nonExistentId }),
       });
 
       expect(res.status).toBe(404);

@@ -77,7 +77,7 @@ let albumCounter = 0;
 function makePhoto(overrides: Partial<Photo> = {}): Photo {
   photoCounter++;
   return {
-    id: `test-photo-${photoCounter}`,
+    id: crypto.randomUUID(),
     title: null,
     description: null,
     originalFilename: "test.jpg",
@@ -95,7 +95,7 @@ function makePhoto(overrides: Partial<Photo> = {}): Photo {
 function makeAlbum(overrides: Partial<Album> = {}): Album {
   albumCounter++;
   return {
-    id: `test-album-${albumCounter}`,
+    id: crypto.randomUUID(),
     title: `Test Album ${albumCounter}`,
     description: null,
     tags: null,
@@ -180,13 +180,14 @@ describe("Admin Photo API Routes", () => {
     });
 
     it("returns 404 for non-existent photo ID", async () => {
+      const nonExistentId = crypto.randomUUID();
       const req = makeJsonRequest(
-        "http://localhost/api/admin/photos/non-existent",
+        `http://localhost/api/admin/photos/${nonExistentId}`,
         "PATCH",
         { description: "test" },
       );
       const res = await PATCH(req, {
-        params: Promise.resolve({ id: "non-existent" }),
+        params: Promise.resolve({ id: nonExistentId }),
       });
 
       expect(res.status).toBe(404);
@@ -252,12 +253,13 @@ describe("Admin Photo API Routes", () => {
     });
 
     it("returns 404 for non-existent photo ID", async () => {
+      const nonExistentId = crypto.randomUUID();
       const req = makeJsonRequest(
-        "http://localhost/api/admin/photos/non-existent",
+        `http://localhost/api/admin/photos/${nonExistentId}`,
         "DELETE",
       );
       const res = await DELETE(req, {
-        params: Promise.resolve({ id: "non-existent" }),
+        params: Promise.resolve({ id: nonExistentId }),
       });
 
       expect(res.status).toBe(404);
@@ -365,13 +367,14 @@ describe("Admin Photo API Routes", () => {
     });
 
     it("returns 404 for non-existent photo ID", async () => {
+      const nonExistentId = crypto.randomUUID();
       const req = makeJsonRequest(
-        "http://localhost/api/admin/photos/non-existent/albums",
+        `http://localhost/api/admin/photos/${nonExistentId}/albums`,
         "POST",
         { albumId: "some-album" },
       );
       const res = await AlbumPOST(req, {
-        params: Promise.resolve({ id: "non-existent" }),
+        params: Promise.resolve({ id: nonExistentId }),
       });
 
       expect(res.status).toBe(404);

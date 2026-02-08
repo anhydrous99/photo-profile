@@ -8,6 +8,7 @@ import { env } from "@/infrastructure/config/env";
  */
 export interface SessionPayload {
   isAdmin: true;
+  sessionId: string;
   expiresAt: Date;
 }
 
@@ -46,10 +47,16 @@ export async function decrypt(session: string): Promise<SessionPayload | null> {
 /**
  * Create new session and set cookie
  * Session expires in 8 hours per user decision
+ *
+ * Generates a unique session ID for each session to prevent session fixation attacks.
+ * Each login creates a completely new session with a fresh session ID.
  */
 export async function createSession(): Promise<void> {
+  // Generate unique session ID to prevent session fixation
+  const sessionId = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000);
-  const session = await encrypt({ isAdmin: true, expiresAt });
+
+  const session = await encrypt({ isAdmin: true, sessionId, expiresAt });
   const cookieStore = await cookies();
 
   cookieStore.set("session", session, {

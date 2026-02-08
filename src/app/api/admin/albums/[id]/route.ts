@@ -8,6 +8,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
+import { isValidUUID } from "@/infrastructure/validation";
 
 const albumRepository = new SQLiteAlbumRepository();
 const photoRepository = new SQLitePhotoRepository();
@@ -16,7 +17,11 @@ const updateAlbumSchema = z.object({
   title: z.string().min(1).max(100).optional(),
   description: z.string().max(500).nullable().optional(),
   tags: z.string().max(200).nullable().optional(),
-  coverPhotoId: z.string().nullable().optional(),
+  coverPhotoId: z
+    .string()
+    .uuid("Invalid cover photo ID format")
+    .nullable()
+    .optional(),
   isPublished: z.boolean().optional(),
 });
 
@@ -40,6 +45,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const { id } = await context.params;
+
+    // Validate album ID format
+    if (!isValidUUID(id)) {
+      return NextResponse.json(
+        { error: "Invalid album ID format" },
+        { status: 400 },
+      );
+    }
 
     // Fetch existing album
     const album = await albumRepository.findById(id);
@@ -111,6 +124,14 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
 
     const { id: albumId } = await context.params;
+
+    // Validate album ID format
+    if (!isValidUUID(albumId)) {
+      return NextResponse.json(
+        { error: "Invalid album ID format" },
+        { status: 400 },
+      );
+    }
 
     // Verify album exists
     const album = await albumRepository.findById(albumId);
