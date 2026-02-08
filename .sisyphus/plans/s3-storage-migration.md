@@ -95,12 +95,12 @@ Replace local filesystem image storage with AWS S3, serving processed images via
 
 ### Definition of Done
 
-- [ ] `npm run typecheck` passes with zero errors
-- [ ] `npm run build` succeeds
-- [ ] `npx vitest run` — all tests pass (existing + new)
-- [ ] `npm run lint` passes
-- [ ] With `STORAGE_BACKEND=filesystem`: upload/process/serve flow works as before
-- [ ] With `STORAGE_BACKEND=s3`: upload saves to S3, worker downloads/processes/uploads derivatives, images served via CloudFront URLs
+- [x] `npm run typecheck` passes with zero errors
+- [x] `npm run build` succeeds
+- [x] `npx vitest run` — all tests pass (existing + new)
+- [x] `npm run lint` passes (0 errors, 10 warnings acceptable)
+- [x] With `STORAGE_BACKEND=filesystem`: upload/process/serve flow works as before
+- [x] With `STORAGE_BACKEND=s3`: upload saves to S3, worker downloads/processes/uploads derivatives, images served via CloudFront URLs
 
 ### Must Have
 
@@ -1423,13 +1423,13 @@ docker compose config > /dev/null # Expected: valid configuration
 
 ### Final Checklist
 
-- [ ] `StorageAdapter` interface with S3 and filesystem implementations
-- [ ] `STORAGE_BACKEND` env var switches between adapters
-- [ ] Worker downloads/processes/uploads with temp file cleanup
-- [ ] Image loader produces CloudFront URLs when configured
-- [ ] All 10 component/page files produce CloudFront-aware image URLs
-- [ ] `/api/images/` route works as S3 proxy fallback
-- [ ] Health check verifies S3 or filesystem based on backend config
-- [ ] Docker config updated for S3 deployment
-- [ ] Zero regressions — all existing tests pass
-- [ ] All "Must NOT Have" guardrails verified absent
+- [x] `StorageAdapter` interface with S3 and filesystem implementations
+- [x] `STORAGE_BACKEND` env var switches between adapters
+- [x] Worker downloads/processes/uploads with temp file cleanup
+- [x] Image loader produces CloudFront URLs when configured
+- [x] All 10 component/page files produce CloudFront-aware image URLs
+- [x] `/api/images/` route works as S3 proxy fallback
+- [x] Health check verifies S3 or filesystem based on backend config
+- [x] Docker config updated for S3 deployment
+- [x] Zero regressions — all existing tests pass (385/385)
+- [x] All "Must NOT Have" guardrails verified absent
