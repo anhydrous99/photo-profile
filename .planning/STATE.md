@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Let the photos speak for themselves -- a clean, distraction-free experience where the photography is the focus
-**Current focus:** Phase 17 - Unit and Integration Testing
+**Current focus:** Phase 18 - Worker Resilience & Tech Debt
 
 ## Current Position
 
-Phase: 17 of 19 (Unit & Integration Testing)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-08 -- Completed 17-03-PLAN.md (Admin API Route Tests)
+Phase: 18 of 19 (Worker Resilience & Tech Debt)
+Plan: 1 of 3 in current phase (plans 1 and 3 complete, plan 2 pending)
+Status: In progress
+Last activity: 2026-02-08 -- Completed 18-01-PLAN.md (Worker Resilience)
 
-Progress: [█████░░░░░] 57% (8/14 plans)
+Progress: [███████░░░] 71% (10/14 plans)
 
 ## Performance Metrics
 
@@ -32,9 +32,9 @@ Progress: [█████░░░░░] 57% (8/14 plans)
 
 **v1.2 Velocity:**
 
-- Total plans completed: 8
+- Total plans completed: 9
 - Average duration: 3 min
-- Total execution time: 27 min
+- Total execution time: 28 min
 
 ## Accumulated Context
 
@@ -65,11 +65,10 @@ None.
 ### Blockers/Concerns
 
 - Docker not installed on development machine -- Redis service not tested (docker-compose.yml created and ready)
-- coverPhotoId FK constraint mismatch: schema says SET NULL, DB has NO ACTION (tracked as DEBT-01)
 - Pre-existing TS error in mocks.smoke.test.ts (Property 'get' does not exist on type 'Promise<ReadonlyRequestCookies>') -- does not affect builds
 
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 17-03-PLAN.md (Admin API Route Tests) -- Phase 17 complete
-Resume file: None
+Stopped at: Completed 18-03-PLAN.md (Tech Debt Cleanup) -- Phase 18 plans 1 and 2 still pending
+Resume file: .planning/phases/18-worker-resilience-tech-debt/18-01-PLAN.md
