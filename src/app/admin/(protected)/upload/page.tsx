@@ -88,7 +88,7 @@ export default function UploadPage() {
       const error = rejection.errors[0];
       const reason =
         error?.code === "file-too-large"
-          ? "exceeds 25MB limit"
+          ? "exceeds 100MB limit"
           : (error?.message ?? "rejected");
       return `${fileName}: ${reason}`;
     });

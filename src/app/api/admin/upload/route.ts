@@ -7,7 +7,7 @@ import type { Photo } from "@/domain/entities";
 
 const photoRepository = new SQLitePhotoRepository();
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const MULTIPART_OVERHEAD = 1 * 1024 * 1024; // 1MB
 
 /**
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     );
     if (contentLength > MAX_FILE_SIZE + MULTIPART_OVERHEAD) {
       return NextResponse.json(
-        { error: "File exceeds 25MB limit" },
+        { error: "File exceeds 100MB limit" },
         { status: 413 },
       );
     }
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     // Validate file size after parsing
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: "File exceeds 25MB limit" },
+        { error: "File exceeds 100MB limit" },
         { status: 413 },
       );
     }
