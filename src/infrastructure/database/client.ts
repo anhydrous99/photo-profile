@@ -40,7 +40,7 @@ export function initializeDatabase() {
           title TEXT NOT NULL,
           description TEXT,
           tags TEXT,
-          cover_photo_id TEXT REFERENCES photos(id),
+          cover_photo_id TEXT REFERENCES photos(id) ON DELETE SET NULL,
           sort_order INTEGER NOT NULL DEFAULT 0,
           is_published INTEGER NOT NULL DEFAULT 0,
           created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
@@ -124,7 +124,8 @@ export function initializeDatabase() {
         DROP TABLE _albums_old;
 
         -- Rebuild photo_albums to fix stale FK reference to _albums_old
-        -- (SQLite updates FK references in other tables during ALTER TABLE RENAME)
+        -- (SQLite does NOT update FK references in other tables during
+        --  ALTER TABLE RENAME when foreign_keys is OFF, so rebuild is required)
         DROP INDEX IF EXISTS photo_albums_photo_idx;
         DROP INDEX IF EXISTS photo_albums_album_idx;
         ALTER TABLE photo_albums RENAME TO _photo_albums_old;
