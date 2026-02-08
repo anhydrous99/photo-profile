@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { readFile, readdir, stat } from "fs/promises";
 import { join } from "path";
+import { createHash } from "crypto";
 import { env } from "@/infrastructure/config/env";
 import { logger } from "@/infrastructure/logging/logger";
 
@@ -59,14 +60,31 @@ async function findLargestDerivative(
   }
 }
 
+function generateETag(mtimeMs: number, size: number): string {
+  const hash = createHash("md5")
+    .update(`${mtimeMs}-${size}`)
+    .digest("hex")
+    .slice(0, 16);
+  return `"${hash}"`;
+}
+
 async function serveImage(
+  request: Request,
   filePath: string,
   mimeType: string,
 ): Promise<NextResponse> {
-  const [fileBuffer, fileStat] = await Promise.all([
-    readFile(filePath),
-    stat(filePath),
-  ]);
+  const fileStat = await stat(filePath);
+  const etag = generateETag(fileStat.mtimeMs, fileStat.size);
+
+  const ifNoneMatch = request.headers.get("if-none-match");
+  if (ifNoneMatch === etag) {
+    return new NextResponse(null, {
+      status: 304,
+      headers: { ETag: etag },
+    });
+  }
+
+  const fileBuffer = await readFile(filePath);
 
   return new NextResponse(fileBuffer, {
     status: 200,
@@ -74,12 +92,13 @@ async function serveImage(
       "Content-Type": mimeType,
       "Content-Length": fileStat.size.toString(),
       "Cache-Control": "public, max-age=31536000, immutable",
+      ETag: etag,
     },
   });
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ photoId: string; filename: string }> },
 ): Promise<NextResponse> {
   try {
@@ -98,7 +117,7 @@ export async function GET(
     const filePath = join(photoDir, filename);
 
     try {
-      return await serveImage(filePath, mimeType);
+      return await serveImage(request, filePath, mimeType);
     } catch (error) {
       // File not found - try falling back to largest available derivative
       if (
@@ -109,7 +128,11 @@ export async function GET(
         const fallback = await findLargestDerivative(photoDir, ext);
         if (fallback) {
           try {
-            return await serveImage(join(photoDir, fallback), mimeType);
+            return await serveImage(
+              request,
+              join(photoDir, fallback),
+              mimeType,
+            );
           } catch {
             // Fallback also failed, return 404
           }
