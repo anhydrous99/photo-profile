@@ -97,13 +97,13 @@ Plans:
 3. Photos stuck in "processing" status beyond a configurable time threshold are automatically detected and flagged
 4. Worker DB status updates are resilient to failures (either inside the processor function for BullMQ retry coverage, or with explicit retry logic)
 5. The albums.coverPhotoId foreign key has ON DELETE SET NULL behavior, the Drizzle schema matches the actual database, and stale/misleading code comments are fixed
-   **Plans**: TBD
+   **Plans:** 3 plans
 
 Plans:
 
-- [ ] 18-01: Worker resilience (processor refactor, stale detection, retry)
-- [ ] 18-02: Admin UI for stuck/failed photos (filtering, reprocess action)
-- [ ] 18-03: Tech debt cleanup (FK constraint, schema drift, stale comments)
+- [ ] 18-01-PLAN.md -- Worker resilience (in-processor DB updates, findByStatus/findStaleProcessing repo methods, findOriginalFile helper)
+- [ ] 18-02-PLAN.md -- Admin UI for stuck/failed photos (status filter dropdown, stale detection, reprocess API endpoint)
+- [ ] 18-03-PLAN.md -- Tech debt cleanup (FK constraint SET NULL in initial CREATE, schema drift fix, stale comment correction)
 
 #### Phase 19: Performance & Production
 
