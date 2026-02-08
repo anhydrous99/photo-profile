@@ -27,11 +27,32 @@ const connection = new IORedis(env.REDIS_URL, {
 sharp.cache(false);
 
 /**
+ * Retry helper for DB updates that may fail transiently.
+ * Used in event handlers where BullMQ retry does not apply.
+ */
+async function retryDbUpdate(
+  fn: () => Promise<void>,
+  attempts = 3,
+): Promise<void> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await fn();
+      return;
+    } catch (err) {
+      console.error(`[ImageWorker] DB update retry ${i + 1}/${attempts}:`, err);
+      if (i < attempts - 1)
+        await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+}
+
+/**
  * BullMQ worker for processing image jobs
  *
  * Responsibilities:
  * - Picks up jobs from the "image-processing" queue
  * - Generates derivative images using imageService
+ * - Updates photo status to "ready" in DB (covered by BullMQ 3-attempt retry)
  * - Reports progress during processing
  * - Handles errors gracefully
  *
@@ -76,6 +97,23 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
       `[ImageWorker] Generated ${derivatives.length} files + blur placeholder + EXIF + dimensions (${width}x${height}) for photo ${photoId}`,
     );
 
+    // Update photo status to "ready" in DB
+    // This runs inside the processor function, so BullMQ's 3-attempt retry covers it
+    const repository = new SQLitePhotoRepository();
+    const photo = await repository.findById(photoId);
+    if (photo) {
+      photo.status = "ready";
+      photo.blurDataUrl = blurDataUrl;
+      photo.exifData = exifData;
+      photo.width = width;
+      photo.height = height;
+      photo.updatedAt = new Date();
+      await repository.save(photo);
+      console.log(`[ImageWorker] Updated photo ${photoId} to 'ready'`);
+    } else {
+      console.error(`[ImageWorker] Photo not found: ${photoId}`);
+    }
+
     return { photoId, derivatives, blurDataUrl, exifData, width, height };
   },
   {
@@ -90,43 +128,25 @@ imageWorker.on("error", (err) => {
   console.error("[ImageWorker] Error:", err);
 });
 
+// Failed handler fires only after ALL BullMQ retry attempts are exhausted (final failure)
+// Uses retryDbUpdate wrapper since this is outside the processor function
 imageWorker.on("failed", async (job, err) => {
   console.error(`[ImageWorker] Job ${job?.id} failed:`, err.message);
   if (job?.data.photoId) {
-    const repository = new SQLitePhotoRepository();
-    const photo = await repository.findById(job.data.photoId);
-    if (photo) {
-      photo.status = "error";
-      await repository.save(photo);
-    }
+    await retryDbUpdate(async () => {
+      const repository = new SQLitePhotoRepository();
+      const photo = await repository.findById(job!.data.photoId);
+      if (photo) {
+        photo.status = "error";
+        await repository.save(photo);
+      }
+    });
   }
 });
 
+// Completed handler - logging only (DB update moved into processor function)
 imageWorker.on("completed", async (job, result) => {
   console.log(
     `[ImageWorker] Job ${job.id} completed: ${result.derivatives.length} files`,
   );
-  try {
-    console.log(
-      `[ImageWorker] Updating photo ${result.photoId} status to 'ready'`,
-    );
-    const repository = new SQLitePhotoRepository();
-    const photo = await repository.findById(result.photoId);
-    console.log(`[ImageWorker] Found photo:`, photo);
-    if (photo) {
-      photo.status = "ready";
-      photo.blurDataUrl = result.blurDataUrl;
-      photo.exifData = result.exifData;
-      photo.width = result.width;
-      photo.height = result.height;
-      await repository.save(photo);
-      console.log(
-        `[ImageWorker] Successfully updated photo ${result.photoId} to 'ready' with blur placeholder, EXIF, and dimensions`,
-      );
-    } else {
-      console.error(`[ImageWorker] Photo not found: ${result.photoId}`);
-    }
-  } catch (err) {
-    console.error(`[ImageWorker] Error updating status:`, err);
-  }
 });
