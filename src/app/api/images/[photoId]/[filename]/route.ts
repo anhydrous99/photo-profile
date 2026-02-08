@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { readFile, readdir, stat } from "fs/promises";
-import { join } from "path";
 import { createHash } from "crypto";
-import { env } from "@/infrastructure/config/env";
+import { getStorageAdapter } from "@/infrastructure/storage";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
 
@@ -18,13 +16,16 @@ function getExtension(filename: string): string {
 }
 
 function isValidFilename(filename: string): boolean {
-  // Reject directory traversal attempts
   if (filename.includes("..") || filename.includes("/")) {
     return false;
   }
-  // Validate extension is supported
   const ext = getExtension(filename);
   return ext in MIME_TYPES;
+}
+
+function isFileNotFoundError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.message.startsWith("File not found");
 }
 
 /**
@@ -37,45 +38,45 @@ function isValidFilename(filename: string): boolean {
  * This function falls back to the largest available file of the same format.
  */
 async function findLargestDerivative(
-  photoDir: string,
+  prefix: string,
   ext: string,
 ): Promise<string | null> {
   try {
-    const files = await readdir(photoDir);
-    const matching = files
-      .filter((f) => f.endsWith(ext))
-      .map((f) => {
-        const widthMatch = f.match(/^(\d+)w\./);
+    const adapter = getStorageAdapter();
+    const keys = await adapter.listFiles(prefix);
+    const matching = keys
+      .filter((k) => k.endsWith(ext))
+      .map((k) => {
+        const filename = k.split("/").pop() ?? "";
+        const widthMatch = filename.match(/^(\d+)w\./);
         return widthMatch
-          ? { file: f, width: parseInt(widthMatch[1], 10) }
+          ? { key: k, width: parseInt(widthMatch[1], 10) }
           : null;
       })
       .filter(
-        (entry): entry is { file: string; width: number } => entry !== null,
+        (entry): entry is { key: string; width: number } => entry !== null,
       )
       .sort((a, b) => b.width - a.width);
 
-    return matching.length > 0 ? matching[0].file : null;
+    return matching.length > 0 ? matching[0].key : null;
   } catch {
     return null;
   }
 }
 
-function generateETag(mtimeMs: number, size: number): string {
-  const hash = createHash("md5")
-    .update(`${mtimeMs}-${size}`)
-    .digest("hex")
-    .slice(0, 16);
+function generateContentETag(buffer: Buffer): string {
+  const hash = createHash("md5").update(buffer).digest("hex").slice(0, 16);
   return `"${hash}"`;
 }
 
 async function serveImage(
   request: Request,
-  filePath: string,
+  key: string,
   mimeType: string,
 ): Promise<NextResponse> {
-  const fileStat = await stat(filePath);
-  const etag = generateETag(fileStat.mtimeMs, fileStat.size);
+  const adapter = getStorageAdapter();
+  const fileBuffer = await adapter.getFile(key);
+  const etag = generateContentETag(fileBuffer);
 
   const ifNoneMatch = request.headers.get("if-none-match");
   if (ifNoneMatch === etag) {
@@ -85,13 +86,11 @@ async function serveImage(
     });
   }
 
-  const fileBuffer = await readFile(filePath);
-
-  return new NextResponse(fileBuffer, {
+  return new NextResponse(new Uint8Array(fileBuffer), {
     status: 200,
     headers: {
       "Content-Type": mimeType,
-      "Content-Length": fileStat.size.toString(),
+      "Content-Length": fileBuffer.length.toString(),
       "Cache-Control": "public, max-age=31536000, immutable",
       ETag: etag,
     },
@@ -105,14 +104,12 @@ export async function GET(
   try {
     const { photoId, filename } = await params;
 
-    // Validate photoId to prevent path traversal attacks
     if (!isValidUUID(photoId)) {
       return new NextResponse("Invalid photo ID format", {
         status: 400,
       });
     }
 
-    // Validate filename to prevent directory traversal
     if (!isValidFilename(filename)) {
       return new NextResponse("Invalid filename or unsupported format", {
         status: 400,
@@ -121,33 +118,23 @@ export async function GET(
 
     const ext = getExtension(filename);
     const mimeType = MIME_TYPES[ext];
-    const photoDir = join(env.STORAGE_PATH, "processed", photoId);
-    const filePath = join(photoDir, filename);
+    const key = `processed/${photoId}/${filename}`;
+    const prefix = `processed/${photoId}/`;
 
     try {
-      return await serveImage(request, filePath, mimeType);
+      return await serveImage(request, key, mimeType);
     } catch (error) {
-      // File not found - try falling back to largest available derivative
-      if (
-        error instanceof Error &&
-        "code" in error &&
-        (error as NodeJS.ErrnoException).code === "ENOENT"
-      ) {
-        const fallback = await findLargestDerivative(photoDir, ext);
-        if (fallback) {
+      if (isFileNotFoundError(error)) {
+        const fallbackKey = await findLargestDerivative(prefix, ext);
+        if (fallbackKey) {
           try {
-            return await serveImage(
-              request,
-              join(photoDir, fallback),
-              mimeType,
-            );
+            return await serveImage(request, fallbackKey, mimeType);
           } catch {
-            // Fallback also failed, return 404
+            /* empty — fall through to 404 */
           }
         }
         return new NextResponse("Image not found", { status: 404 });
       }
-      // Non-ENOENT error - log and return 500
       throw error;
     }
   } catch (error) {
