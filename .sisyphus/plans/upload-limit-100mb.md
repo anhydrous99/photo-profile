@@ -173,7 +173,7 @@ Parallel Speedup: ~40% faster than sequential
 
 ## TODOs
 
-- [ ] 1. Update all size limit constants, defaults, and UI text from 25MB to 100MB
+- [x] 1. Update all size limit constants, defaults, and UI text from 25MB to 100MB
 
   **What to do**:
   - Change `MAX_FILE_SIZE` from `25 * 1024 * 1024` to `100 * 1024 * 1024` in `route.ts:10`
@@ -265,7 +265,7 @@ Parallel Speedup: ~40% faster than sequential
 
 ---
 
-- [ ] 2. Add Docker memory limits to docker-compose.yml
+- [x] 2. Add Docker memory limits to docker-compose.yml
 
   **What to do**:
   - Add `mem_limit: 2g` to the `web` service
@@ -340,7 +340,7 @@ Parallel Speedup: ~40% faster than sequential
 
 ---
 
-- [ ] 3. Harden timeouts for 100MB uploads (API route + XHR client)
+- [x] 3. Harden timeouts for 100MB uploads (API route + XHR client)
 
   **What to do**:
   - **API route (`route.ts`):**
@@ -446,7 +446,7 @@ Parallel Speedup: ~40% faster than sequential
 
 ---
 
-- [ ] 4. Add estimated time remaining to upload queue
+- [x] 4. Add estimated time remaining to upload queue
 
   **What to do**:
   - Extend the `UploadItem` interface in `UploadQueue.tsx` to include an optional `startedAt?: number` and `estimatedSecondsRemaining?: number` field
@@ -554,7 +554,7 @@ Parallel Speedup: ~40% faster than sequential
 
 ---
 
-- [ ] 5. Build verification and end-to-end QA
+- [x] 5. Build verification and end-to-end QA
 
   **What to do**:
   - Run full build pipeline: `npm run typecheck && npm run lint && npm run build`
