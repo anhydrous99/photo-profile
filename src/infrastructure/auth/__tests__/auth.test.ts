@@ -14,6 +14,7 @@ describe("Session", () => {
   it("encrypt returns a JWT with 3 dot-separated parts", async () => {
     const token = await encrypt({
       isAdmin: true,
+      sessionId: crypto.randomUUID(),
       expiresAt: new Date(Date.now() + 3600000),
     });
     expect(token).toMatch(/^eyJ/);
@@ -23,6 +24,7 @@ describe("Session", () => {
   it("decrypt verifies a valid token and returns payload", async () => {
     const token = await encrypt({
       isAdmin: true,
+      sessionId: crypto.randomUUID(),
       expiresAt: new Date(Date.now() + 3600000),
     });
     const result = await decrypt(token);
@@ -33,6 +35,7 @@ describe("Session", () => {
   it("decrypt returns null for tampered token", async () => {
     const token = await encrypt({
       isAdmin: true,
+      sessionId: crypto.randomUUID(),
       expiresAt: new Date(Date.now() + 3600000),
     });
     const tampered = token.slice(0, -5) + "XXXXX";
@@ -62,7 +65,11 @@ describe("Session", () => {
 
   it("encrypt/decrypt round-trip preserves expiresAt field", async () => {
     const expiresAt = new Date(Date.now() + 3600000);
-    const token = await encrypt({ isAdmin: true, expiresAt });
+    const token = await encrypt({
+      isAdmin: true,
+      sessionId: crypto.randomUUID(),
+      expiresAt,
+    });
     const result = await decrypt(token);
     expect(result).not.toBeNull();
     // jose serializes Date to ISO string in JWT payload
