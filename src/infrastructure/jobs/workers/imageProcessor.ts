@@ -1,6 +1,6 @@
-// Environment variables loaded by worker.ts entry point
 import { Worker, Job } from "bullmq";
 import path from "path";
+import fs from "fs/promises";
 import IORedis from "ioredis";
 import sharp from "sharp";
 import { env } from "@/infrastructure/config/env";
@@ -11,6 +11,7 @@ import {
 } from "@/infrastructure/services/imageService";
 import { extractExifData } from "@/infrastructure/services/exifService";
 import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
+import { getStorageAdapter } from "@/infrastructure/storage";
 import { ImageJobData, ImageJobResult } from "../queues";
 
 /**
@@ -70,7 +71,9 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
   "image-processing",
   async (job: Job<ImageJobData>) => {
     const { photoId, originalKey } = job.data;
-    const outputDir = path.join(env.STORAGE_PATH, "processed", photoId);
+    const tempDir = `/tmp/photo-worker-${photoId}-${job.attemptsMade}`;
+    const originalFilename = path.basename(originalKey);
+    const tempOriginalPath = path.join(tempDir, originalFilename);
 
     logger.info(`Processing job ${job.id} for photo ${photoId}`, {
       component: "image-worker",
@@ -78,67 +81,96 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
       photoId,
     });
 
-    // Update progress - starting
-    await job.updateProgress(10);
+    try {
+      await fs.mkdir(tempDir, { recursive: true });
 
-    // Generate all derivatives (WebP + AVIF at each size)
-    const derivatives = await generateDerivatives(originalKey, outputDir);
+      const adapter = getStorageAdapter();
+      const originalBuffer = await adapter.getFile(originalKey);
+      await fs.writeFile(tempOriginalPath, originalBuffer);
 
-    // Update progress - derivatives done
-    await job.updateProgress(80);
+      await job.updateProgress(10);
 
-    // Get post-rotation dimensions for accurate srcSet
-    const rotatedMeta = await sharp(originalKey).rotate().metadata();
-    const width = rotatedMeta.width!;
-    const height = rotatedMeta.height!;
+      const derivatives = await generateDerivatives(tempOriginalPath, tempDir);
 
-    // Extract EXIF metadata from original image
-    const exifData = await extractExifData(originalKey);
+      await job.updateProgress(80);
 
-    // Update progress - EXIF done
-    await job.updateProgress(90);
+      const rotatedMeta = await sharp(tempOriginalPath).rotate().metadata();
+      const width = rotatedMeta.width!;
+      const height = rotatedMeta.height!;
 
-    // Generate blur placeholder from original image
-    const blurDataUrl = await generateBlurPlaceholder(originalKey);
+      const exifData = await extractExifData(tempOriginalPath);
 
-    // Update progress - complete
-    await job.updateProgress(100);
+      await job.updateProgress(90);
 
-    logger.info(
-      `Generated ${derivatives.length} files + blur placeholder + EXIF + dimensions (${width}x${height}) for photo ${photoId}`,
-      {
-        component: "image-worker",
-        photoId,
-        derivativeCount: derivatives.length,
-        width,
-        height,
-      },
-    );
+      const blurDataUrl = await generateBlurPlaceholder(tempOriginalPath);
 
-    // Update photo status to "ready" in DB
-    // This runs inside the processor function, so BullMQ's 3-attempt retry covers it
-    const repository = new SQLitePhotoRepository();
-    const photo = await repository.findById(photoId);
-    if (photo) {
-      photo.status = "ready";
-      photo.blurDataUrl = blurDataUrl;
-      photo.exifData = exifData;
-      photo.width = width;
-      photo.height = height;
-      photo.updatedAt = new Date();
-      await repository.save(photo);
-      logger.info(`Updated photo ${photoId} to 'ready'`, {
-        component: "image-worker",
-        photoId,
-      });
-    } else {
-      logger.error(`Photo not found: ${photoId}`, {
-        component: "image-worker",
-        photoId,
-      });
+      const CONTENT_TYPES: Record<string, string> = {
+        ".webp": "image/webp",
+        ".avif": "image/avif",
+      };
+
+      const entries = await fs.readdir(tempDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isFile()) continue;
+        if (entry.name.startsWith("original")) continue;
+
+        const ext = path.extname(entry.name);
+        const contentType = CONTENT_TYPES[ext];
+        if (!contentType) continue;
+
+        const fileBuffer = await fs.readFile(path.join(tempDir, entry.name));
+        await adapter.saveFile(
+          `processed/${photoId}/${entry.name}`,
+          fileBuffer,
+          contentType,
+        );
+      }
+
+      await job.updateProgress(100);
+
+      logger.info(
+        `Generated ${derivatives.length} files + blur placeholder + EXIF + dimensions (${width}x${height}) for photo ${photoId}`,
+        {
+          component: "image-worker",
+          photoId,
+          derivativeCount: derivatives.length,
+          width,
+          height,
+        },
+      );
+
+      const repository = new SQLitePhotoRepository();
+      const photo = await repository.findById(photoId);
+      if (photo) {
+        photo.status = "ready";
+        photo.blurDataUrl = blurDataUrl;
+        photo.exifData = exifData;
+        photo.width = width;
+        photo.height = height;
+        photo.updatedAt = new Date();
+        await repository.save(photo);
+        logger.info(`Updated photo ${photoId} to 'ready'`, {
+          component: "image-worker",
+          photoId,
+        });
+      } else {
+        logger.error(`Photo not found: ${photoId}`, {
+          component: "image-worker",
+          photoId,
+        });
+      }
+
+      return { photoId, derivatives, blurDataUrl, exifData, width, height };
+    } finally {
+      try {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      } catch {
+        logger.warn(`Failed to clean up temp dir: ${tempDir}`, {
+          component: "image-worker",
+          photoId,
+        });
+      }
     }
-
-    return { photoId, derivatives, blurDataUrl, exifData, width, height };
   },
   {
     connection,

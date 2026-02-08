@@ -32,17 +32,37 @@ vi.mock("@/infrastructure/database/client", () => ({
 
 vi.mock("@/infrastructure/storage", () => ({
   deletePhotoFiles: vi.fn().mockResolvedValue(undefined),
-  saveOriginalFile: vi.fn().mockResolvedValue("/tmp/test/original.jpg"),
+  saveOriginalFile: vi
+    .fn()
+    .mockImplementation(
+      (photoId: string) => `originals/${photoId}/original.jpg`,
+    ),
+  findOriginalFile: vi
+    .fn()
+    .mockImplementation(
+      (photoId: string) => `originals/${photoId}/original.jpg`,
+    ),
 }));
 
 vi.mock("@/infrastructure/jobs", () => ({
   enqueueImageProcessing: vi.fn().mockResolvedValue("mock-job-id"),
+  imageQueue: {
+    getJob: vi.fn().mockResolvedValue(null),
+  },
 }));
 
 // ---- Imports (after mocks) ----
 
 import { verifySession } from "@/infrastructure/auth";
+import {
+  deletePhotoFiles,
+  saveOriginalFile,
+  findOriginalFile,
+} from "@/infrastructure/storage";
+import { enqueueImageProcessing } from "@/infrastructure/jobs";
 import { PATCH, DELETE } from "@/app/api/admin/photos/[id]/route";
+import { POST as UploadPOST } from "@/app/api/admin/upload/route";
+import { POST as ReprocessPOST } from "@/app/api/admin/photos/[id]/reprocess/route";
 import {
   GET as AlbumGET,
   POST as AlbumPOST,
@@ -281,6 +301,21 @@ describe("Admin Photo API Routes", () => {
 
       expect(res.status).toBe(204);
     });
+
+    it("calls deletePhotoFiles with correct photo ID", async () => {
+      const photo = makePhoto();
+      await insertPhoto(photo);
+
+      const req = makeJsonRequest(
+        `http://localhost/api/admin/photos/${photo.id}`,
+        "DELETE",
+      );
+      await DELETE(req, {
+        params: Promise.resolve({ id: photo.id }),
+      });
+
+      expect(deletePhotoFiles).toHaveBeenCalledWith(photo.id);
+    });
   });
 
   // ---- GET /api/admin/photos/[id]/albums ----
@@ -445,6 +480,202 @@ describe("Admin Photo API Routes", () => {
       });
 
       expect(res.status).toBe(204);
+    });
+  });
+
+  // ---- POST /api/admin/upload ----
+
+  describe("POST /api/admin/upload", () => {
+    function makeUploadRequest(file?: File): NextRequest {
+      const formData = new FormData();
+      if (file) {
+        formData.append("file", file);
+      }
+      return new NextRequest("http://localhost/api/admin/upload", {
+        method: "POST",
+        body: formData,
+      });
+    }
+
+    it("returns 401 when unauthenticated", async () => {
+      vi.mocked(verifySession).mockResolvedValue(null);
+
+      const file = new File(["test"], "photo.jpg", { type: "image/jpeg" });
+      const req = makeUploadRequest(file);
+      const res = await UploadPOST(req);
+
+      expect(res.status).toBe(401);
+      const body = await res.json();
+      expect(body.error).toBe("Unauthorized");
+    });
+
+    it("returns 400 when no file provided", async () => {
+      const req = makeUploadRequest();
+      const res = await UploadPOST(req);
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("No file provided");
+    });
+
+    it("returns 400 for invalid file type", async () => {
+      const file = new File(["test"], "document.pdf", {
+        type: "application/pdf",
+      });
+      const req = makeUploadRequest(file);
+      const res = await UploadPOST(req);
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("Invalid file type");
+    });
+
+    it("returns 201 and calls saveOriginalFile with storage key format", async () => {
+      const file = new File(["test-image-data"], "photo.jpg", {
+        type: "image/jpeg",
+      });
+      const req = makeUploadRequest(file);
+      const res = await UploadPOST(req);
+
+      expect(res.status).toBe(201);
+      const body = await res.json();
+      expect(body.photoId).toBeDefined();
+      expect(body.status).toBe("processing");
+
+      expect(saveOriginalFile).toHaveBeenCalledWith(
+        body.photoId,
+        expect.any(File),
+      );
+    });
+
+    it("passes storage key to enqueueImageProcessing", async () => {
+      const file = new File(["test-image-data"], "photo.jpg", {
+        type: "image/jpeg",
+      });
+      const req = makeUploadRequest(file);
+      const res = await UploadPOST(req);
+
+      expect(res.status).toBe(201);
+      const body = await res.json();
+
+      const expectedKey = `originals/${body.photoId}/original.jpg`;
+      expect(enqueueImageProcessing).toHaveBeenCalledWith(
+        body.photoId,
+        expectedKey,
+      );
+    });
+  });
+
+  // ---- POST /api/admin/photos/[id]/reprocess ----
+
+  describe("POST /api/admin/photos/[id]/reprocess", () => {
+    it("returns 401 when unauthenticated", async () => {
+      vi.mocked(verifySession).mockResolvedValue(null);
+
+      const req = makeJsonRequest(
+        "http://localhost/api/admin/photos/some-id/reprocess",
+        "POST",
+      );
+      const res = await ReprocessPOST(req, {
+        params: Promise.resolve({ id: "some-id" }),
+      });
+
+      expect(res.status).toBe(401);
+      const body = await res.json();
+      expect(body.error).toBe("Unauthorized");
+    });
+
+    it("returns 404 for non-existent photo", async () => {
+      const nonExistentId = crypto.randomUUID();
+      const req = makeJsonRequest(
+        `http://localhost/api/admin/photos/${nonExistentId}/reprocess`,
+        "POST",
+      );
+      const res = await ReprocessPOST(req, {
+        params: Promise.resolve({ id: nonExistentId }),
+      });
+
+      expect(res.status).toBe(404);
+      const body = await res.json();
+      expect(body.error).toBe("Photo not found");
+    });
+
+    it("returns 400 for already-processed photo", async () => {
+      const photo = makePhoto({ status: "ready" });
+      await insertPhoto(photo);
+
+      const req = makeJsonRequest(
+        `http://localhost/api/admin/photos/${photo.id}/reprocess`,
+        "POST",
+      );
+      const res = await ReprocessPOST(req, {
+        params: Promise.resolve({ id: photo.id }),
+      });
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Photo is already processed");
+    });
+
+    it("returns 404 when original file not found", async () => {
+      const photo = makePhoto({ status: "error" });
+      await insertPhoto(photo);
+
+      vi.mocked(findOriginalFile).mockResolvedValueOnce(null);
+
+      const req = makeJsonRequest(
+        `http://localhost/api/admin/photos/${photo.id}/reprocess`,
+        "POST",
+      );
+      const res = await ReprocessPOST(req, {
+        params: Promise.resolve({ id: photo.id }),
+      });
+
+      expect(res.status).toBe(404);
+      const body = await res.json();
+      expect(body.error).toBe("Original file not found");
+    });
+
+    it("calls findOriginalFile and passes key to enqueueImageProcessing", async () => {
+      const photo = makePhoto({ status: "error" });
+      await insertPhoto(photo);
+
+      const req = makeJsonRequest(
+        `http://localhost/api/admin/photos/${photo.id}/reprocess`,
+        "POST",
+      );
+      const res = await ReprocessPOST(req, {
+        params: Promise.resolve({ id: photo.id }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.id).toBe(photo.id);
+      expect(body.status).toBe("processing");
+
+      expect(findOriginalFile).toHaveBeenCalledWith(photo.id);
+      const expectedKey = `originals/${photo.id}/original.jpg`;
+      expect(enqueueImageProcessing).toHaveBeenCalledWith(
+        photo.id,
+        expectedKey,
+      );
+    });
+
+    it("reprocesses stale processing photos", async () => {
+      const photo = makePhoto({ status: "processing" });
+      await insertPhoto(photo);
+
+      const req = makeJsonRequest(
+        `http://localhost/api/admin/photos/${photo.id}/reprocess`,
+        "POST",
+      );
+      const res = await ReprocessPOST(req, {
+        params: Promise.resolve({ id: photo.id }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.status).toBe("processing");
     });
   });
 });

@@ -32,7 +32,11 @@ vi.mock("@/infrastructure/database/client", () => ({
 
 vi.mock("@/infrastructure/storage", () => ({
   deletePhotoFiles: vi.fn().mockResolvedValue(undefined),
-  saveOriginalFile: vi.fn().mockResolvedValue("/tmp/test/original.jpg"),
+  saveOriginalFile: vi
+    .fn()
+    .mockImplementation(
+      (photoId: string) => `originals/${photoId}/original.jpg`,
+    ),
 }));
 
 vi.mock("@/infrastructure/jobs", () => ({
@@ -42,6 +46,7 @@ vi.mock("@/infrastructure/jobs", () => ({
 // ---- Imports (after mocks) ----
 
 import { verifySession } from "@/infrastructure/auth";
+import { deletePhotoFiles } from "@/infrastructure/storage";
 import { GET, POST } from "@/app/api/admin/albums/route";
 import { PATCH, DELETE } from "@/app/api/admin/albums/[id]/route";
 import { NextRequest } from "next/server";
@@ -128,6 +133,7 @@ describe("Admin Album API Routes", () => {
   beforeEach(() => {
     albumCounter = 0;
     photoCounter = 0;
+    vi.clearAllMocks();
     const { db, sqlite } = createTestDb();
     testDb = db;
     testSqlite = sqlite;
@@ -409,7 +415,6 @@ describe("Admin Album API Routes", () => {
       const album = makeAlbum();
       insertAlbum(album);
 
-      // Insert photos and associate them with album
       const photoId1 = insertPhoto();
       const photoId2 = insertPhoto();
 
@@ -432,6 +437,58 @@ describe("Admin Album API Routes", () => {
       });
 
       expect(res.status).toBe(204);
+    });
+
+    it("calls deletePhotoFiles for each photo when cascade deleting", async () => {
+      const album = makeAlbum();
+      insertAlbum(album);
+
+      const photoId1 = insertPhoto();
+      const photoId2 = insertPhoto();
+
+      testDb
+        .insert(schema.photoAlbums)
+        .values({ photoId: photoId1, albumId: album.id, sortOrder: 0 })
+        .run();
+      testDb
+        .insert(schema.photoAlbums)
+        .values({ photoId: photoId2, albumId: album.id, sortOrder: 1 })
+        .run();
+
+      const req = makeJsonRequest(
+        `http://localhost/api/admin/albums/${album.id}`,
+        "DELETE",
+        { deletePhotos: true },
+      );
+      await DELETE(req, {
+        params: Promise.resolve({ id: album.id }),
+      });
+
+      expect(deletePhotoFiles).toHaveBeenCalledTimes(2);
+      expect(deletePhotoFiles).toHaveBeenCalledWith(photoId1);
+      expect(deletePhotoFiles).toHaveBeenCalledWith(photoId2);
+    });
+
+    it("does not call deletePhotoFiles when deletePhotos is false", async () => {
+      const album = makeAlbum();
+      insertAlbum(album);
+
+      const photoId1 = insertPhoto();
+      testDb
+        .insert(schema.photoAlbums)
+        .values({ photoId: photoId1, albumId: album.id, sortOrder: 0 })
+        .run();
+
+      const req = makeJsonRequest(
+        `http://localhost/api/admin/albums/${album.id}`,
+        "DELETE",
+        { deletePhotos: false },
+      );
+      await DELETE(req, {
+        params: Promise.resolve({ id: album.id }),
+      });
+
+      expect(deletePhotoFiles).not.toHaveBeenCalled();
     });
   });
 });
