@@ -117,13 +117,13 @@ Plans:
 3. GET /api/health returns 200 when the database and storage are accessible, and a non-200 status when either is unavailable
 4. Application logging uses a structured utility with log levels and JSON output instead of raw console.log calls
 5. At least one targeted optimization (informed by measurement data) is applied and its impact is measured against the baseline
-   **Plans**: TBD
+   **Plans:** 3 plans
 
 Plans:
 
-- [ ] 19-01: Performance baselines and bundle analysis
-- [ ] 19-02: Health check endpoint and structured logging
-- [ ] 19-03: Targeted optimizations based on measurement data
+- [ ] 19-01-PLAN.md -- Bundle analysis configuration and Lighthouse baseline measurement infrastructure
+- [ ] 19-02-PLAN.md -- Health check endpoint, structured logging utility, and console.\* migration
+- [ ] 19-03-PLAN.md -- Targeted optimizations (SQLite WAL mode, image ETag/304) with documented justification
 
 ## Progress
 
