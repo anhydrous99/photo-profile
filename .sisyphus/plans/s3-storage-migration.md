@@ -791,7 +791,7 @@ Critical Path: Task 1 → Task 4 → Task 8 → Task 14
 
 ---
 
-- [ ] 8. Refactor worker for S3 download→process→upload flow
+- [x] 8. Refactor worker for S3 download→process→upload flow
 
   **What to do**:
   - **RED**: Write comprehensive worker tests:
@@ -896,7 +896,7 @@ Critical Path: Task 1 → Task 4 → Task 8 → Task 14
 
 ---
 
-- [ ] 9. Update upload and delete API routes to use storage adapter
+- [x] 9. Update upload and delete API routes to use storage adapter
 
   **What to do**:
   - Update `src/app/api/admin/upload/route.ts`:
@@ -973,7 +973,7 @@ Critical Path: Task 1 → Task 4 → Task 8 → Task 14
 
 ---
 
-- [ ] 10. Update image serving route (S3 fallback proxy)
+- [x] 10. Update image serving route (S3 fallback proxy)
 
   **What to do**:
   - **RED**: Write tests for updated image serving route:
@@ -1052,7 +1052,7 @@ Critical Path: Task 1 → Task 4 → Task 8 → Task 14
 
 ---
 
-- [ ] 11. Update image loader and component/page image URLs for CloudFront
+- [x] 11. Update image loader and component/page image URLs for CloudFront
 
   **What to do**:
   - **RED**: Write test for updated `imageLoader.ts`:
