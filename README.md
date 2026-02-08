@@ -11,6 +11,9 @@ A modern, high-performance, self-hosted photography portfolio built with **Next.
   - High-quality image derivatives (WebP, AVIF) using **Sharp**.
   - Automatic EXIF data extraction.
   - Smart image loading and progressive rendering.
+- **Flexible Storage**:
+  - **Local Filesystem**: Simple setup for self-hosting.
+  - **AWS S3 + CloudFront**: Scalable object storage with global CDN delivery.
 - **Secure Admin Panel**:
   - JWT-based authentication (Jose).
   - Rate limiting and brute-force protection.
@@ -26,6 +29,7 @@ A modern, high-performance, self-hosted photography portfolio built with **Next.
 - **ORM**: Drizzle ORM
 - **Queue**: BullMQ (requires Redis)
 - **Image Processing**: Sharp
+- **Storage**: Local Filesystem or AWS S3
 - **Styling**: Tailwind CSS v4
 - **Testing**: Vitest, Playwright
 
@@ -33,6 +37,7 @@ A modern, high-performance, self-hosted photography portfolio built with **Next.
 
 - **Node.js** (v20 or higher recommended)
 - **Redis** (Required for background image processing jobs)
+- **AWS Account** (Optional, if using S3 storage)
 
 ## 🏁 Getting Started
 
@@ -47,18 +52,30 @@ npm install
 Create a `.env` file in the root directory. You can use the following template:
 
 ```env
-# Required
+# Required Core
 DATABASE_PATH=./data/photo-profile.db
-STORAGE_PATH=./storage
 AUTH_SECRET=your-super-secret-key-at-least-32-chars-long
 ADMIN_PASSWORD_HASH= # Generated in step 3
+
+# Storage Configuration (Choose one)
+# Option A: Local Filesystem (Default)
+STORAGE_BACKEND=filesystem
+STORAGE_PATH=./storage
+
+# Option B: AWS S3 + CloudFront
+# STORAGE_BACKEND=s3
+# AWS_REGION=us-east-1
+# AWS_S3_BUCKET=your-bucket-name
+# AWS_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
+# AWS_ACCESS_KEY_ID=your-access-key
+# AWS_SECRET_ACCESS_KEY=your-secret-key
 
 # Optional (Defaults)
 # REDIS_URL=redis://localhost:6379
 # NODE_ENV=development
 ```
 
-Ensure the `data` and `storage` directories exist or are writable.
+Ensure the `data` and `storage` (if using filesystem) directories exist or are writable.
 
 ### 3. Generate Admin Password
 
@@ -82,21 +99,26 @@ npm run db:push
 
 To run the full application, you need **two processes** running: the web server and the background worker.
 
-### Web Server
+### Option A: Using Docker Compose (Recommended)
 
-Starts the Next.js application at `http://localhost:3000`.
-
-```bash
-npm run dev
-```
-
-### Worker Process
-
-Processes image uploads (generates thumbnails, extracts EXIF, etc.). **Images will stick in "Processing" state if this is not running.**
+This runs the Web App, Worker, and Redis together.
 
 ```bash
-npm run worker
+docker-compose up -d
 ```
+
+### Option B: Manual Start
+
+1. **Start Redis** (Ensure Redis is running locally)
+2. **Start Web Server** (http://localhost:3000)
+   ```bash
+   npm run dev
+   ```
+3. **Start Worker Process**
+   ```bash
+   npm run worker
+   ```
+   _Note: Images will remain in "Processing" state if the worker is not running._
 
 ## 📂 Project Structure
 

@@ -1,5 +1,0 @@
-
-> photo-profile@0.1.0 typecheck
-> tsc --noEmit
-
-src/infrastructure/__tests__/mocks.smoke.test.ts(25,24): error TS2339: Property 'get' does not exist on type 'Promise<ReadonlyRequestCookies>'.
