@@ -610,7 +610,7 @@ Critical Path: Task 1 → Task 4 → Task 8 → Task 14
 
 ---
 
-- [ ] 6. Create storage factory and update barrel exports
+- [x] 6. Create storage factory and update barrel exports
 
   **What to do**:
   - **RED**: Write test for factory function:
