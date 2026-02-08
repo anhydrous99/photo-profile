@@ -62,7 +62,7 @@ Plans:
 Plans:
 
 - [x] 16-01-PLAN.md -- Error boundaries and loading states (error.tsx, global-error.tsx, not-found.tsx, loading.tsx)
-- [ ] 16-02-PLAN.md -- API hardening (Zod validation, try/catch wrappers, consistent responses, upload safeguards)
+- [x] 16-02-PLAN.md -- API hardening (Zod validation, try/catch wrappers, consistent responses, upload safeguards)
 - [x] 16-03-PLAN.md -- Data layer safety and upload UX (JSON.parse try/catch, DropZone 25MB limit, rejection toasts)
 
 #### Phase 17: Unit & Integration Testing
@@ -133,7 +133,7 @@ Phases 15 and 16 can execute in parallel (no dependency). Phase 17 depends on bo
 | Phase                                | Milestone | Plans Complete | Status      | Completed  |
 | ------------------------------------ | --------- | -------------- | ----------- | ---------- |
 | 15. Testing Infrastructure           | v1.2      | 2/2            | Complete    | 2026-02-07 |
-| 16. Error Boundaries & API Hardening | v1.2      | 2/3            | In progress | -          |
+| 16. Error Boundaries & API Hardening | v1.2      | 3/3            | Complete    | 2026-02-07 |
 | 17. Unit & Integration Testing       | v1.2      | 0/3            | Not started | -          |
 | 18. Worker Resilience & Tech Debt    | v1.2      | 0/3            | Not started | -          |
 | 19. Performance & Production         | v1.2      | 0/3            | Not started | -          |
