@@ -14,6 +14,8 @@ export default defineConfig({
         "$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVW",
       NODE_ENV: "test",
       REDIS_URL: "redis://localhost:6379",
+      DYNAMODB_ENDPOINT: "http://localhost:8000",
+      DYNAMODB_TABLE_PREFIX: "test_",
     },
     setupFiles: ["./src/__tests__/setup.ts"],
     coverage: {
