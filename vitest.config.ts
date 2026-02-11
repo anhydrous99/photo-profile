@@ -6,6 +6,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     fileParallelism: false,
+    globalSetup: ["./src/__tests__/globalSetup.ts"],
     env: {
       DATABASE_PATH: ":memory:",
       STORAGE_PATH: "/tmp/test-storage",
@@ -15,7 +16,6 @@ export default defineConfig({
         "$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVW",
       NODE_ENV: "test",
       REDIS_URL: "redis://localhost:6379",
-      DYNAMODB_ENDPOINT: "http://localhost:8000",
       DYNAMODB_TABLE_PREFIX: "test_",
     },
     setupFiles: ["./src/__tests__/setup.ts"],

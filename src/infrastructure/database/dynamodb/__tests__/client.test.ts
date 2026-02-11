@@ -4,7 +4,7 @@ import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 
 const mockEnv = vi.hoisted(() => ({
   AWS_REGION: "us-east-1",
-  DYNAMODB_ENDPOINT: "http://localhost:8000",
+  DYNAMODB_ENDPOINT: process.env.DYNAMODB_ENDPOINT,
   DYNAMODB_TABLE_PREFIX: "test_",
 }));
 
@@ -40,7 +40,7 @@ describe("DynamoDB Client", () => {
   it("connects to DynamoDB Local and lists tables", async () => {
     const localClient = new DynamoDBClient({
       region: "us-east-1",
-      endpoint: "http://localhost:8000",
+      endpoint: process.env.DYNAMODB_ENDPOINT,
       credentials: {
         accessKeyId: "local",
         secretAccessKey: "local",
