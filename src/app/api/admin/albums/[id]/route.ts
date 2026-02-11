@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
 import { deletePhotoFiles } from "@/infrastructure/storage";
 import {
-  SQLiteAlbumRepository,
-  SQLitePhotoRepository,
-} from "@/infrastructure/database/repositories";
+  DynamoDBAlbumRepository,
+  DynamoDBPhotoRepository,
+} from "@/infrastructure/database/dynamodb/repositories";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
 
-const albumRepository = new SQLiteAlbumRepository();
-const photoRepository = new SQLitePhotoRepository();
+const photoRepository = new DynamoDBPhotoRepository();
+const albumRepository = new DynamoDBAlbumRepository(photoRepository);
 
 const updateAlbumSchema = z.object({
   title: z.string().min(1).max(100).optional(),

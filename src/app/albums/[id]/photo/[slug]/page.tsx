@@ -2,21 +2,24 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AlbumGalleryClient } from "@/presentation/components/AlbumGalleryClient";
-import { SQLiteAlbumRepository } from "@/infrastructure/database/repositories/SQLiteAlbumRepository";
-import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
+import {
+  DynamoDBAlbumRepository,
+  DynamoDBPhotoRepository,
+} from "@/infrastructure/database/dynamodb/repositories";
 import { getImageUrl } from "@/infrastructure/storage";
 
 interface PageProps {
   params: Promise<{ id: string; slug: string }>;
 }
 
+const photoRepo = new DynamoDBPhotoRepository();
+
 const getAlbum = cache(async (id: string) => {
-  const albumRepo = new SQLiteAlbumRepository();
+  const albumRepo = new DynamoDBAlbumRepository(photoRepo);
   return albumRepo.findById(id);
 });
 
 const getAlbumPhotos = cache(async (albumId: string) => {
-  const photoRepo = new SQLitePhotoRepository();
   const allPhotos = await photoRepo.findByAlbumId(albumId);
   return allPhotos.filter((p) => p.status === "ready");
 });
@@ -31,7 +34,6 @@ export async function generateMetadata({
     return { title: "Photo Not Found" };
   }
 
-  const photoRepo = new SQLitePhotoRepository();
   const photo = await photoRepo.findBySlugPrefix(slug);
 
   if (!photo) {

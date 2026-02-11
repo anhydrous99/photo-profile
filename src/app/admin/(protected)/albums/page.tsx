@@ -1,7 +1,11 @@
-import { SQLiteAlbumRepository } from "@/infrastructure/database/repositories";
+import {
+  DynamoDBAlbumRepository,
+  DynamoDBPhotoRepository,
+} from "@/infrastructure/database/dynamodb/repositories";
 import { AlbumsPageClient } from "./AlbumsPageClient";
 
-const albumRepository = new SQLiteAlbumRepository();
+const photoRepository = new DynamoDBPhotoRepository();
+const albumRepository = new DynamoDBAlbumRepository(photoRepository);
 
 /**
  * Albums Management Page (Server Component)

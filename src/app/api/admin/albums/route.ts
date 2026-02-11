@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
-import { SQLiteAlbumRepository } from "@/infrastructure/database/repositories";
+import {
+  DynamoDBAlbumRepository,
+  DynamoDBPhotoRepository,
+} from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 
-const albumRepository = new SQLiteAlbumRepository();
+const photoRepository = new DynamoDBPhotoRepository();
+const albumRepository = new DynamoDBAlbumRepository(photoRepository);
 
 const createAlbumSchema = z.object({
   title: z.string().min(1).max(100),

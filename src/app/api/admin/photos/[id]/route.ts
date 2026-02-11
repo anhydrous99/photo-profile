@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
 import { deletePhotoFiles } from "@/infrastructure/storage";
-import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
+import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
 
-const photoRepository = new SQLitePhotoRepository();
+const photoRepository = new DynamoDBPhotoRepository();
 
 const updatePhotoSchema = z.object({
   description: z.string().nullable(),

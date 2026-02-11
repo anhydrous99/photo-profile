@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
-import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
+import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
 
-const photoRepository = new SQLitePhotoRepository();
+const photoRepository = new DynamoDBPhotoRepository();
 
 const reorderSchema = z.object({
   photoIds: z.array(z.string().uuid("Invalid photo ID format")),

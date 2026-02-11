@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { db } from "@/infrastructure/database/client";
-import { sql } from "drizzle-orm";
+import { docClient } from "@/infrastructure/database/dynamodb/client";
+import { ListTablesCommand } from "@aws-sdk/client-dynamodb";
 import { getStorageAdapter } from "@/infrastructure/storage";
 
 export async function GET() {
@@ -10,7 +10,7 @@ export async function GET() {
   };
 
   try {
-    db.run(sql`SELECT 1`);
+    await docClient.send(new ListTablesCommand({}));
   } catch (e) {
     checks.database = {
       status: "error",

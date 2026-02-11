@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
 import { findOriginalFile } from "@/infrastructure/storage";
 import { imageQueue, enqueueImageProcessing } from "@/infrastructure/jobs";
-import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
+import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
 
-const photoRepository = new SQLitePhotoRepository();
+const photoRepository = new DynamoDBPhotoRepository();
 
 interface RouteContext {
   params: Promise<{ id: string }>;

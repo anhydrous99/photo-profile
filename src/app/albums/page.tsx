@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { SQLiteAlbumRepository } from "@/infrastructure/database/repositories/SQLiteAlbumRepository";
-import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
+import {
+  DynamoDBAlbumRepository,
+  DynamoDBPhotoRepository,
+} from "@/infrastructure/database/dynamodb/repositories";
 import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 import type { Album } from "@/domain/entities/Album";
 
@@ -29,8 +31,8 @@ function ImagePlaceholder() {
 async function getAlbumsWithCovers(): Promise<
   Array<{ album: Album; coverPhotoId: string | null }>
 > {
-  const albumRepo = new SQLiteAlbumRepository();
-  const photoRepo = new SQLitePhotoRepository();
+  const photoRepo = new DynamoDBPhotoRepository();
+  const albumRepo = new DynamoDBAlbumRepository(photoRepo);
 
   const albums = await albumRepo.findPublished();
 

@@ -1,16 +1,17 @@
 import { notFound } from "next/navigation";
 import {
-  SQLiteAlbumRepository,
-  SQLitePhotoRepository,
-} from "@/infrastructure/database/repositories";
+  DynamoDBAlbumRepository,
+  DynamoDBPhotoRepository,
+} from "@/infrastructure/database/dynamodb/repositories";
 import { AlbumDetailClient } from "./AlbumDetailClient";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const albumRepository = new SQLiteAlbumRepository();
-const photoRepository = new SQLitePhotoRepository();
+const photoRepository = new DynamoDBPhotoRepository();
+const albumRepository = new DynamoDBAlbumRepository(photoRepository);
+// photoRepository already instantiated above
 
 /**
  * Admin Album Detail Page (Server Component)

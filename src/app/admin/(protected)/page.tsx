@@ -1,15 +1,15 @@
 import Link from "next/link";
 import {
-  SQLitePhotoRepository,
-  SQLiteAlbumRepository,
-} from "@/infrastructure/database/repositories";
+  DynamoDBPhotoRepository,
+  DynamoDBAlbumRepository,
+} from "@/infrastructure/database/dynamodb/repositories";
 import { AdminDashboardClient } from "./AdminDashboardClient";
 import type { Photo } from "@/domain/entities";
 
 export const dynamic = "force-dynamic";
 
-const photoRepository = new SQLitePhotoRepository();
-const albumRepository = new SQLiteAlbumRepository();
+const photoRepository = new DynamoDBPhotoRepository();
+const albumRepository = new DynamoDBAlbumRepository(photoRepository);
 
 const PAGE_SIZE = 24;
 const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes

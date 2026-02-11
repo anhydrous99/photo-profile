@@ -2,8 +2,10 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AlbumGalleryClient } from "@/presentation/components/AlbumGalleryClient";
-import { SQLiteAlbumRepository } from "@/infrastructure/database/repositories/SQLiteAlbumRepository";
-import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
+import {
+  DynamoDBAlbumRepository,
+  DynamoDBPhotoRepository,
+} from "@/infrastructure/database/dynamodb/repositories";
 import { getImageUrl } from "@/infrastructure/storage";
 
 interface PageProps {
@@ -11,7 +13,8 @@ interface PageProps {
 }
 
 const getAlbum = cache(async (id: string) => {
-  const albumRepo = new SQLiteAlbumRepository();
+  const photoRepo = new DynamoDBPhotoRepository();
+  const albumRepo = new DynamoDBAlbumRepository(photoRepo);
   return albumRepo.findById(id);
 });
 
@@ -46,7 +49,7 @@ export async function generateMetadata({
     ];
     metadata.twitter!.images = [ogImageUrl];
   } else {
-    const photoRepo = new SQLitePhotoRepository();
+    const photoRepo = new DynamoDBPhotoRepository();
     const photos = await photoRepo.findByAlbumId(id);
     const firstReady = photos.find((p) => p.status === "ready");
     if (firstReady) {
@@ -65,7 +68,7 @@ export default async function AlbumPage({ params }: PageProps) {
   const { id } = await params;
 
   const album = await getAlbum(id);
-  const photoRepo = new SQLitePhotoRepository();
+  const photoRepo = new DynamoDBPhotoRepository();
   const allPhotos = await photoRepo.findByAlbumId(id);
 
   // 404 if album doesn't exist or isn't published

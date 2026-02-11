@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  SQLitePhotoRepository,
-  SQLiteAlbumRepository,
-} from "@/infrastructure/database/repositories";
+  DynamoDBPhotoRepository,
+  DynamoDBAlbumRepository,
+} from "@/infrastructure/database/dynamodb/repositories";
 import { PhotoDetail, AlbumSelector } from "@/presentation/components";
 
-const photoRepository = new SQLitePhotoRepository();
-const albumRepository = new SQLiteAlbumRepository();
+const photoRepository = new DynamoDBPhotoRepository();
+const albumRepository = new DynamoDBAlbumRepository(photoRepository);
 
 interface PageProps {
   params: Promise<{ id: string }>;

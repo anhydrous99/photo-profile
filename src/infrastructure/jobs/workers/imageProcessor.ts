@@ -10,7 +10,7 @@ import {
   generateBlurPlaceholder,
 } from "@/infrastructure/services/imageService";
 import { extractExifData } from "@/infrastructure/services/exifService";
-import { SQLitePhotoRepository } from "@/infrastructure/database/repositories/SQLitePhotoRepository";
+import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { getStorageAdapter } from "@/infrastructure/storage";
 import { ImageJobData, ImageJobResult } from "../queues";
 
@@ -139,7 +139,7 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
         },
       );
 
-      const repository = new SQLitePhotoRepository();
+      const repository = new DynamoDBPhotoRepository();
       const photo = await repository.findById(photoId);
       if (photo) {
         photo.status = "ready";
@@ -198,7 +198,7 @@ imageWorker.on("failed", async (job, err) => {
   });
   if (job?.data.photoId) {
     await retryDbUpdate(async () => {
-      const repository = new SQLitePhotoRepository();
+      const repository = new DynamoDBPhotoRepository();
       const photo = await repository.findById(job!.data.photoId);
       if (photo) {
         photo.status = "error";

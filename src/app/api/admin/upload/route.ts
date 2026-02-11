@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
 import { saveOriginalFile } from "@/infrastructure/storage";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
-import { SQLitePhotoRepository } from "@/infrastructure/database/repositories";
+import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import type { Photo } from "@/domain/entities";
 import { logger } from "@/infrastructure/logging/logger";
 
 export const maxDuration = 300;
 
-const photoRepository = new SQLitePhotoRepository();
+const photoRepository = new DynamoDBPhotoRepository();
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const MULTIPART_OVERHEAD = 5 * 1024 * 1024; // 5MB
