@@ -42,6 +42,7 @@ jobs:
           AUTH_SECRET: test-secret-key-at-least-32-characters-long-min
           ADMIN_PASSWORD_HASH: $2b$10$test
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          DYNAMODB_ENDPOINT: http://localhost:8000
 
       - name: Run tests
         run: npm run test
