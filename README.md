@@ -1,6 +1,6 @@
 # Photo Profile
 
-A modern, high-performance, self-hosted photography portfolio built with **Next.js 16**, following **Clean Architecture** principles.
+A modern, high-performance, self-hosted photography portfolio built with **Next.js 16**, following **Clean Architecture** principles. Leverages **DynamoDB** for data storage, **BullMQ** for background image processing, and **AWS S3 + CloudFront** for scalable image delivery.
 
 ## 🚀 Key Features
 
@@ -11,33 +11,38 @@ A modern, high-performance, self-hosted photography portfolio built with **Next.
   - High-quality image derivatives (WebP, AVIF) using **Sharp**.
   - Automatic EXIF data extraction.
   - Smart image loading and progressive rendering.
+- **Database**:
+  - **DynamoDB** for production-grade data storage (primary).
+  - **SQLite** support for local development (legacy option).
 - **Flexible Storage**:
   - **Local Filesystem**: Simple setup for self-hosting.
   - **AWS S3 + CloudFront**: Scalable object storage with global CDN delivery.
 - **Secure Admin Panel**:
-  - JWT-based authentication (Jose).
-  - Rate limiting and brute-force protection.
+  - JWT-based authentication (Jose) with timing attack prevention.
+  - Rate limiting and brute-force protection (Redis-backed).
   - Secure password hashing (Bcrypt).
-- **Database**: **SQLite** via **Drizzle ORM** for lightweight, file-based persistence.
+  - IP validation with trusted proxy support.
 - **Modern UI**: **Tailwind CSS v4** and **Geist** font family.
 
 ## 🛠 Tech Stack
 
 - **Framework**: Next.js 16, React 19
 - **Language**: TypeScript
-- **Database**: SQLite (via `better-sqlite3`)
-- **ORM**: Drizzle ORM
+- **Database**: DynamoDB (primary), SQLite (legacy)
+- **ORM**: Drizzle ORM (SQLite only)
 - **Queue**: BullMQ (requires Redis)
 - **Image Processing**: Sharp
 - **Storage**: Local Filesystem or AWS S3
 - **Styling**: Tailwind CSS v4
 - **Testing**: Vitest, Playwright
+- **Authentication**: JWT (Jose HS256), Bcrypt, Rate Limiting
 
 ## 📋 Prerequisites
 
 - **Node.js** (v20 or higher recommended)
-- **Redis** (Required for background image processing jobs)
-- **AWS Account** (Optional, if using S3 storage)
+- **Redis** (Optional for development; **Required for production** background job processing and rate limiting)
+- **AWS Account** (Optional, if using DynamoDB or S3 storage; Docker Compose includes local DynamoDB)
+- **Docker & Docker Compose** (Recommended for easy setup of Redis and DynamoDB-local)
 
 ## 🏁 Getting Started
 
@@ -53,9 +58,15 @@ Create a `.env` file in the root directory. You can use the following template:
 
 ```env
 # Required Core
-DATABASE_PATH=./data/photo-profile.db
 AUTH_SECRET=your-super-secret-key-at-least-32-chars-long
 ADMIN_PASSWORD_HASH= # Generated in step 3
+
+# Database: SQLite (Legacy - for local development only)
+DATABASE_PATH=./data/photo-profile.db
+
+# Database: DynamoDB (Production)
+# DYNAMODB_ENDPOINT=http://localhost:8000  # Local development only
+# DYNAMODB_TABLE_PREFIX=dev_                # Optional prefix for local testing
 
 # Storage Configuration (Choose one)
 # Option A: Local Filesystem (Default)
@@ -69,10 +80,12 @@ STORAGE_PATH=./storage
 # AWS_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
 # AWS_ACCESS_KEY_ID=your-access-key
 # AWS_SECRET_ACCESS_KEY=your-secret-key
+# NEXT_PUBLIC_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
 
 # Optional (Defaults)
 # REDIS_URL=redis://localhost:6379
 # NODE_ENV=development
+# LOG_LEVEL=info
 ```
 
 Ensure the `data` and `storage` (if using filesystem) directories exist or are writable.
@@ -89,10 +102,32 @@ Copy the output hash into your `.env` file as `ADMIN_PASSWORD_HASH`.
 
 ### 4. Database Setup
 
-Push the database schema to your SQLite file:
+**Option A: DynamoDB (Recommended for Production)**
+
+If using AWS DynamoDB, tables are created automatically on first run. For local development with Docker Compose, tables are provisioned during startup.
+
+**Option B: SQLite to DynamoDB Migration (If migrating from existing SQLite)**
+
+If you have an existing SQLite database and want to migrate to DynamoDB:
 
 ```bash
-npm run db:push
+npm run db:migrate-dynamo
+```
+
+This script:
+
+- Reads all photos and albums from SQLite
+- Batch-writes them to DynamoDB
+- Performs verification to ensure data integrity
+- Supports dry-run mode to preview changes
+
+**Option C: SQLite Only (Local Development)**
+
+For lightweight local development without Docker, SQLite is initialized automatically:
+
+```bash
+# No explicit setup needed — SQLite initializes on first run
+npm run dev
 ```
 
 ## 🏃‍♂️ Running the Application
@@ -101,10 +136,30 @@ To run the full application, you need **two processes** running: the web server 
 
 ### Option A: Using Docker Compose (Recommended)
 
-This runs the Web App, Worker, and Redis together.
+This runs the Web App, Worker, Redis, and DynamoDB-Local in a single command:
 
 ```bash
 docker-compose up -d
+```
+
+**Services included:**
+
+- **web** — Next.js app (http://localhost:3000)
+- **worker** — Background image processing (requires Redis)
+- **redis** — In-memory cache & job queue (port 6379)
+- **dynamodb-local** — Local DynamoDB for development (port 8000, in-memory mode)
+
+**To stop all services:**
+
+```bash
+docker-compose down
+```
+
+**To view logs:**
+
+```bash
+docker-compose logs -f web    # Web server logs
+docker-compose logs -f worker # Worker logs
 ```
 
 ### Option B: Manual Start
@@ -135,19 +190,111 @@ src/
 
 ## 📜 Scripts
 
-| Command                       | Description                              |
-| ----------------------------- | ---------------------------------------- |
-| `npm run dev`                 | Start development server                 |
-| `npm run build`               | Build for production                     |
-| `npm run start`               | Start production server                  |
-| `npm run worker`              | Start background image processing worker |
-| `npm run db:push`             | Push schema changes to SQLite database   |
-| `npm run db:studio`           | Open Drizzle Studio database GUI         |
-| `npm run lint`                | Run ESLint                               |
-| `npm run format`              | Format code with Prettier                |
-| `npm run test`                | Run unit tests with Vitest               |
-| `npm run exif:backfill`       | Backfill EXIF data for existing photos   |
-| `npm run dimensions:backfill` | Backfill image dimensions                |
+| Command                     | Description                                         |
+| --------------------------- | --------------------------------------------------- |
+| **Development**             |                                                     |
+| `npm run dev`               | Start Next.js dev server (http://localhost:3000)    |
+| `npm run worker`            | Start BullMQ background image processing worker     |
+| **Build & Production**      |                                                     |
+| `npm run build`             | Build for production (standalone output)            |
+| `npm run start`             | Start production server                             |
+| `npm run analyze`           | Analyze webpack bundle size                         |
+| **Code Quality**            |                                                     |
+| `npm run lint`              | Run ESLint                                          |
+| `npm run lint:fix`          | Run ESLint with auto-fix                            |
+| `npm run format`            | Format code with Prettier                           |
+| `npm run format:check`      | Check formatting without modifying files            |
+| `npm run typecheck`         | Run TypeScript type checking                        |
+| **Testing**                 |                                                     |
+| `npm run test`              | Run all tests with Vitest                           |
+| `npm run test:watch`        | Run tests in watch mode                             |
+| `npm run test:pipeline`     | E2E test: verify image processing pipeline          |
+| **Database & Migration**    |                                                     |
+| `npm run db:migrate-dynamo` | Migrate from SQLite to DynamoDB (with verification) |
+| **Utilities**               |                                                     |
+| `npm run prepare`           | Setup Husky pre-commit hooks                        |
+
+## 🔒 Security Features
+
+The admin panel includes multiple layers of security:
+
+- **JWT Authentication**: Tokens expire after 8 hours (configurable)
+- **Password Hashing**: Bcrypt with security best practices
+- **Timing Attack Prevention**: Constant-time password comparison + random jitter
+- **Rate Limiting**: Redis-backed rate limiter (5 attempts per 15 minutes) with graceful degradation
+- **IP Validation**: Trusted proxy support to prevent IP spoofing attacks
+- **EXIF Privacy**: Only 11 safe metadata fields exposed (no GPS, camera serial, software info)
+- **HttpOnly Cookies**: Session tokens stored in secure, HTTP-only cookies
+
+## 🐛 Troubleshooting
+
+### Images stay in "Processing" state
+
+**Cause**: Background worker is not running or Redis is unavailable.
+
+**Solution**:
+
+```bash
+# Check if worker is running
+ps aux | grep "src/infrastructure/jobs/worker.ts"
+
+# If using Docker Compose, restart worker
+docker-compose restart worker
+
+# If Redis is down, the app degrades gracefully but job processing fails
+# Restart Redis
+docker-compose restart redis
+```
+
+### Database errors on startup
+
+**Cause**: DynamoDB tables don't exist or endpoint is unreachable.
+
+**Solution**:
+
+```bash
+# If using Docker Compose, tables are auto-created during startup
+docker-compose up -d
+
+# If using local development without Docker:
+# Ensure DYNAMODB_ENDPOINT is not set (uses real AWS account)
+# Or provide local DynamoDB endpoint
+export DYNAMODB_ENDPOINT=http://localhost:8000
+npm run dev
+```
+
+### Rate limiter not working
+
+**Cause**: Redis is unavailable (app degrades gracefully).
+
+**Impact**: Rate limiting is skipped, but app continues functioning.
+
+**Solution**:
+
+```bash
+# Ensure Redis is running
+docker-compose up -d redis
+
+# Or start Redis manually
+redis-server
+```
+
+### S3 upload errors
+
+**Cause**: AWS credentials are missing or invalid.
+
+**Solution**:
+
+1. Verify `AWS_S3_BUCKET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+2. Test credentials:
+   ```bash
+   aws s3 ls s3://your-bucket-name
+   ```
+3. Ensure CloudFront domain is set if using CDN:
+   ```env
+   AWS_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
+   NEXT_PUBLIC_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
+   ```
 
 ## 🧪 Quality Assurance
 
