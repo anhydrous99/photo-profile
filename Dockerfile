@@ -3,7 +3,7 @@
 # =============================================================================
 FROM node:22-slim AS deps
 
-# Install build tools for native modules (sharp, bcrypt, better-sqlite3)
+# Install build tools for native modules (sharp, bcrypt)
 RUN apt-get update && \
     apt-get install -y python3 make g++ && \
     rm -rf /var/lib/apt/lists/*
