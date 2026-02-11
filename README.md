@@ -26,16 +26,21 @@ A modern, high-performance, self-hosted photography portfolio built with **Next.
 
 ## 🛠 Tech Stack
 
-- **Framework**: Next.js 16, React 19
-- **Language**: TypeScript
-- **Database**: DynamoDB (primary), SQLite (legacy)
-- **ORM**: Drizzle ORM (SQLite only)
-- **Queue**: BullMQ (requires Redis)
-- **Image Processing**: Sharp
-- **Storage**: Local Filesystem or AWS S3
-- **Styling**: Tailwind CSS v4
-- **Testing**: Vitest, Playwright
-- **Authentication**: JWT (Jose HS256), Bcrypt, Rate Limiting
+| Layer                | Technology           | Version    | Notes                                                               |
+| -------------------- | -------------------- | ---------- | ------------------------------------------------------------------- |
+| **Framework**        | Next.js              | 16         | App Router with Server Components                                   |
+| **Runtime**          | Node.js              | 20+        | Recommended for optimal performance                                 |
+| **Language**         | TypeScript           | Latest     | Strict mode enabled                                                 |
+| **Database**         | DynamoDB             | AWS SDK v3 | **Primary** (production-ready). SQLite legacy option for local dev. |
+| **ORM**              | Drizzle ORM          | Latest     | SQLite only (DynamoDB uses direct SDK)                              |
+| **Job Queue**        | BullMQ               | Latest     | Requires Redis for background image processing                      |
+| **Image Processing** | Sharp                | Latest     | WebP, AVIF derivatives + EXIF extraction                            |
+| **Storage**          | AWS S3 or Filesystem | —          | Choose one: `STORAGE_BACKEND` env var                               |
+| **CDN**              | CloudFront           | —          | Optional, pairs with S3 for global delivery                         |
+| **Styling**          | Tailwind CSS         | v4         | Utility-first CSS framework                                         |
+| **Testing**          | Vitest, Playwright   | Latest     | Unit tests + E2E browser testing                                    |
+| **Auth**             | Jose, Bcrypt         | Latest     | JWT (HS256), password hashing, rate limiting                        |
+| **UI Font**          | Geist                | Latest     | Modern, high-performance font family                                |
 
 ## 📋 Prerequisites
 
@@ -54,41 +59,70 @@ npm install
 
 ### 2. Environment Configuration
 
-Create a `.env` file in the root directory. You can use the following template:
+Create a `.env` file in the root directory with the following required and optional settings:
+
+#### ✅ **Required Core Settings**
 
 ```env
-# Required Core
 AUTH_SECRET=your-super-secret-key-at-least-32-chars-long
 ADMIN_PASSWORD_HASH= # Generated in step 3
-
-# Database: SQLite (Legacy - for local development only)
-DATABASE_PATH=./data/photo-profile.db
-
-# Database: DynamoDB (Production)
-# DYNAMODB_ENDPOINT=http://localhost:8000  # Local development only
-# DYNAMODB_TABLE_PREFIX=dev_                # Optional prefix for local testing
-
-# Storage Configuration (Choose one)
-# Option A: Local Filesystem (Default)
-STORAGE_BACKEND=filesystem
-STORAGE_PATH=./storage
-
-# Option B: AWS S3 + CloudFront
-# STORAGE_BACKEND=s3
-# AWS_REGION=us-east-1
-# AWS_S3_BUCKET=your-bucket-name
-# AWS_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
-# AWS_ACCESS_KEY_ID=your-access-key
-# AWS_SECRET_ACCESS_KEY=your-secret-key
-# NEXT_PUBLIC_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
-
-# Optional (Defaults)
-# REDIS_URL=redis://localhost:6379
-# NODE_ENV=development
-# LOG_LEVEL=info
 ```
 
-Ensure the `data` and `storage` (if using filesystem) directories exist or are writable.
+#### 🗄️ **Database Configuration (Choose One)**
+
+**Option A: DynamoDB (Recommended for Production)**
+
+```env
+# AWS DynamoDB (requires AWS account)
+# Credentials handled via AWS SDK (IAM roles or .aws/credentials)
+# Tables created automatically on first run
+
+# For local development with Docker Compose:
+DYNAMODB_ENDPOINT=http://localhost:8000
+DYNAMODB_TABLE_PREFIX=dev_
+```
+
+**Option B: SQLite (Legacy - Local Development Only)**
+
+```env
+DATABASE_PATH=./data/photo-profile.db
+```
+
+> **Why DynamoDB?** Fully managed, production-grade, scales automatically. SQLite is maintained for backwards compatibility and lightweight local development.
+
+#### 💾 **Storage Backend (Choose One)**
+
+**Option A: Local Filesystem (Default)**
+
+```env
+STORAGE_BACKEND=filesystem
+STORAGE_PATH=./storage
+```
+
+**Option B: AWS S3 + CloudFront (Recommended for Production)**
+
+```env
+STORAGE_BACKEND=s3
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=your-bucket-name
+AWS_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+NEXT_PUBLIC_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
+```
+
+#### 🔄 **Optional Configuration**
+
+```env
+REDIS_URL=redis://localhost:6379      # Defaults to localhost:6379
+NODE_ENV=development                  # or production
+LOG_LEVEL=info                         # or debug, warn, error
+```
+
+**Ensure these directories exist or are writable:**
+
+- `./data/` (if using SQLite)
+- `./storage/` (if using filesystem backend)
 
 ### 3. Generate Admin Password
 
@@ -177,97 +211,273 @@ docker-compose logs -f worker # Worker logs
 
 ## 📂 Project Structure
 
-This project follows Clean Architecture:
+This project follows **Clean Architecture** with strict separation of concerns:
 
 ```
 src/
-├── domain/              # Pure business entities & repository interfaces (No dependencies)
-├── application/         # Application use cases (Logic lives in infra/API in this project)
-├── infrastructure/      # Database, Auth, Image Processing, File System implementations
-├── presentation/        # React Components (UI)
-└── app/                 # Next.js App Router (Pages & API Routes)
+├── domain/
+│   ├── entities/        # Photo, Album — plain TS interfaces (ZERO external dependencies)
+│   └── repositories/    # PhotoRepository, AlbumRepository interface contracts
+│
+├── application/         # [EMPTY — .gitkeep] Business logic lives in API routes & infra services
+│
+├── infrastructure/      # Implementation of domain contracts + external services
+│   ├── auth/            # JWT (jose), Bcrypt, rate limiter, session management
+│   ├── config/          # Zod-validated environment variables (crash on startup if invalid)
+│   ├── database/        # SQLite (Drizzle ORM) + DynamoDB repositories & tables
+│   ├── jobs/            # BullMQ queue setup + standalone image processor worker
+│   ├── logging/         # Structured logger (JSON in prod, pretty in dev)
+│   ├── services/        # Sharp image processing, EXIF extraction, derivatives
+│   ├── storage/         # StorageAdapter interface + filesystem & S3 implementations
+│   └── validation/      # UUID & input validation helpers
+│
+├── presentation/        # React UI Components
+│   ├── components/      # Reusable client components (barrel exported via index.ts)
+│   └── lib/             # XHR upload utility with progress tracking
+│
+├── app/                 # Next.js App Router (Entry Points)
+│   ├── actions/         # Server Action: login (rate-limited password verification)
+│   ├── admin/login/     # Public password login page (unprotected)
+│   ├── admin/(protected)/  # Route group — JWT verification in layout
+│   ├── albums/          # Public album gallery pages (Server Components)
+│   ├── api/             # REST API endpoints (admin/* routes require auth)
+│   └── page.tsx         # Home: random public photos (force-dynamic, no cache)
+│
+├── lib/                 # Shared utilities
+│   ├── imageLoader.ts   # Custom Next.js image loader for Sharp derivatives
+│   └── types.ts         # Global type definitions
+│
+└── proxy.ts             # Edge middleware: cookie validation on /admin/* routes
 ```
+
+### Architecture Principles
+
+| Layer              | Purpose               | Dependencies                    | Examples                                         |
+| ------------------ | --------------------- | ------------------------------- | ------------------------------------------------ |
+| **Domain**         | Pure business rules   | None (import only from domain/) | Photo interface, Album interface                 |
+| **Infrastructure** | External integrations | Domain only                     | DynamoDB repos, JWT auth, Sharp image service    |
+| **Presentation**   | React UI components   | Domain, Infrastructure          | PhotoGrid, AlbumCard (client components)         |
+| **App (Next.js)**  | HTTP entry points     | All layers                      | API routes, Server Components, Client Components |
 
 ## 📜 Scripts
 
-| Command                     | Description                                         |
-| --------------------------- | --------------------------------------------------- |
-| **Development**             |                                                     |
-| `npm run dev`               | Start Next.js dev server (http://localhost:3000)    |
-| `npm run worker`            | Start BullMQ background image processing worker     |
-| **Build & Production**      |                                                     |
-| `npm run build`             | Build for production (standalone output)            |
-| `npm run start`             | Start production server                             |
-| `npm run analyze`           | Analyze webpack bundle size                         |
-| **Code Quality**            |                                                     |
-| `npm run lint`              | Run ESLint                                          |
-| `npm run lint:fix`          | Run ESLint with auto-fix                            |
-| `npm run format`            | Format code with Prettier                           |
-| `npm run format:check`      | Check formatting without modifying files            |
-| `npm run typecheck`         | Run TypeScript type checking                        |
-| **Testing**                 |                                                     |
-| `npm run test`              | Run all tests with Vitest                           |
-| `npm run test:watch`        | Run tests in watch mode                             |
-| `npm run test:pipeline`     | E2E test: verify image processing pipeline          |
-| **Database & Migration**    |                                                     |
-| `npm run db:migrate-dynamo` | Migrate from SQLite to DynamoDB (with verification) |
-| **Utilities**               |                                                     |
-| `npm run prepare`           | Setup Husky pre-commit hooks                        |
+### Development
+
+| Command          | Description                                                          |
+| ---------------- | -------------------------------------------------------------------- |
+| `npm run dev`    | Start Next.js dev server (http://localhost:3000) with HMR            |
+| `npm run worker` | Start BullMQ background worker for image processing (requires Redis) |
+
+### Build & Production
+
+| Command           | Description                                                         |
+| ----------------- | ------------------------------------------------------------------- |
+| `npm run build`   | Build for production (standalone output, optimized)                 |
+| `npm run start`   | Start production server (requires `npm run build` first)            |
+| `npm run analyze` | Analyze Next.js bundle size and identify optimization opportunities |
+
+### Code Quality
+
+| Command                | Description                                                          |
+| ---------------------- | -------------------------------------------------------------------- |
+| `npm run lint`         | Run ESLint (9 flat config) — checks all `.ts`, `.tsx`, `.js`, `.jsx` |
+| `npm run lint:fix`     | Run ESLint with auto-fix (modifies files in-place)                   |
+| `npm run format`       | Format code with Prettier (all file types)                           |
+| `npm run format:check` | Check formatting without modifying files (useful in CI)              |
+| `npm run typecheck`    | Run TypeScript type checking (`tsc --noEmit`)                        |
+
+### Testing
+
+| Command                 | Description                                                                      |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| `npm run test`          | Run all tests with Vitest (once, exit after completion)                          |
+| `npm run test:watch`    | Run tests in watch mode (re-run on file changes)                                 |
+| `npm run test:pipeline` | E2E test: Verify full image processing pipeline (upload → process → derivatives) |
+
+**Pro Tips:**
+
+```bash
+# Run single test file
+npx vitest run src/infrastructure/auth/__tests__/auth.test.ts
+
+# Run tests matching a pattern
+npx vitest run --testNamePattern="encrypt"
+
+# Generate coverage report
+npx vitest run --coverage
+```
+
+### Database & Migration
+
+| Command                     | Description                                                          |
+| --------------------------- | -------------------------------------------------------------------- |
+| `npm run db:migrate-dynamo` | Migrate all photos & albums from SQLite → DynamoDB with verification |
+| `npm run db:push`           | (SQLite only) Push Drizzle schema changes to database                |
+| `npm run db:studio`         | (SQLite only) Open Drizzle Studio GUI for database inspection        |
+
+### Pre-commit & Setup
+
+| Command           | Description                                                       |
+| ----------------- | ----------------------------------------------------------------- |
+| `npm run prepare` | Setup Husky pre-commit hooks (runs lint + format on staged files) |
 
 ## 🔒 Security Features
 
-The admin panel includes multiple layers of security:
+The admin panel implements **defense-in-depth** with multiple security layers:
 
-- **JWT Authentication**: Tokens expire after 8 hours (configurable)
-- **Password Hashing**: Bcrypt with security best practices
-- **Timing Attack Prevention**: Constant-time password comparison + random jitter
-- **Rate Limiting**: Redis-backed rate limiter (5 attempts per 15 minutes) with graceful degradation
-- **IP Validation**: Trusted proxy support to prevent IP spoofing attacks
-- **EXIF Privacy**: Only 11 safe metadata fields exposed (no GPS, camera serial, software info)
-- **HttpOnly Cookies**: Session tokens stored in secure, HTTP-only cookies
+### Authentication & Authorization
+
+- **JWT with HS256**: Uses Jose library for secure token signing/verification
+- **Token Expiration**: 8 hours (configurable via code)
+- **Session Storage**: HttpOnly cookies only (not localStorage — prevents XSS theft)
+- **Single Admin User**: Password-only authentication (no username required, reduces attack surface)
+
+### Password Security
+
+- **Bcrypt Hashing**: Industry-standard with automatic salt generation
+- **Timing Attack Prevention**: Constant-time comparison prevents attackers from guessing passwords via response time analysis
+- **Password Generation Helper**: `npm run hash-password` script for generating secure hashes
+
+### Rate Limiting & Brute Force Protection
+
+- **Redis-Backed**: 5 failed login attempts per 15 minutes = temporary lockout
+- **Graceful Degradation**: If Redis is unavailable, rate limiting is skipped (security trade-off for availability)
+- **IP Tracking**: Identifies attackers by IP address, respects X-Forwarded-For headers for proxy environments
+
+### Network & Request Security
+
+- **Trusted Proxy Support**: Validates X-Forwarded-For headers to prevent IP spoofing in reverse proxy setups
+- **CORS**: Not applicable (single-origin app, no cross-domain requests)
+- **Request Validation**: All inputs validated with Zod before processing
+
+### Image Privacy & EXIF Data
+
+- **EXIF Sanitization**: Only 11 safe metadata fields exposed to public API:
+  - Camera: make, model
+  - Settings: iso, focalLength, fNumber, exposureTime, exposureCompensation
+  - Image: width, height, dateTime, orientation
+  - **Excluded**: GPS coordinates, camera serial number, software version, lens info
+- **Automatic Extraction**: EXIF data extracted during upload, immediately sanitized
+
+### Data Protection
+
+- **Filesystem Isolation**: Storage directory not web-accessible (not served directly)
+- **S3 Private Buckets**: If using AWS S3, bucket can be private with CloudFront OAI (Origin Access Identity)
+- **Image Derivatives**: Generated files stored with same privacy controls as originals
+
+### Development & Deployment
+
+- **Strict TypeScript**: `strict: true` catches many classes of bugs at compile time
+- **Pre-commit Hooks**: ESLint + Prettier enforce code quality before commits
+- **Environment Validation**: Zod schema crashes on startup if required env vars are missing or invalid
+- **Secrets**: Never commit `.env` file (included in `.gitignore`)
 
 ## 🐛 Troubleshooting
 
 ### Images stay in "Processing" state
 
-**Cause**: Background worker is not running or Redis is unavailable.
+**Symptoms**: Uploaded images show "Processing..." indefinitely, never become viewable.
 
-**Solution**:
+**Root Causes**:
+
+1. Background worker is not running
+2. Redis is unavailable or misconfigured
+3. Worker crashed silently (check logs)
+4. Image processing failed (EXIF, Sharp, file system)
+
+**Diagnostic Steps**:
 
 ```bash
-# Check if worker is running
-ps aux | grep "src/infrastructure/jobs/worker.ts"
+# 1. Check if worker process is running
+ps aux | grep "worker"
 
-# If using Docker Compose, restart worker
-docker-compose restart worker
+# 2. Check Redis connectivity
+redis-cli ping  # Should return PONG
 
-# If Redis is down, the app degrades gracefully but job processing fails
-# Restart Redis
-docker-compose restart redis
+# 3. Check Redis queue for jobs
+redis-cli KEYS "bull:*"
+
+# 4. If using Docker Compose, check worker logs
+docker-compose logs -f worker
+
+# 5. Check file system (if using filesystem backend)
+ls -la ./storage/  # Should have subdirectories for derivatives
 ```
+
+**Solutions**:
+
+```bash
+# Restart worker only
+npm run worker
+
+# Or restart all services with Docker Compose
+docker-compose restart worker redis
+
+# Check for disk space (images may fail to save)
+df -h
+```
+
+---
 
 ### Database errors on startup
 
-**Cause**: DynamoDB tables don't exist or endpoint is unreachable.
+**Error Messages**:
 
-**Solution**:
+- `Cannot find module 'better-sqlite3'`
+- `DynamoDB endpoint unreachable`
+- `ENOENT: no such file or directory, open './data/photo-profile.db'`
+
+**Diagnostic Steps**:
 
 ```bash
-# If using Docker Compose, tables are auto-created during startup
-docker-compose up -d
+# 1. Verify database configuration in .env
+cat .env | grep -E "DATABASE_|DYNAMODB_"
 
-# If using local development without Docker:
-# Ensure DYNAMODB_ENDPOINT is not set (uses real AWS account)
-# Or provide local DynamoDB endpoint
+# 2. Check DynamoDB endpoint availability
+curl -v http://localhost:8000/  # Should respond, not timeout
+
+# 3. Check SQLite database file
+ls -la ./data/photo-profile.db
+
+# 4. Check Node version (must be 20+)
+node --version
+```
+
+**Solutions**:
+
+**For DynamoDB:**
+
+```bash
+# Start Docker Compose (auto-creates tables)
+docker-compose up -d dynamodb-local
+
+# Or verify local endpoint
 export DYNAMODB_ENDPOINT=http://localhost:8000
+npm run dev
+
+# For AWS, verify credentials
+aws sts get-caller-identity
+```
+
+**For SQLite:**
+
+```bash
+# Create data directory
+mkdir -p ./data
+
+# Start app (will auto-initialize database)
 npm run dev
 ```
 
+---
+
 ### Rate limiter not working
 
-**Cause**: Redis is unavailable (app degrades gracefully).
+**Symptom**: Can attempt login more than 5 times within 15 minutes without being blocked.
 
-**Impact**: Rate limiting is skipped, but app continues functioning.
+**Cause**: Redis is unavailable (app degrades gracefully, continues without protection).
+
+**Impact**: Security risk — brute force attacks possible. Rate limiting skipped, but app keeps running.
 
 **Solution**:
 
@@ -277,24 +487,151 @@ docker-compose up -d redis
 
 # Or start Redis manually
 redis-server
+
+# Verify Redis is accessible
+redis-cli PING  # Should return PONG
 ```
+
+---
 
 ### S3 upload errors
 
-**Cause**: AWS credentials are missing or invalid.
+**Error Messages**:
+
+- `AccessDenied: User: arn:aws:iam::... is not authorized to perform: s3:PutObject`
+- `The specified bucket does not exist`
+- `NoCredentialsError: Missing credentials`
+
+**Diagnostic Steps**:
+
+```bash
+# 1. Verify S3 configuration in .env
+cat .env | grep -E "AWS_|STORAGE_"
+
+# 2. Test AWS credentials
+aws s3 ls s3://your-bucket-name
+
+# 3. Verify bucket exists and region is correct
+aws s3api list-buckets
+
+# 4. Check IAM permissions for the access key
+aws iam get-user
+```
+
+**Solutions**:
+
+```bash
+# Update .env with correct values
+STORAGE_BACKEND=s3
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=your-actual-bucket-name
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+
+# Verify CloudFront domain (if using CDN)
+AWS_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
+NEXT_PUBLIC_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
+
+# Test S3 bucket access
+aws s3 cp test.txt s3://your-bucket-name/test.txt
+aws s3 rm s3://your-bucket-name/test.txt
+```
+
+---
+
+### Port already in use
+
+**Error**: `Error: listen EADDRINUSE :::3000` (or other ports)
 
 **Solution**:
 
-1. Verify `AWS_S3_BUCKET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
-2. Test credentials:
-   ```bash
-   aws s3 ls s3://your-bucket-name
-   ```
-3. Ensure CloudFront domain is set if using CDN:
-   ```env
-   AWS_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
-   NEXT_PUBLIC_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
-   ```
+```bash
+# Find process using port 3000
+lsof -i :3000
+
+# Kill the process (macOS/Linux)
+kill -9 <PID>
+
+# Or use different port
+PORT=3001 npm run dev
+```
+
+---
+
+### TypeScript errors not showing in VSCode
+
+**Cause**: TypeScript language server is out of sync or VSCode cache is stale.
+
+**Solution**:
+
+1. Open Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
+2. Type "TypeScript: Restart TS Server"
+3. Select and wait for restart
+
+Or run manual check:
+
+```bash
+npm run typecheck
+```
+
+---
+
+### Image not appearing on public gallery
+
+**Possible Causes**:
+
+1. Image is still in "Processing" state (see above)
+2. EXIF privacy filter removed restricted fields
+3. Storage backend path mismatch
+4. CloudFront cache stale (for S3 backend)
+
+**Verify**:
+
+```bash
+# 1. Check image storage exists
+ls -la ./storage/images/  # If using filesystem
+
+# 2. Check image metadata in database (DynamoDB or SQLite)
+# Use admin panel → inspect image details
+
+# 3. Clear CloudFront cache (if using S3 + CloudFront)
+# AWS Console → CloudFront → Invalidations → Create
+```
+
+---
+
+### Worker keeps crashing
+
+**Symptom**: Worker starts but exits after a few seconds.
+
+**Check Logs**:
+
+```bash
+docker-compose logs -f worker
+
+# Or if running locally
+npm run worker 2>&1 | head -50  # Show first 50 lines
+```
+
+**Common Issues**:
+
+- Redis is down → `Cannot connect to Redis`
+- Sharp is not installed → `Cannot find module 'sharp'`
+- Database unavailable → `DynamoDB endpoint unreachable`
+
+**Fix**:
+
+```bash
+# Reinstall dependencies
+rm -rf node_modules package-lock.json
+npm install
+
+# Verify Redis is running
+docker-compose up -d redis
+
+# Restart worker
+npm run worker
+```
 
 ## 🧪 Quality Assurance
 
