@@ -29,6 +29,8 @@ if (env.DYNAMODB_ENDPOINT) {
 
 const client = new DynamoDBClient(clientConfig);
 
+export const dynamodbClient = client;
+
 export const docClient = DynamoDBDocumentClient.from(client, {
   marshallOptions: {
     removeUndefinedValues: true,
