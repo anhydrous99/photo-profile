@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
+    fileParallelism: false,
     env: {
       DATABASE_PATH: ":memory:",
       STORAGE_PATH: "/tmp/test-storage",
