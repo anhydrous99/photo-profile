@@ -84,11 +84,14 @@ vi.mock("@/infrastructure/services/exifService", () => ({
   extractExifData: mockExtractExifData,
 }));
 
-vi.mock("@/infrastructure/database/repositories/SQLitePhotoRepository", () => ({
-  SQLitePhotoRepository: vi.fn(function () {
-    return mockRepository;
+vi.mock(
+  "@/infrastructure/database/dynamodb/repositories/DynamoDBPhotoRepository",
+  () => ({
+    DynamoDBPhotoRepository: vi.fn(function () {
+      return mockRepository;
+    }),
   }),
-}));
+);
 
 vi.mock("@/infrastructure/logging/logger", () => ({
   logger: mockLogger,
