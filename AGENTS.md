@@ -1,165 +1,183 @@
-# PROJECT KNOWLEDGE BASE
+# AGENTS.md — Photo Profile
 
-**Generated:** 2026-02-06
-**Commit:** 8fb1a59
-**Branch:** main
+Self-hosted photography portfolio. Next.js 16 App Router + TypeScript + DynamoDB (via AWS SDK) + Sharp image processing + BullMQ job queue. Single admin user, public-facing gallery. Clean Architecture layers under `src/`.
 
-## OVERVIEW
+## COMMANDS
 
-Self-hosted photography portfolio. Next.js 16 App Router + TypeScript + SQLite (Drizzle ORM) + Sharp image processing + BullMQ job queue. Single admin user, public-facing gallery. Clean Architecture (domain/application/infrastructure/presentation).
+```bash
+# --- Development ---
+npm run dev                    # Next.js dev server (port 3000)
+npm run worker                 # BullMQ image processing worker (separate process, requires Redis)
+
+# --- Quality ---
+npm run lint                   # ESLint 9 flat config (eslint-config-next + prettier)
+npm run lint:fix               # ESLint with auto-fix
+npm run format                 # Prettier format all files
+npm run format:check           # Check formatting only
+npm run typecheck              # tsc --noEmit
+
+# --- Tests ---
+npm run test                   # Vitest — run all tests once
+npm run test:watch             # Vitest — watch mode
+npx vitest run src/infrastructure/auth/__tests__/auth.test.ts       # Single test file
+npx vitest run --testNamePattern="encrypt"                          # Run tests matching name
+npx vitest run --coverage                                           # With V8 coverage
+
+# --- Build & Deploy ---
+npm run build                  # Production build (output: standalone)
+npm run db:push                # Push Drizzle schema to SQLite
+npm run db:studio              # Drizzle Studio GUI
+
+# --- CDK (photo-profile-cdk/) ---
+# cd ../photo-profile-cdk && npm run build && npx cdk synth
+# Tests: npm test (Jest + ts-jest)
+```
+
+Pre-commit hook (`husky` + `lint-staged`): runs `eslint --fix` + `prettier --write` on staged `.ts/.tsx/.js/.jsx` files. CI runs: lint → format:check → typecheck → build → test.
 
 ## STRUCTURE
 
 ```
 src/
-├── domain/              # Pure interfaces, zero dependencies
-│   ├── entities/        # Photo (with ExifData), Album
-│   └── repositories/    # PhotoRepository, AlbumRepository interfaces
-├── application/         # EMPTY — business logic lives in infra + API routes
+├── domain/                    # Pure interfaces, ZERO external imports
+│   ├── entities/              # Photo (with ExifData), Album — plain interfaces
+│   └── repositories/          # PhotoRepository, AlbumRepository interfaces
+├── application/               # EMPTY — business logic lives in API routes + infra services
 ├── infrastructure/
-│   ├── auth/            # JWT (jose/HS256, 8h expiry), bcrypt, rate limiter, DAL
-│   ├── config/          # Zod-validated env vars (fail-fast at startup)
-│   ├── database/        # Drizzle ORM client, schema, SQLite repository impls
-│   ├── jobs/            # BullMQ queue + standalone worker process
-│   ├── services/        # Sharp image derivatives, EXIF extraction
-│   └── storage/         # Filesystem ops (originals + processed dirs)
+│   ├── auth/                  # JWT (jose HS256, 8h), bcrypt, rate limiter, DAL
+│   ├── config/                # Zod-validated env vars (crash on startup if invalid)
+│   ├── database/
+│   │   ├── schema.ts          # Drizzle ORM SQLite schema (legacy)
+│   │   ├── client.ts          # SQLite connection + auto-migrations
+│   │   └── dynamodb/          # DynamoDB repositories, tables, client
+│   ├── jobs/                  # BullMQ queue + standalone worker
+│   ├── logging/               # Structured logger (JSON in prod, pretty in dev)
+│   ├── services/              # Sharp image derivatives, EXIF extraction
+│   ├── storage/               # StorageAdapter interface + filesystem/S3 implementations
+│   └── validation/            # UUID validation helpers
 ├── presentation/
-│   ├── components/      # 19 React client components (barrel export via index.ts)
-│   └── lib/             # XHR upload utility with progress tracking
-├── app/                 # Next.js App Router
-│   ├── actions/         # Server Action: login (rate-limited, bcrypt verify)
-│   ├── admin/           # Protected admin panel
-│   │   ├── login/       # Password-only login page
-│   │   └── (protected)/ # Route group — layout.tsx verifies JWT
-│   ├── albums/          # Public album pages (Server Components)
-│   └── api/             # REST endpoints (admin/* + image serving)
-├── lib/                 # Custom Next.js image loader
-└── proxy.ts             # Edge middleware: cookie check on /admin/*, 404 if missing
-scripts/                 # hash-password, backfill-exif, backfill-dimensions, backfill-blur
+│   ├── components/            # React client components (barrel export via index.ts)
+│   └── lib/                   # XHR upload utility with progress tracking
+├── app/                       # Next.js App Router
+│   ├── actions/               # Server Action: login (rate-limited, bcrypt verify)
+│   ├── admin/login/           # Password-only login page
+│   ├── admin/(protected)/     # Route group — layout.tsx verifies JWT
+│   ├── albums/                # Public album pages (Server Components)
+│   └── api/                   # REST endpoints (admin/* + image serving)
+├── lib/                       # Custom Next.js image loader
+└── proxy.ts                   # Edge: cookie check on /admin/*, 404 if missing
 ```
 
 ## WHERE TO LOOK
 
-| Task                   | Location                                                                                    | Notes                                                            |
-| ---------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Add domain entity      | `src/domain/entities/`                                                                      | Plain TS interface, no methods                                   |
-| Add repository method  | `src/domain/repositories/` (interface) + `src/infrastructure/database/repositories/` (impl) | Impl has `toDomain()`/`toDatabase()` mappers                     |
-| Add API endpoint       | `src/app/api/admin/`                                                                        | Call `verifySession()` first; instantiate repos directly         |
-| Add admin page         | `src/app/admin/(protected)/`                                                                | Server Component fetches data → passes props to Client Component |
-| Add public page        | `src/app/` or `src/app/albums/`                                                             | Server Components, no auth                                       |
-| Add React component    | `src/presentation/components/`                                                              | Mark `"use client"`, add to barrel `index.ts`                    |
-| Modify auth            | `src/infrastructure/auth/`                                                                  | session.ts (JWT), dal.ts (verify), password.ts (bcrypt)          |
-| Modify image pipeline  | `src/infrastructure/services/imageService.ts`                                               | Sharp derivatives: rotate() + resize() + withMetadata()          |
-| Modify worker          | `src/infrastructure/jobs/workers/imageProcessor.ts`                                         | Concurrency=2; runs via `npm run worker`                         |
-| Add DB column          | `src/infrastructure/database/schema.ts` + migration in `client.ts`                          | Timestamps are MILLISECONDS, not seconds                         |
-| Serve new image format | `src/app/api/images/[photoId]/[filename]/route.ts`                                          | Add to MIME_TYPES map                                            |
-| Environment config     | `src/infrastructure/config/env.ts`                                                          | Zod schema — app crashes on startup if invalid                   |
+| Task                  | Files                                                                                                |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| Add domain entity     | `src/domain/entities/` — plain TS interface, add to barrel `index.ts`                                |
+| Add repository method | `src/domain/repositories/` (interface) + `src/infrastructure/database/dynamodb/repositories/` (impl) |
+| Add API endpoint      | `src/app/api/admin/` — call `verifySession()` first, instantiate repos directly                      |
+| Add admin page        | `src/app/admin/(protected)/` — Server Component → Client Component pattern                           |
+| Add public page       | `src/app/` or `src/app/albums/` — Server Components, no auth                                         |
+| Add React component   | `src/presentation/components/` — `"use client"`, add to barrel `index.ts`                            |
+| Modify auth           | `src/infrastructure/auth/` — session.ts (JWT), dal.ts, password.ts                                   |
+| Modify image pipeline | `src/infrastructure/services/imageService.ts`                                                        |
+| Modify worker         | `src/infrastructure/jobs/workers/imageProcessor.ts` (concurrency=2)                                  |
+| Add storage operation | `src/infrastructure/storage/types.ts` (interface) + both adapter impls                               |
+| Environment config    | `src/infrastructure/config/env.ts` — Zod schema, crash on invalid                                    |
 
-## CONVENTIONS
+## CODE STYLE
 
-### Architecture Rules
+### TypeScript
 
-- **Domain layer**: Zero imports from other layers. Entities are plain interfaces (no classes, no methods).
-- **No application services**: Business logic is in API routes and infrastructure services. The `application/` layer is intentionally empty.
-- **Repository instantiation**: Direct `new SQLitePhotoRepository()` in server components and API routes. No DI container.
-- **Upsert pattern**: All `save()` methods use `onConflictDoUpdate` — single method for insert and update.
+- **Strict mode** enabled (`strict: true` in tsconfig)
+- Path aliases: `@/*` → `./src/*`, `@/domain/*`, `@/infrastructure/*`, `@/presentation/*`, `@/application/*`
+- Domain entities are **plain interfaces** — no classes, no methods
+- Use `type` imports for type-only: `import type { Photo } from "@/domain/entities"`
+- Validate inputs with **Zod** (`z.object({...}).safeParse(body)`)
+- UUIDs for all entity IDs (`crypto.randomUUID()`)
+- Timestamps are **milliseconds** (not seconds)
 
-### Auth — Two-Layer Protection
+### Formatting & Linting
 
-1. `proxy.ts` (Edge): Checks cookie EXISTS → returns **404** if missing (hides admin panel existence)
-2. `(protected)/layout.tsx` (Server Component): Full JWT verify → redirects to `/admin/login` if invalid
+- **Prettier** for formatting (default config)
+- **ESLint 9** flat config: `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript` + `eslint-config-prettier`
+- Trailing commas in multi-line (Prettier default)
 
-- API routes verify session independently via `verifySession()` at top of handler
+### Naming
 
-### Data Flow Pattern
+- Components: **PascalCase** files (`PhotoGrid.tsx`, `SortableAlbumCard.tsx`)
+- Utilities/services: **camelCase** files (`uploadFile.ts`, `imageService.ts`)
+- Repository classes: **PascalCase** (`DynamoDBPhotoRepository`)
+- All modules use **barrel exports** via `index.ts`
 
-```
-Server Component → fetches from repository → serializes props → Client Component
-Client Component → useState for UI → fetch() for mutations → router.refresh() to revalidate
-```
+### React & Next.js
 
+- Client components: `"use client"` directive at top
+- Data flow: Server Component fetches → serializes props → Client Component renders
+- Mutations: Client calls `fetch()` → `router.refresh()` to revalidate
 - No global state management (no Redux/Zustand/Context)
-- Optimistic updates with rollback on error (AlbumSelector, SortableAlbumCard, drag-drop)
+- Optimistic updates with rollback on error
+- Styling: **Tailwind CSS v4** with `@tailwindcss/postcss` — no CSS-in-JS, no CSS modules
 
-### Image Pipeline
+### API Routes
 
-```
-Upload API → saveOriginalFile() → DB record (status="processing") → BullMQ job
-Worker → generateDerivatives() → extractExifData() → generateBlurPlaceholder()
-       → update photo: status="ready", blurDataUrl, exifData, width, height
-```
+- Every admin route: `verifySession()` at top → 401 if null
+- Validate params with `isValidUUID(id)` → 400 if invalid
+- Validate body with Zod `safeParse` → 400 with `fieldErrors`
+- Wrap handler in try/catch → `logger.error(...)` → 500
+- Return `NextResponse.json(...)` with appropriate status codes
+- Repository instantiated at module scope: `const repo = new DynamoDBPhotoRepository()`
 
-- Derivatives: WebP (q82) + AVIF (q80) at [300, 600, 1200, 2400]px widths
-- No upscaling — skips sizes larger than original
-- Image API falls back to largest available derivative if requested size doesn't exist
-- Worker concurrency: 2 (50MP images use ~144MB RAM each)
+### Error Handling
 
-### File Naming
+- API routes: try/catch with structured logging (`logger.error("route description", { error: ... })`)
+- Error serialization: `error instanceof Error ? { message: error.message, stack: error.stack } : error`
+- No empty catch blocks
+- Redis/BullMQ failures: graceful degradation (photo stays "processing")
 
-- Components: PascalCase (`PhotoGrid.tsx`)
-- Utilities: camelCase (`uploadFile.ts`)
-- All barrel exports via `index.ts`
+### Testing
 
-### Styling
+- **Vitest** with globals enabled, node environment
+- Tests colocated: `__tests__/` directories next to source files
+- Mock pattern: `vi.hoisted()` for shared mock refs + `vi.mock()` for module mocks
+- Import `{ describe, it, expect }` from `"vitest"` explicitly (even with globals)
+- Test env vars set in `vitest.config.ts` (DATABASE_PATH=`:memory:`, etc.)
+- Coverage: V8 provider, covers `src/infrastructure/**/*.ts`
 
-- Tailwind CSS v4 with `@tailwindcss/postcss` plugin (not legacy tailwindcss plugin)
-- No CSS-in-JS, no CSS modules
-- Geist font family (sans + mono)
+## ANTI-PATTERNS — NEVER DO
 
-## ANTI-PATTERNS (THIS PROJECT)
+- **Never** remove `.rotate()` from Sharp pipelines — images render with wrong orientation
+- **Never** remove `.withMetadata()` from Sharp — colors shift (loses sRGB ICC profile)
+- **Never** remove BullMQ worker error handlers — worker fails silently, photos stuck "processing"
+- **Never** access GPS/camera serial/software EXIF tags — privacy policy, only 11 fields allowed
+- **Never** use `middleware.ts` — project uses `proxy.ts` (Next.js 16 proxy pattern)
+- **Never** add `@ts-ignore`, `@ts-expect-error`, or `as any`
+- **Never** delete failing tests to make the suite pass
 
-### NEVER
+## KNOWN TYPE WORKAROUNDS
 
-- Remove `.rotate()` from Sharp pipelines — images will render with wrong orientation
-- Remove `.withMetadata()` from Sharp pipelines — colors will shift (loses sRGB ICC profile)
-- Remove BullMQ worker error handlers (`on('error')`, `on('failed')`, `on('completed')`) — worker fails silently, photos stuck in "processing" forever
-- Access GPS, camera serial, or software EXIF tags — privacy policy, only 11 fields extracted
-- Use `middleware.ts` — project uses `proxy.ts` (Next.js 16 proxy pattern)
-- Add `@ts-ignore`, `@ts-expect-error`, or `as any`
+These are the ONLY acceptable non-strict type patterns in the codebase:
 
-### KNOWN TYPE WORKAROUNDS
+- `session.ts:40` — `payload as unknown as SessionPayload` (jose untyped payload)
+- `imageProcessor.ts:60-61` — `rotatedMeta.width!` / `height!` (Sharp guarantees after `.rotate()`)
+- `queues.ts:80` — `job.id!` (BullMQ assigns ID after `queue.add()`)
+- `env.ts:29,31` — `eslint-disable` for NodeJS namespace augmentation
 
-- `session.ts:40`: `payload as unknown as SessionPayload` — jose returns untyped payload, double-cast required
-- `imageProcessor.ts:60-61`: `rotatedMeta.width!` / `height!` — Sharp metadata guaranteed after `.rotate()`
-- `queues.ts:80`: `job.id!` — BullMQ always assigns ID after `queue.add()`
-- `env.ts:29,31`: Two `eslint-disable` comments for NodeJS namespace augmentation
+## WATCH OUT
 
-### WATCH OUT
-
-- `application/services/` is empty (`.gitkeep` only) — business logic is in API routes and infra services
-- Redis unavailable = jobs silently dropped. Upload succeeds but photo stays "processing". Expected in dev without Docker.
-- Timestamps are **milliseconds** (`unixepoch() * 1000`), not seconds
+- `application/services/` is **empty** (`.gitkeep`) — business logic is in API routes + infra services
+- **Redis unavailable** = jobs silently dropped; photo stays "processing" forever. Expected in dev without Docker.
 - `exifData` column stores **JSON string** in SQLite, parsed/serialized by repository mappers
-- `tags` on Album is comma-separated string, not array or JSON
+- `tags` on Album is **comma-separated string**, not array or JSON
 - `export const dynamic = "force-dynamic"` on homepage — random photos require no caching
-- Root layout metadata still has default "Create Next App" title — not yet customized
+- **Storage backend**: `STORAGE_BACKEND` env var switches between `filesystem` and `s3`; `getStorageAdapter()` is a singleton factory
+- **DynamoDB**: Used for repositories; local dev via `dynamodb-local` in docker-compose (port 8000)
+- **Image API**: Falls back to largest available derivative if requested size doesn't exist
 
-## COMMANDS
+## INFRASTRUCTURE
 
-```bash
-npm run dev              # Dev server (port 3000)
-npm run build            # Production build
-npm run lint             # ESLint (flat config, ESLint 9+)
-npm run lint:fix         # ESLint with auto-fix
-npm run format           # Prettier format all
-npm run format:check     # Check formatting
-npm run typecheck        # tsc --noEmit
-npm run worker           # Start BullMQ image processing worker (separate process)
-npm run db:push          # Push Drizzle schema to SQLite
-npm run db:studio        # Drizzle Studio GUI
-npm run exif:backfill    # Backfill EXIF metadata for existing photos
-npm run dimensions:backfill  # Backfill image dimensions
-```
-
-Pre-commit hook: `lint-staged` runs `eslint --fix` + `prettier --write` on staged files.
-
-## NOTES
-
-- **Docker**: Multi-stage Dockerfile + docker-compose (web, worker, redis). Output: standalone. Worker copies full src + node_modules for tsx execution.
-- **Redis**: Required for BullMQ (image jobs) and rate limiting. App degrades gracefully without it.
-- **SQLite**: File-based at `DATABASE_PATH`. Auto-migrations in `client.ts` (phases 11-13). Foreign keys enabled at startup.
-- **Admin password**: Generate hash with `npx tsx scripts/hash-password.ts <password>`, set as `ADMIN_PASSWORD_HASH` env var.
-- **Image loader**: Custom loader (`src/lib/imageLoader.ts`) maps Next.js `<Image>` width requests to nearest derivative: `{src}/{bestWidth}w.webp`.
-- **Upload**: Uses XMLHttpRequest (not fetch) for upload progress events. Fetch upload progress is not yet standardized.
-- **Lightbox**: `yet-another-react-lightbox` loaded via dynamic import (code splitting). Supports EXIF panel, zoom, fullscreen.
-- **Drag-drop**: `@dnd-kit/core` + `@dnd-kit/sortable` for album and photo reordering. Optimistic reorder → API call → rollback on error.
+- **Docker**: Multi-stage Dockerfile + docker-compose (web, worker, redis, dynamodb-local). Output: standalone.
+- **Redis**: Required for BullMQ + rate limiting. App degrades gracefully without it.
+- **SQLite**: Legacy — Drizzle ORM schema still present. DynamoDB is the active data layer.
+- **S3 + CloudFront**: Optional storage backend; filesystem is the default.
+- **CDK**: `photo-profile-cdk/` — AWS CDK stack (scaffold only). Jest for tests.
+- **Admin password**: `npx tsx scripts/hash-password.ts <password>` → set `ADMIN_PASSWORD_HASH` env var.
