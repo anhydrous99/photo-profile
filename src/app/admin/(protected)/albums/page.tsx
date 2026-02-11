@@ -4,6 +4,8 @@ import {
 } from "@/infrastructure/database/dynamodb/repositories";
 import { AlbumsPageClient } from "./AlbumsPageClient";
 
+export const dynamic = "force-dynamic";
+
 const photoRepository = new DynamoDBPhotoRepository();
 const albumRepository = new DynamoDBAlbumRepository(photoRepository);
 

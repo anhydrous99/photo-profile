@@ -7,6 +7,8 @@ import {
 import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 import type { Album } from "@/domain/entities/Album";
 
+export const dynamic = "force-dynamic";
+
 // Placeholder icon for albums without photos
 function ImagePlaceholder() {
   return (
