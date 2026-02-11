@@ -21,7 +21,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
   // Stop accepting new jobs, wait for current jobs to finish
   await imageWorker.close();
-  await imageQueue.close();
+  await imageQueue().close();
 
   logger.info("Shutdown complete", { component: "worker" });
   process.exit(0);

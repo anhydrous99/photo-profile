@@ -3,27 +3,31 @@ import IORedis from "ioredis";
 import { env } from "@/infrastructure/config/env";
 import { logger } from "@/infrastructure/logging/logger";
 
-/**
- * Redis client for rate limiting
- * - enableOfflineQueue: false to fail fast if Redis unavailable
- * - maxRetriesPerRequest: null required for rate-limiter-flexible
- */
-const redisClient = new IORedis(env.REDIS_URL, {
-  enableOfflineQueue: false,
-  maxRetriesPerRequest: null,
-});
+let _redisClient: IORedis | undefined;
+let _loginRateLimiter: RateLimiterRedis | undefined;
 
-/**
- * Rate limiter for login attempts
- * Configured per user decision: 5 attempts per 15 minutes
- */
-const loginRateLimiter = new RateLimiterRedis({
-  storeClient: redisClient,
-  keyPrefix: "login_fail_ip",
-  points: 5, // 5 attempts allowed
-  duration: 60 * 15, // Per 15 minutes
-  blockDuration: 60 * 15, // Block for 15 minutes when limit exceeded
-});
+function getRedisClient(): IORedis {
+  if (!_redisClient) {
+    _redisClient = new IORedis(env.REDIS_URL, {
+      enableOfflineQueue: false,
+      maxRetriesPerRequest: null,
+    });
+  }
+  return _redisClient;
+}
+
+function getLoginRateLimiter(): RateLimiterRedis {
+  if (!_loginRateLimiter) {
+    _loginRateLimiter = new RateLimiterRedis({
+      storeClient: getRedisClient(),
+      keyPrefix: "login_fail_ip",
+      points: 5,
+      duration: 60 * 15,
+      blockDuration: 60 * 15,
+    });
+  }
+  return _loginRateLimiter;
+}
 
 /**
  * Check if IP is rate limited
@@ -35,7 +39,7 @@ export async function checkRateLimit(
   ip: string,
 ): Promise<{ allowed: boolean; retryAfter?: number }> {
   try {
-    await loginRateLimiter.consume(ip);
+    await getLoginRateLimiter().consume(ip);
     return { allowed: true };
   } catch (rateLimiterRes) {
     // Redis connection error - allow request but warn
@@ -62,7 +66,7 @@ export async function checkRateLimit(
  */
 export async function resetRateLimit(ip: string): Promise<void> {
   try {
-    await loginRateLimiter.delete(ip);
+    await getLoginRateLimiter().delete(ip);
   } catch (error) {
     // Redis unavailable - silent no-op in development
     if (error instanceof Error) {

@@ -78,7 +78,7 @@ export async function POST(_request: NextRequest, context: RouteContext) {
     // 7. Remove old job (prevents job ID collision) and re-enqueue
     try {
       const oldJobId = `photo-${id}`;
-      const oldJob = await imageQueue.getJob(oldJobId);
+      const oldJob = await imageQueue().getJob(oldJobId);
       if (oldJob) {
         await oldJob.remove();
       }

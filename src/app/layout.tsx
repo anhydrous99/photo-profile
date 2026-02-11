@@ -3,11 +3,13 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { initializeApp } from "@/infrastructure/initialization";
 
-// Initialize app infrastructure on startup
-initializeApp().catch((error) => {
-  console.error("Failed to initialize app:", error);
-  process.exit(1);
-});
+// Initialize app infrastructure on startup (skip during build — no DynamoDB available)
+if (process.env.NEXT_PHASE !== "phase-production-build") {
+  initializeApp().catch((error) => {
+    console.error("Failed to initialize app:", error);
+    process.exit(1);
+  });
+}
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

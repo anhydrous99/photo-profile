@@ -44,7 +44,7 @@ async function main(): Promise<void> {
     console.log(`       ${testImagePath}`);
     console.log(`[Test] Creating directory...`);
     await fs.mkdir(originalDir, { recursive: true });
-    await imageQueue.close();
+    await imageQueue().close();
     process.exit(1);
   }
 
@@ -64,7 +64,7 @@ async function main(): Promise<void> {
       if (files.length >= EXPECTED_FILES) {
         console.log(`[Test] SUCCESS! Generated derivatives:`);
         files.sort().forEach((f) => console.log(`       - ${f}`));
-        await imageQueue.close();
+        await imageQueue().close();
         process.exit(0);
       }
     } catch {
@@ -79,7 +79,7 @@ async function main(): Promise<void> {
   );
   console.error(`[Test] Ensure worker is running: npm run worker`);
   console.error(`[Test] Ensure Redis is running: docker-compose up -d`);
-  await imageQueue.close();
+  await imageQueue().close();
   process.exit(1);
 }
 
