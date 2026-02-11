@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
 import { findOriginalFile } from "@/infrastructure/storage";
-import { imageQueue, enqueueImageProcessing } from "@/infrastructure/jobs";
+import { enqueueImageProcessing } from "@/infrastructure/jobs";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
@@ -75,17 +75,7 @@ export async function POST(_request: NextRequest, context: RouteContext) {
     photo.updatedAt = new Date();
     await photoRepository.save(photo);
 
-    // 7. Remove old job (prevents job ID collision) and re-enqueue
-    try {
-      const oldJobId = `photo-${id}`;
-      const oldJob = await imageQueue().getJob(oldJobId);
-      if (oldJob) {
-        await oldJob.remove();
-      }
-    } catch {
-      // Old job may not exist or already removed - safe to ignore
-    }
-
+    // 7. Re-enqueue processing job
     try {
       await Promise.race([
         enqueueImageProcessing(id, originalPath), // originalPath is S3 key or filesystem path

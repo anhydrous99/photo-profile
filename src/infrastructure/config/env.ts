@@ -14,6 +14,7 @@ const envSchema = z
     AWS_CLOUDFRONT_DOMAIN: z.string().optional(),
     AWS_ACCESS_KEY_ID: z.string().optional(),
     AWS_SECRET_ACCESS_KEY: z.string().optional(),
+    SQS_QUEUE_URL: z.string().url().optional(),
     REDIS_URL: z.string().url().optional().default("redis://localhost:6379"),
     NODE_ENV: z
       .enum(["development", "production", "test"])

@@ -2,7 +2,6 @@
 import "./load-env";
 
 import { imageWorker } from "./workers/imageProcessor";
-import { imageQueue } from "./queues";
 import { logger } from "@/infrastructure/logging/logger";
 
 logger.info("Starting image processing worker", { component: "worker" });
@@ -21,7 +20,6 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
   // Stop accepting new jobs, wait for current jobs to finish
   await imageWorker.close();
-  await imageQueue().close();
 
   logger.info("Shutdown complete", { component: "worker" });
   process.exit(0);
