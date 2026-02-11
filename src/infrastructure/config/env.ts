@@ -23,6 +23,8 @@ const envSchema = z
       .min(32, "AUTH_SECRET must be at least 32 characters for security"),
     ADMIN_PASSWORD_HASH: z.string().min(1, "ADMIN_PASSWORD_HASH is required"),
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).optional(),
+    DYNAMODB_ENDPOINT: z.string().optional(),
+    DYNAMODB_TABLE_PREFIX: z.string().optional().default(""),
     TRUSTED_PROXIES: z
       .string()
       .optional()
