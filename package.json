@@ -20,7 +20,8 @@
     "db:studio": "drizzle-kit studio",
     "exif:backfill": "npx tsx --require dotenv/config scripts/backfill-exif.ts",
     "dimensions:backfill": "npx tsx --require dotenv/config scripts/backfill-dimensions.ts",
-    "analyze": "ANALYZE=true next build --webpack"
+    "analyze": "ANALYZE=true next build --webpack",
+    "db:migrate-dynamo": "npx tsx --require dotenv/config scripts/migrate-to-dynamodb.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
