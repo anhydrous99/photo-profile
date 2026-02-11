@@ -1,13 +1,15 @@
 import type { Photo } from "../entities/Photo";
 
+// Cursor-based pagination for DynamoDB compatibility
 export interface PaginatedResult<T> {
   data: T[];
-  total: number;
+  nextCursor: string | null;
 }
 
+// Cursor-based pagination for DynamoDB compatibility
 export interface PaginationOptions {
   limit: number;
-  offset: number;
+  cursor?: string;
   status?: Photo["status"];
   albumFilter?: "all" | "none";
 }

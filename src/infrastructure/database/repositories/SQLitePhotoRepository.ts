@@ -44,25 +44,30 @@ export class SQLitePhotoRepository implements PhotoRepository {
       );
     }
 
+    if (options.cursor) {
+      const cursorDate = new Date(options.cursor);
+      conditions.push(lt(photos.createdAt, cursorDate));
+    }
+
     const condition = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const [results, [{ count }]] = await Promise.all([
-      db
-        .select()
-        .from(photos)
-        .where(condition)
-        .orderBy(desc(photos.createdAt))
-        .limit(options.limit)
-        .offset(options.offset),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(photos)
-        .where(condition),
-    ]);
+    // Fetch one extra to determine if there's a next page
+    const results = await db
+      .select()
+      .from(photos)
+      .where(condition)
+      .orderBy(desc(photos.createdAt))
+      .limit(options.limit + 1);
+
+    const hasMore = results.length > options.limit;
+    const pageResults = hasMore ? results.slice(0, options.limit) : results;
+    const nextCursor = hasMore
+      ? pageResults[pageResults.length - 1].createdAt.toISOString()
+      : null;
 
     return {
-      data: results.map((row) => this.toDomain(row)),
-      total: count,
+      data: pageResults.map((row) => this.toDomain(row)),
+      nextCursor,
     };
   }
 

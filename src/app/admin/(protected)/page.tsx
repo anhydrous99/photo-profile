@@ -19,7 +19,12 @@ const VALID_ALBUM_FILTERS = ["all", "none"] as const;
 type AlbumFilter = (typeof VALID_ALBUM_FILTERS)[number];
 
 interface PageProps {
-  searchParams: Promise<{ page?: string; status?: string; album?: string }>;
+  searchParams: Promise<{
+    cursor?: string;
+    cursors?: string;
+    status?: string;
+    album?: string;
+  }>;
 }
 
 /**
@@ -34,7 +39,10 @@ interface PageProps {
 export default async function AdminDashboard({ searchParams }: PageProps) {
   const params = await searchParams;
 
-  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const cursor = params.cursor || undefined;
+  const cursorHistory = params.cursors
+    ? params.cursors.split(",").filter(Boolean)
+    : [];
   const statusFilter = VALID_STATUSES.includes(params.status as Photo["status"])
     ? (params.status as Photo["status"])
     : undefined;
@@ -44,20 +52,19 @@ export default async function AdminDashboard({ searchParams }: PageProps) {
     ? (params.album as AlbumFilter)
     : "all";
 
-  const offset = (page - 1) * PAGE_SIZE;
+  const [{ data: photos, nextCursor }, albums, stalePhotos] = await Promise.all(
+    [
+      photoRepository.findPaginated({
+        limit: PAGE_SIZE,
+        cursor,
+        status: statusFilter,
+        albumFilter: albumFilter === "all" ? undefined : albumFilter,
+      }),
+      albumRepository.findAll(),
+      photoRepository.findStaleProcessing(STALE_THRESHOLD_MS),
+    ],
+  );
 
-  const [{ data: photos, total }, albums, stalePhotos] = await Promise.all([
-    photoRepository.findPaginated({
-      limit: PAGE_SIZE,
-      offset,
-      status: statusFilter,
-      albumFilter: albumFilter === "all" ? undefined : albumFilter,
-    }),
-    albumRepository.findAll(),
-    photoRepository.findStaleProcessing(STALE_THRESHOLD_MS),
-  ]);
-
-  const totalPages = Math.ceil(total / PAGE_SIZE);
   const stalePhotoIds = stalePhotos.map((p) => p.id);
 
   return (
@@ -80,16 +87,14 @@ export default async function AdminDashboard({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <h2 className="mb-4 text-lg font-medium text-text-primary">
-        Photos ({total})
-      </h2>
+      <h2 className="mb-4 text-lg font-medium text-text-primary">Photos</h2>
 
       <AdminDashboardClient
         photos={photos}
         albums={albums}
         stalePhotoIds={stalePhotoIds}
-        currentPage={page}
-        totalPages={totalPages}
+        nextCursor={nextCursor}
+        cursorHistory={cursorHistory}
         statusFilter={statusFilter ?? "all"}
         albumFilter={albumFilter}
       />

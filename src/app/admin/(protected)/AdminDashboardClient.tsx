@@ -12,8 +12,8 @@ interface AdminDashboardClientProps {
   photos: Photo[];
   albums: Album[];
   stalePhotoIds: string[];
-  currentPage: number;
-  totalPages: number;
+  nextCursor: string | null;
+  cursorHistory: string[];
   statusFilter: StatusFilter;
   albumFilter: AlbumFilter;
 }
@@ -22,8 +22,8 @@ export function AdminDashboardClient({
   photos,
   albums,
   stalePhotoIds,
-  currentPage,
-  totalPages,
+  nextCursor,
+  cursorHistory,
   statusFilter,
   albumFilter,
 }: AdminDashboardClientProps) {
@@ -33,13 +33,27 @@ export function AdminDashboardClient({
   const [reprocessing, setReprocessing] = useState(false);
 
   const buildUrl = useCallback(
-    (params: { page?: number; status?: string; album?: string }) => {
+    (params: {
+      cursor?: string;
+      cursorHistory?: string[];
+      status?: string;
+      album?: string;
+    }) => {
       const newParams = new URLSearchParams(searchParams.toString());
 
-      if (params.page && params.page > 1) {
-        newParams.set("page", String(params.page));
+      if (params.cursor) {
+        newParams.set("cursor", params.cursor);
       } else {
-        newParams.delete("page");
+        newParams.delete("cursor");
+      }
+
+      if (
+        params.cursorHistory !== undefined &&
+        params.cursorHistory.length > 0
+      ) {
+        newParams.set("cursors", params.cursorHistory.join(","));
+      } else {
+        newParams.delete("cursors");
       }
 
       if (params.status !== undefined) {
@@ -64,11 +78,34 @@ export function AdminDashboardClient({
     [searchParams],
   );
 
-  const handlePageChange = (page: number) => {
+  const handleNext = () => {
+    if (!nextCursor) return;
     setSelectedIds(new Set());
+
+    const currentCursor = searchParams.get("cursor") ?? "";
+    const newHistory = [...cursorHistory, currentCursor];
+
     router.push(
       buildUrl({
-        page,
+        cursor: nextCursor,
+        cursorHistory: newHistory,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        album: albumFilter === "all" ? undefined : albumFilter,
+      }),
+    );
+  };
+
+  const handlePrevious = () => {
+    if (cursorHistory.length === 0) return;
+    setSelectedIds(new Set());
+
+    const newHistory = [...cursorHistory];
+    const previousCursor = newHistory.pop();
+
+    router.push(
+      buildUrl({
+        cursor: previousCursor || undefined,
+        cursorHistory: newHistory,
         status: statusFilter === "all" ? undefined : statusFilter,
         album: albumFilter === "all" ? undefined : albumFilter,
       }),
@@ -77,12 +114,12 @@ export function AdminDashboardClient({
 
   const handleStatusChange = (status: StatusFilter) => {
     setSelectedIds(new Set());
-    router.push(buildUrl({ page: 1, status }));
+    router.push(buildUrl({ status, cursorHistory: [] }));
   };
 
   const handleAlbumFilterChange = (album: AlbumFilter) => {
     setSelectedIds(new Set());
-    router.push(buildUrl({ page: 1, album }));
+    router.push(buildUrl({ album, cursorHistory: [] }));
   };
 
   const handleSelectionChange = (newSelectedIds: Set<string>) => {
@@ -235,9 +272,10 @@ export function AdminDashboardClient({
       />
       <div className="mt-6">
         <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onChange={handlePageChange}
+          nextCursor={nextCursor}
+          onNext={handleNext}
+          onPrevious={handlePrevious}
+          hasPrevious={cursorHistory.length > 0}
         />
       </div>
     </>

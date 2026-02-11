@@ -449,12 +449,12 @@ describe("SQLitePhotoRepository", () => {
       await repo.save(p2);
       await repo.save(p3);
 
-      const result = await repo.findPaginated({ limit: 2, offset: 0 });
+      const result = await repo.findPaginated({ limit: 2 });
       expect(result.data).toHaveLength(2);
-      expect(result.total).toBe(3);
+      expect(result.nextCursor).not.toBeNull();
     });
 
-    it("returns total count of all photos not just the page", async () => {
+    it("returns nextCursor when more items exist", async () => {
       const p1 = makePhoto({
         createdAt: new Date("2024-01-01T00:00:00Z"),
         updatedAt: new Date("2024-01-01T00:00:00Z"),
@@ -476,9 +476,9 @@ describe("SQLitePhotoRepository", () => {
       await repo.save(p3);
       await repo.save(p4);
 
-      const result = await repo.findPaginated({ limit: 2, offset: 0 });
+      const result = await repo.findPaginated({ limit: 2 });
       expect(result.data).toHaveLength(2);
-      expect(result.total).toBe(4);
+      expect(result.nextCursor).not.toBeNull();
     });
 
     it("results are ordered by createdAt descending (newest first)", async () => {
@@ -498,14 +498,14 @@ describe("SQLitePhotoRepository", () => {
       await repo.save(p2);
       await repo.save(p3);
 
-      const result = await repo.findPaginated({ limit: 10, offset: 0 });
+      const result = await repo.findPaginated({ limit: 10 });
       expect(result.data).toHaveLength(3);
       expect(result.data[0].id).toBe(p3.id);
       expect(result.data[1].id).toBe(p2.id);
       expect(result.data[2].id).toBe(p1.id);
     });
 
-    it("status filter returns only photos with matching status and correct filtered count", async () => {
+    it("status filter returns only photos with matching status", async () => {
       const ready1 = makePhoto({
         status: "ready",
         createdAt: new Date("2024-01-01T00:00:00Z"),
@@ -527,22 +527,21 @@ describe("SQLitePhotoRepository", () => {
 
       const result = await repo.findPaginated({
         limit: 10,
-        offset: 0,
         status: "ready",
       });
       expect(result.data).toHaveLength(2);
-      expect(result.total).toBe(2);
+      expect(result.nextCursor).toBeNull();
       expect(result.data[0].status).toBe("ready");
       expect(result.data[1].status).toBe("ready");
     });
 
-    it("returns empty data array and total=0 when no photos exist", async () => {
-      const result = await repo.findPaginated({ limit: 10, offset: 0 });
+    it("returns empty data and null nextCursor when no photos exist", async () => {
+      const result = await repo.findPaginated({ limit: 10 });
       expect(result.data).toHaveLength(0);
-      expect(result.total).toBe(0);
+      expect(result.nextCursor).toBeNull();
     });
 
-    it("offset beyond total returns empty data but correct total count", async () => {
+    it("cursor-based pagination returns next page correctly", async () => {
       const p1 = makePhoto({
         createdAt: new Date("2024-01-01T00:00:00Z"),
         updatedAt: new Date("2024-01-01T00:00:00Z"),
@@ -551,15 +550,28 @@ describe("SQLitePhotoRepository", () => {
         createdAt: new Date("2024-01-02T00:00:00Z"),
         updatedAt: new Date("2024-01-02T00:00:00Z"),
       });
+      const p3 = makePhoto({
+        createdAt: new Date("2024-01-03T00:00:00Z"),
+        updatedAt: new Date("2024-01-03T00:00:00Z"),
+      });
       await repo.save(p1);
       await repo.save(p2);
+      await repo.save(p3);
 
-      const result = await repo.findPaginated({ limit: 10, offset: 100 });
-      expect(result.data).toHaveLength(0);
-      expect(result.total).toBe(2);
+      const page1 = await repo.findPaginated({ limit: 2 });
+      expect(page1.data).toHaveLength(2);
+      expect(page1.nextCursor).not.toBeNull();
+
+      const page2 = await repo.findPaginated({
+        limit: 2,
+        cursor: page1.nextCursor!,
+      });
+      expect(page2.data).toHaveLength(1);
+      expect(page2.nextCursor).toBeNull();
+      expect(page2.data[0].id).toBe(p1.id);
     });
 
-    it("status filter with no matching photos returns empty data and total=0", async () => {
+    it("status filter with no matching photos returns empty data", async () => {
       const ready = makePhoto({
         status: "ready",
         createdAt: new Date("2024-01-01T00:00:00Z"),
@@ -569,11 +581,10 @@ describe("SQLitePhotoRepository", () => {
 
       const result = await repo.findPaginated({
         limit: 10,
-        offset: 0,
         status: "processing",
       });
       expect(result.data).toHaveLength(0);
-      expect(result.total).toBe(0);
+      expect(result.nextCursor).toBeNull();
     });
 
     it("albumFilter 'none' returns only photos not in any album", async () => {
@@ -594,11 +605,9 @@ describe("SQLitePhotoRepository", () => {
 
       const result = await repo.findPaginated({
         limit: 10,
-        offset: 0,
         albumFilter: "none",
       });
       expect(result.data).toHaveLength(1);
-      expect(result.total).toBe(1);
       expect(result.data[0].id).toBe(unassigned.id);
     });
 
@@ -616,11 +625,10 @@ describe("SQLitePhotoRepository", () => {
 
       const result = await repo.findPaginated({
         limit: 10,
-        offset: 0,
         albumFilter: "none",
       });
       expect(result.data).toHaveLength(2);
-      expect(result.total).toBe(2);
+      expect(result.nextCursor).toBeNull();
     });
 
     it("albumFilter 'none' returns empty when all photos are in albums", async () => {
@@ -636,11 +644,10 @@ describe("SQLitePhotoRepository", () => {
 
       const result = await repo.findPaginated({
         limit: 10,
-        offset: 0,
         albumFilter: "none",
       });
       expect(result.data).toHaveLength(0);
-      expect(result.total).toBe(0);
+      expect(result.nextCursor).toBeNull();
     });
 
     it("albumFilter 'none' excludes photo in multiple albums", async () => {
@@ -664,7 +671,6 @@ describe("SQLitePhotoRepository", () => {
 
       const result = await repo.findPaginated({
         limit: 10,
-        offset: 0,
         albumFilter: "none",
       });
       expect(result.data).toHaveLength(1);
@@ -697,16 +703,14 @@ describe("SQLitePhotoRepository", () => {
 
       const result = await repo.findPaginated({
         limit: 10,
-        offset: 0,
         status: "ready",
         albumFilter: "none",
       });
       expect(result.data).toHaveLength(1);
-      expect(result.total).toBe(1);
       expect(result.data[0].id).toBe(readyOrphan.id);
     });
 
-    it("albumFilter 'none' respects pagination limit and offset", async () => {
+    it("albumFilter 'none' respects pagination limit with cursor", async () => {
       const album = makeAlbumValues();
       testDb.insert(schema.albums).values(album).run();
 
@@ -728,11 +732,10 @@ describe("SQLitePhotoRepository", () => {
 
       const result = await repo.findPaginated({
         limit: 2,
-        offset: 0,
         albumFilter: "none",
       });
       expect(result.data).toHaveLength(2);
-      expect(result.total).toBe(3);
+      expect(result.nextCursor).not.toBeNull();
     });
 
     it("omitting albumFilter returns all photos (default behavior)", async () => {
@@ -753,10 +756,9 @@ describe("SQLitePhotoRepository", () => {
 
       const result = await repo.findPaginated({
         limit: 10,
-        offset: 0,
       });
       expect(result.data).toHaveLength(2);
-      expect(result.total).toBe(2);
+      expect(result.nextCursor).toBeNull();
     });
   });
 });
