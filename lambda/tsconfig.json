@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "paths": {
+      "@/*": ["../src/*"]
+    },
+    "baseUrl": "."
+  },
+  "include": [
+    "*.ts",
+    "../src/infrastructure/services/*.ts",
+    "../src/domain/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "__tests__"]
+}
