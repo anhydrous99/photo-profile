@@ -23,8 +23,7 @@ interface RouteContext {
  * 3. Guard against reprocessing already-ready photos
  * 4. Discover original file path
  * 5. Reset status to "processing"
- * 6. Remove old BullMQ job (prevent ID collision)
- * 7. Re-enqueue processing job
+ * 6. Re-enqueue processing job via SQS
  *
  * Returns: { id, status: "processing" }
  */

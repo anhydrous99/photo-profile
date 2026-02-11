@@ -6,7 +6,7 @@
  * - next/headers (cookies/headers)
  * - next/cache (revalidation functions)
  * - ioredis (prevents TCP connection hang)
- * - bullmq (prevents Redis operations)
+ * - @aws-sdk/client-sqs (prevents network calls)
  *
  * These tests also serve as usage examples for Phase 17 test authors.
  */
@@ -49,6 +49,6 @@ describe("Mock smoke tests", () => {
 
   it("can import queues module without hanging", async () => {
     const queues = await import("@/infrastructure/jobs/queues");
-    expect(queues.imageQueue).toBeDefined();
+    expect(queues.enqueueImageProcessing).toBeDefined();
   });
 });

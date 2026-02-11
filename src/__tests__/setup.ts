@@ -66,17 +66,15 @@ vi.mock("react", async (importOriginal) => {
   };
 });
 
-// 7. bullmq: Mock Queue and Worker to prevent Redis operations
-//    Uses regular functions (not arrows) so they can be called with `new`
-vi.mock("bullmq", () => {
-  const MockQueue = vi.fn(function (this: Record<string, unknown>) {
-    this.add = vi.fn();
-    this.close = vi.fn();
-    this.on = vi.fn();
+// 7. @aws-sdk/client-sqs: Mock SQS client to prevent network calls
+//    Uses regular function (not arrow) so it can be called with `new`
+vi.mock("@aws-sdk/client-sqs", () => {
+  const MockSQSClient = vi.fn(function (this: Record<string, unknown>) {
+    this.send = vi.fn().mockResolvedValue({ MessageId: "mock-message-id" });
   });
-  const MockWorker = vi.fn(function (this: Record<string, unknown>) {
-    this.on = vi.fn();
-    this.close = vi.fn();
-  });
-  return { Queue: MockQueue, Worker: MockWorker };
+  const MockSendMessageCommand = vi.fn();
+  return {
+    SQSClient: MockSQSClient,
+    SendMessageCommand: MockSendMessageCommand,
+  };
 });
