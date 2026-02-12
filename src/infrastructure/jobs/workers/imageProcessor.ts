@@ -1,17 +1,10 @@
 import { Worker, Job } from "bullmq";
-import path from "path";
-import fs from "fs/promises";
 import IORedis from "ioredis";
 import sharp from "sharp";
 import { env } from "@/infrastructure/config/env";
 import { logger } from "@/infrastructure/logging/logger";
-import {
-  generateDerivatives,
-  generateBlurPlaceholder,
-} from "@/infrastructure/services/imageService";
-import { extractExifData } from "@/infrastructure/services/exifService";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
-import { getStorageAdapter } from "@/infrastructure/storage";
+import { processImageJob } from "@/infrastructure/services/imageProcessingJob";
 import { ImageJobData, ImageJobResult } from "../queues";
 
 /**
@@ -71,9 +64,6 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
   "image-processing",
   async (job: Job<ImageJobData>) => {
     const { photoId, originalKey } = job.data;
-    const tempDir = `/tmp/photo-worker-${photoId}-${job.attemptsMade}`;
-    const originalFilename = path.basename(originalKey);
-    const tempOriginalPath = path.join(tempDir, originalFilename);
 
     logger.info(`Processing job ${job.id} for photo ${photoId}`, {
       component: "image-worker",
@@ -81,96 +71,30 @@ export const imageWorker = new Worker<ImageJobData, ImageJobResult>(
       photoId,
     });
 
-    try {
-      await fs.mkdir(tempDir, { recursive: true });
+    const result = await processImageJob({ photoId, originalKey });
 
-      const adapter = getStorageAdapter();
-      const originalBuffer = await adapter.getFile(originalKey);
-      await fs.writeFile(tempOriginalPath, originalBuffer);
-
-      await job.updateProgress(10);
-
-      const derivatives = await generateDerivatives(tempOriginalPath, tempDir);
-
-      await job.updateProgress(80);
-
-      const rotatedMeta = await sharp(tempOriginalPath).rotate().metadata();
-      const width = rotatedMeta.width!;
-      const height = rotatedMeta.height!;
-
-      const exifData = await extractExifData(tempOriginalPath);
-
-      await job.updateProgress(90);
-
-      const blurDataUrl = await generateBlurPlaceholder(tempOriginalPath);
-
-      const CONTENT_TYPES: Record<string, string> = {
-        ".webp": "image/webp",
-        ".avif": "image/avif",
-      };
-
-      const entries = await fs.readdir(tempDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isFile()) continue;
-        if (entry.name.startsWith("original")) continue;
-
-        const ext = path.extname(entry.name);
-        const contentType = CONTENT_TYPES[ext];
-        if (!contentType) continue;
-
-        const fileBuffer = await fs.readFile(path.join(tempDir, entry.name));
-        await adapter.saveFile(
-          `processed/${photoId}/${entry.name}`,
-          fileBuffer,
-          contentType,
-        );
-      }
-
-      await job.updateProgress(100);
-
-      logger.info(
-        `Generated ${derivatives.length} files + blur placeholder + EXIF + dimensions (${width}x${height}) for photo ${photoId}`,
-        {
-          component: "image-worker",
-          photoId,
-          derivativeCount: derivatives.length,
-          width,
-          height,
-        },
-      );
-
-      const repository = new DynamoDBPhotoRepository();
-      const photo = await repository.findById(photoId);
-      if (photo) {
-        photo.status = "ready";
-        photo.blurDataUrl = blurDataUrl;
-        photo.exifData = exifData;
-        photo.width = width;
-        photo.height = height;
-        photo.updatedAt = new Date();
-        await repository.save(photo);
-        logger.info(`Updated photo ${photoId} to 'ready'`, {
-          component: "image-worker",
-          photoId,
-        });
-      } else {
-        logger.error(`Photo not found: ${photoId}`, {
-          component: "image-worker",
-          photoId,
-        });
-      }
-
-      return { photoId, derivatives, blurDataUrl, exifData, width, height };
-    } finally {
-      try {
-        await fs.rm(tempDir, { recursive: true, force: true });
-      } catch {
-        logger.warn(`Failed to clean up temp dir: ${tempDir}`, {
-          component: "image-worker",
-          photoId,
-        });
-      }
+    const repository = new DynamoDBPhotoRepository();
+    const photo = await repository.findById(photoId);
+    if (photo) {
+      photo.status = "ready";
+      photo.blurDataUrl = result.blurDataUrl;
+      photo.exifData = result.exifData;
+      photo.width = result.width;
+      photo.height = result.height;
+      photo.updatedAt = new Date();
+      await repository.save(photo);
+      logger.info(`Updated photo ${photoId} to 'ready'`, {
+        component: "image-worker",
+        photoId,
+      });
+    } else {
+      logger.error(`Photo not found: ${photoId}`, {
+        component: "image-worker",
+        photoId,
+      });
     }
+
+    return result;
   },
   {
     connection,

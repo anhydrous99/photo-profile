@@ -3,7 +3,7 @@ import { logger } from "@/infrastructure/logging/logger";
 
 const envSchema = z
   .object({
-    STORAGE_PATH: z.string().min(1, "STORAGE_PATH is required"),
+    STORAGE_PATH: z.string().optional().default(""),
     STORAGE_BACKEND: z
       .enum(["s3", "filesystem"])
       .default("filesystem")
@@ -14,6 +14,11 @@ const envSchema = z
     AWS_ACCESS_KEY_ID: z.string().optional(),
     AWS_SECRET_ACCESS_KEY: z.string().optional(),
     REDIS_URL: z.string().url().optional().default("redis://localhost:6379"),
+    QUEUE_BACKEND: z
+      .enum(["bullmq", "sqs"])
+      .default("bullmq")
+      .describe("Queue backend: bullmq or sqs"),
+    SQS_QUEUE_URL: z.string().url().optional(),
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
@@ -69,6 +74,16 @@ const envSchema = z
           path: ["STORAGE_PATH"],
           message:
             "STORAGE_PATH is required when STORAGE_BACKEND is filesystem",
+        });
+      }
+    }
+
+    if (data.QUEUE_BACKEND === "sqs") {
+      if (!data.SQS_QUEUE_URL) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["SQS_QUEUE_URL"],
+          message: "SQS_QUEUE_URL is required when QUEUE_BACKEND is sqs",
         });
       }
     }
