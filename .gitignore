@@ -55,5 +55,9 @@ next-env.d.ts
 # local environment
 .env.local
 
+# lambda packaging (keep structure, ignore build output)
+/lambda-package/*
+!/lambda-package/.gitkeep
+
 .sisyphus
 .planning
