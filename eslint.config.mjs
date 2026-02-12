@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Lambda package (generated code):
+    "lambda-package/**",
   ]),
 ]);
 

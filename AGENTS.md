@@ -1,13 +1,12 @@
 # AGENTS.md — Photo Profile
 
-Self-hosted photography portfolio. Next.js 16 App Router + TypeScript + DynamoDB (via AWS SDK) + Sharp image processing + BullMQ job queue. Single admin user, public-facing gallery. Clean Architecture layers under `src/`.
+Photography portfolio for Vercel deployment. Next.js 16 App Router + TypeScript + DynamoDB (via AWS SDK) + Sharp image processing + Lambda + SQS job queue. Single admin user, public-facing gallery. Clean Architecture layers under `src/`.
 
 ## COMMANDS
 
 ```bash
 # --- Development ---
 npm run dev                    # Next.js dev server (port 3000)
-npm run worker                 # BullMQ image processing worker (separate process, requires Redis)
 
 # --- Quality ---
 npm run lint                   # ESLint 9 flat config (eslint-config-next + prettier)
@@ -25,6 +24,7 @@ npx vitest run --coverage                                           # With V8 co
 
 # --- Build ---
 npm run build                  # Production build (output: standalone)
+npm run build:lambda           # Build Lambda package with Sharp ARM64 binary
 ```
 
 Pre-commit hook (`husky` + `lint-staged`): runs `eslint --fix` + `prettier --write` on staged `.ts/.tsx/.js/.jsx/.json/.md/.yml/.yaml` files. CI pipeline: lint → format:check → typecheck → build → test.
@@ -41,7 +41,7 @@ src/
 │   ├── auth/                  # JWT (jose HS256, 8h), bcrypt, rate limiter, DAL
 │   ├── config/                # Zod-validated env vars (crash on startup if invalid)
 │   ├── database/dynamodb/     # DynamoDB repositories, tables, client
-│   ├── jobs/                  # BullMQ queue + standalone worker
+│   ├── jobs/                  # SQS enqueue + Lambda handler
 │   ├── logging/               # Structured logger (JSON in prod, pretty in dev)
 │   ├── services/              # Sharp image derivatives, EXIF extraction
 │   ├── storage/               # StorageAdapter interface + filesystem/S3 implementations
@@ -71,7 +71,7 @@ src/
 | Add React component   | `src/presentation/components/` — `"use client"`, add to barrel `index.ts`                            |
 | Modify auth           | `src/infrastructure/auth/` — session.ts (JWT), dal.ts, password.ts                                   |
 | Modify image pipeline | `src/infrastructure/services/imageService.ts`                                                        |
-| Modify worker         | `src/infrastructure/jobs/workers/imageProcessor.ts` (concurrency=2)                                  |
+| Modify Lambda handler | `src/infrastructure/jobs/lambdaHandler.ts` — SQS event handler                                       |
 | Environment config    | `src/infrastructure/config/env.ts` — Zod schema, crash on invalid                                    |
 
 ## CODE STYLE
@@ -121,7 +121,7 @@ src/
 - API routes: try/catch with structured logging (`logger.error("route description", { error: ... })`)
 - Error serialization: `error instanceof Error ? { message: error.message, stack: error.stack } : error`
 - No empty catch blocks
-- Redis/BullMQ failures: graceful degradation (photo stays "processing")
+- Lambda/SQS failures: photo stays "processing", check CloudWatch logs and DLQ
 
 ### Testing
 
@@ -136,7 +136,6 @@ src/
 
 - **Never** remove `.rotate()` from Sharp pipelines — images render with wrong orientation
 - **Never** remove `.withMetadata()` from Sharp — colors shift (loses sRGB ICC profile)
-- **Never** remove BullMQ worker error handlers — worker fails silently, photos stuck "processing"
 - **Never** access GPS/camera serial/software EXIF tags — privacy policy, only 11 fields allowed
 - **Never** use `middleware.ts` — project uses `proxy.ts` (Next.js 16 proxy pattern)
 - **Never** add `@ts-ignore`, `@ts-expect-error`, or `as any`
@@ -159,12 +158,12 @@ These are the ONLY acceptable non-strict type patterns in the codebase:
 - **Storage backend**: `STORAGE_BACKEND` env var switches between `filesystem` and `s3`; `getStorageAdapter()` is a singleton factory
 - **DynamoDB**: Local dev via `dynamodb-local` in docker-compose (port 8000). Tables auto-created on first run.
 - **Image API**: Falls back to largest available derivative if requested size doesn't exist
-- **Redis unavailable** = jobs silently dropped; photo stays "processing" forever. Expected in dev without Docker.
 
 ## INFRASTRUCTURE
 
 - **Docker**: Multi-stage Dockerfile + docker-compose (web, worker, redis, dynamodb-local). Output: standalone.
-- **Redis**: Required for BullMQ + rate limiting. App degrades gracefully without it.
+- **Upstash Redis**: Required for rate limiting (serverless-compatible).
 - **S3 + CloudFront**: Optional storage backend; filesystem is the default.
-- **CDK**: `photo-profile-cdk/` — AWS CDK stack (scaffold only). Jest for tests.
+- **Lambda + SQS**: Image processing queue for Vercel deployment. Lambda handler at `src/infrastructure/jobs/lambdaHandler.ts`.
+- **CDK**: `photo-profile-cdk/` — AWS CDK stack (Lambda, SQS, DLQ, IAM). Jest for tests.
 - **Admin password**: `npx tsx scripts/hash-password.ts <password>` → set `ADMIN_PASSWORD_HASH` env var.

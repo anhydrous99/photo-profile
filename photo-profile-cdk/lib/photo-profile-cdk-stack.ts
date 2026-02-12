@@ -56,7 +56,6 @@ export class PhotoProfileCdkStack extends cdk.Stack {
         DYNAMODB_TABLE_PREFIX: tablePrefix,
         STORAGE_BACKEND: "s3",
         STORAGE_PATH: "",
-        QUEUE_BACKEND: "sqs",
         AUTH_SECRET: "dummy-not-used-by-lambda",
         ADMIN_PASSWORD_HASH: "dummy-not-used-by-lambda",
       },

@@ -1,15 +1,15 @@
 # Photo Profile
 
-A modern, high-performance photography portfolio built with **Next.js 16**, following **Clean Architecture** principles. Supports **two deployment models**: self-hosted (Docker with BullMQ) or serverless (Vercel with AWS Lambda + SQS). Leverages **DynamoDB** for data storage, flexible queue backends (BullMQ or SQS), and flexible storage options (local filesystem or AWS S3 + CloudFront) for image delivery.
+A modern, high-performance photography portfolio built with **Next.js 16**, following **Clean Architecture** principles. Designed for **Vercel serverless deployment** with AWS Lambda + SQS for image processing. Leverages **DynamoDB** for data storage and flexible storage options (local filesystem or AWS S3 + CloudFront) for image delivery.
 
 ## 🚀 Key Features
 
 - **Next.js 16 App Router**: Leveraging Server Components for optimal performance.
 - **Clean Architecture**: Strict separation of concerns (Domain, Infrastructure, Presentation).
-- **Flexible Deployment**: Self-hosted Docker or Vercel serverless.
+- **Serverless Deployment**: Vercel with AWS Lambda + SQS for scalable image processing.
 - **Infrastructure as Code**: AWS CDK stack for Lambda, SQS, and IAM resources.
 - **High-Performance Image Pipeline**:
-  - Background processing with **BullMQ** (local dev) or **AWS Lambda + SQS** (Vercel/production).
+  - Background processing with **AWS Lambda + SQS** for serverless scalability.
   - High-quality image derivatives (WebP, AVIF) using **Sharp**.
   - Automatic EXIF data extraction.
   - Smart image loading and progressive rendering.
@@ -20,7 +20,7 @@ A modern, high-performance photography portfolio built with **Next.js 16**, foll
   - **AWS S3 + CloudFront**: Scalable object storage with global CDN delivery.
 - **Secure Admin Panel**:
   - JWT-based authentication (Jose) with timing attack prevention.
-  - Rate limiting and brute-force protection (Redis-backed).
+  - Rate limiting and brute-force protection (Upstash Redis for serverless compatibility).
   - Secure password hashing (Bcrypt).
   - IP validation with trusted proxy support.
 - **Modern UI**: **Tailwind CSS v4** and **Geist** font family.
@@ -30,21 +30,20 @@ A modern, high-performance photography portfolio built with **Next.js 16**, foll
 - **Framework**: Next.js 16, React 19
 - **Language**: TypeScript
 - **Database**: DynamoDB
-- **Queue**: BullMQ (local dev) or AWS SQS + Lambda (production/Vercel)
-- **Image Processing**: Sharp
+- **Queue**: AWS SQS + Lambda (serverless image processing)
+- **Image Processing**: Sharp (ARM64 optimized for Lambda)
 - **Storage**: Local Filesystem or AWS S3
 - **Infrastructure**: AWS CDK
 - **Styling**: Tailwind CSS v4
 - **Testing**: Vitest, Playwright
-- **Authentication**: JWT (Jose HS256), Bcrypt, Rate Limiting
+- **Authentication**: JWT (Jose HS256), Bcrypt, Rate Limiting (Upstash Redis)
 
 ## 📋 Prerequisites
 
 - **Node.js** (v20 or higher recommended)
-- **Redis** (Optional for development; **Required for self-hosted production** with BullMQ; **Not required for Vercel deployment** — Lambda + SQS handles image processing)
-- **AWS Account** (Optional, if using DynamoDB or S3 storage; Docker Compose includes local DynamoDB)
-- **Docker & Docker Compose** (Recommended for easy setup of Redis and DynamoDB-local)
-- **AWS CDK CLI** (Optional, only needed if deploying infrastructure for Vercel/Lambda deployment)
+- **AWS Account** (Required for DynamoDB, S3 storage, Lambda, and SQS)
+- **Upstash Redis** (Required for rate limiting — serverless-compatible)
+- **AWS CDK CLI** (Required for deploying Lambda + SQS infrastructure)
 
 ## 🏁 Getting Started
 
@@ -68,11 +67,11 @@ ADMIN_PASSWORD_HASH= # Generated in step 3
 # DYNAMODB_TABLE_PREFIX=dev_                # Optional prefix for local testing
 
 # Storage Configuration (Choose one)
-# Option A: Local Filesystem (Default)
+# Option A: Local Filesystem (Default for local dev)
 STORAGE_BACKEND=filesystem
 STORAGE_PATH=./storage  # Optional when STORAGE_BACKEND=s3
 
-# Option B: AWS S3 + CloudFront
+# Option B: AWS S3 + CloudFront (Required for Vercel)
 # STORAGE_BACKEND=s3
 # AWS_REGION=us-east-1
 # AWS_S3_BUCKET=your-bucket-name
@@ -81,12 +80,14 @@ STORAGE_PATH=./storage  # Optional when STORAGE_BACKEND=s3
 # AWS_SECRET_ACCESS_KEY=your-secret-key
 # NEXT_PUBLIC_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
 
-# Queue Backend (bullmq for local dev, sqs for Vercel/Lambda)
-# QUEUE_BACKEND=bullmq  # Default for local development
-# SQS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/123456789/photo-profile-queue  # Required when QUEUE_BACKEND=sqs
+# Queue Backend (SQS for Vercel/Lambda)
+SQS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/123456789/photo-profile-queue
+
+# Rate Limiting (Upstash Redis - Required)
+UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-token
 
 # Optional (Defaults)
-# REDIS_URL=redis://localhost:6379
 # NODE_ENV=development
 # LOG_LEVEL=info
 # NEXT_PUBLIC_SITE_URL=http://localhost:3000
@@ -112,50 +113,23 @@ Tables are created automatically on first run. For local development with Docker
 
 ## 🏃‍♂️ Running the Application
 
-### Option A: Using Docker Compose (Recommended for Local Development)
+### Local Development
 
-This runs the Web App, Worker, Redis, and DynamoDB-Local in a single command:
-
-```bash
-docker-compose up -d
-```
-
-**Services included:**
-
-- **web** — Next.js app (http://localhost:3000)
-- **worker** — Background image processing (requires Redis)
-- **redis** — In-memory cache & job queue (port 6379)
-- **dynamodb-local** — Local DynamoDB for development (port 8000, in-memory mode)
-
-**To stop all services:**
+Start the Next.js development server:
 
 ```bash
-docker-compose down
+npm run dev
 ```
 
-**To view logs:**
+The app will be available at http://localhost:3000.
 
-```bash
-docker-compose logs -f web    # Web server logs
-docker-compose logs -f worker # Worker logs
-```
+**Note**: Image processing requires Lambda + SQS infrastructure. For local development, you can:
 
-### Option B: Manual Start (Local Development)
+- Deploy the CDK stack to AWS (see below)
+- Set `SQS_QUEUE_URL` in your `.env` file
+- Images will be processed via Lambda when uploaded
 
-To run the full application locally, you need **two processes** running: the web server and the background worker.
-
-1. **Start Redis** (Ensure Redis is running locally)
-2. **Start Web Server** (http://localhost:3000)
-   ```bash
-   npm run dev
-   ```
-3. **Start Worker Process**
-   ```bash
-   npm run worker
-   ```
-   _Note: Images will remain in "Processing" state if the worker is not running._
-
-### Option C: Vercel Deployment (Serverless)
+### Vercel Deployment (Production)
 
 Deploy to Vercel with AWS Lambda + SQS for image processing:
 
@@ -177,11 +151,10 @@ Deploy to Vercel with AWS Lambda + SQS for image processing:
 3. **Set Environment Variables in Vercel**
 
    ```env
-   # Queue Backend (Required for Vercel)
-   QUEUE_BACKEND=sqs
+   # Queue Backend (Required)
    SQS_QUEUE_URL=<from CDK output>
 
-   # Storage (Required for Vercel)
+   # Storage (Required)
    STORAGE_BACKEND=s3
    AWS_S3_BUCKET=<your-bucket>
    AWS_REGION=<your-region>
@@ -194,6 +167,10 @@ Deploy to Vercel with AWS Lambda + SQS for image processing:
 
    # Database (Required)
    DYNAMODB_TABLE_PREFIX=prod_  # Must match CDK context
+
+   # Rate Limiting (Required - Upstash Redis)
+   UPSTASH_REDIS_REST_URL=<your-upstash-redis-url>
+   UPSTASH_REDIS_REST_TOKEN=<your-upstash-token>
 
    # AWS Credentials (Required)
    AWS_ACCESS_KEY_ID=<your-access-key>
@@ -222,22 +199,7 @@ src/
 
 ## 🏗️ Architecture
 
-The application supports two deployment models with different queue backends:
-
-### Self-hosted (Docker)
-
-```
-Client → Next.js → BullMQ → Redis → Worker → Sharp → Filesystem/S3
-                                                ↓
-                                            DynamoDB
-```
-
-- **Queue**: BullMQ with Redis
-- **Image Processing**: Standalone worker process (`npm run worker`)
-- **Storage**: Local filesystem or S3
-- **Deployment**: Docker Compose or manual
-
-### Vercel (Serverless)
+The application uses a serverless architecture optimized for Vercel deployment:
 
 ```
 Client → Next.js (Vercel) → SQS → Lambda → Sharp → S3 + CloudFront
@@ -252,27 +214,27 @@ Client → Next.js (Vercel) → SQS → Lambda → Sharp → S3 + CloudFront
 
 ## 📜 Scripts
 
-| Command                 | Description                                                             |
-| ----------------------- | ----------------------------------------------------------------------- |
-| **Development**         |                                                                         |
-| `npm run dev`           | Start Next.js dev server (http://localhost:3000)                        |
-| `npm run worker`        | Start BullMQ background image processing worker                         |
-| **Build & Production**  |                                                                         |
-| `npm run build`         | Build for production (standalone output for Docker, default for Vercel) |
-| `npm run start`         | Start production server                                                 |
-| `npm run analyze`       | Analyze webpack bundle size                                             |
-| **Code Quality**        |                                                                         |
-| `npm run lint`          | Run ESLint                                                              |
-| `npm run lint:fix`      | Run ESLint with auto-fix                                                |
-| `npm run format`        | Format code with Prettier                                               |
-| `npm run format:check`  | Check formatting without modifying files                                |
-| `npm run typecheck`     | Run TypeScript type checking                                            |
-| **Testing**             |                                                                         |
-| `npm run test`          | Run all tests with Vitest                                               |
-| `npm run test:watch`    | Run tests in watch mode                                                 |
-| `npm run test:pipeline` | E2E test: verify image processing pipeline                              |
-| **Utilities**           |                                                                         |
-| `npm run prepare`       | Setup Husky pre-commit hooks                                            |
+| Command                 | Description                                      |
+| ----------------------- | ------------------------------------------------ |
+| **Development**         |                                                  |
+| `npm run dev`           | Start Next.js dev server (http://localhost:3000) |
+| **Build & Production**  |                                                  |
+| `npm run build`         | Build for production (standalone output)         |
+| `npm run build:lambda`  | Build Lambda package with Sharp ARM64 binary     |
+| `npm run start`         | Start production server                          |
+| `npm run analyze`       | Analyze webpack bundle size                      |
+| **Code Quality**        |                                                  |
+| `npm run lint`          | Run ESLint                                       |
+| `npm run lint:fix`      | Run ESLint with auto-fix                         |
+| `npm run format`        | Format code with Prettier                        |
+| `npm run format:check`  | Check formatting without modifying files         |
+| `npm run typecheck`     | Run TypeScript type checking                     |
+| **Testing**             |                                                  |
+| `npm run test`          | Run all tests with Vitest                        |
+| `npm run test:watch`    | Run tests in watch mode                          |
+| `npm run test:pipeline` | E2E test: verify image processing pipeline       |
+| **Utilities**           |                                                  |
+| `npm run prepare`       | Setup Husky pre-commit hooks                     |
 
 ## ☁️ CDK Infrastructure
 
@@ -336,7 +298,7 @@ The admin panel includes multiple layers of security:
 - **JWT Authentication**: Tokens expire after 8 hours (configurable)
 - **Password Hashing**: Bcrypt with security best practices
 - **Timing Attack Prevention**: Constant-time password comparison + random jitter
-- **Rate Limiting**: Redis-backed rate limiter (5 attempts per 15 minutes) with graceful degradation
+- **Rate Limiting**: Upstash Redis rate limiter (5 attempts per 15 minutes, serverless-compatible)
 - **IP Validation**: Trusted proxy support to prevent IP spoofing attacks
 - **EXIF Privacy**: Only 11 safe metadata fields exposed (no GPS, camera serial, software info)
 - **HttpOnly Cookies**: Session tokens stored in secure, HTTP-only cookies
@@ -344,26 +306,6 @@ The admin panel includes multiple layers of security:
 ## 🐛 Troubleshooting
 
 ### Images stay in "Processing" state
-
-**Self-hosted (BullMQ):**
-
-**Cause**: Background worker is not running or Redis is unavailable.
-
-**Solution**:
-
-```bash
-# Check if worker is running
-ps aux | grep "src/infrastructure/jobs/worker.ts"
-
-# If using Docker Compose, restart worker
-docker-compose restart worker
-
-# If Redis is down, the app degrades gracefully but job processing fails
-# Restart Redis
-docker-compose restart redis
-```
-
-**Vercel (Lambda + SQS):**
 
 **Cause**: Lambda function failed or SQS message processing error.
 
@@ -379,6 +321,7 @@ docker-compose restart redis
    ```
 3. Verify Lambda has correct IAM permissions for S3 and DynamoDB
 4. Check Lambda timeout (120s) is sufficient for large images
+5. Verify `SQS_QUEUE_URL` is correctly set in environment variables
 
 ### Database errors on startup
 
@@ -386,32 +329,22 @@ docker-compose restart redis
 
 **Solution**:
 
-```bash
-# If using Docker Compose, tables are auto-created during startup
-docker-compose up -d
-
-# If using local development without Docker:
-# Ensure DYNAMODB_ENDPOINT is not set (uses real AWS account)
-# Or provide local DynamoDB endpoint
-export DYNAMODB_ENDPOINT=http://localhost:8000
-npm run dev
-```
+1. Verify AWS credentials are set correctly
+2. Check `DYNAMODB_TABLE_PREFIX` matches your CDK deployment
+3. Ensure DynamoDB tables exist in your AWS account
+4. For local development, set `DYNAMODB_ENDPOINT=http://localhost:8000` and run DynamoDB Local
 
 ### Rate limiter not working
 
-**Cause**: Redis is unavailable (app degrades gracefully).
+**Cause**: Upstash Redis is unavailable or credentials are incorrect.
 
-**Impact**: Rate limiting is skipped, but app continues functioning.
+**Impact**: Rate limiting is skipped, but app continues functioning (graceful degradation).
 
 **Solution**:
 
-```bash
-# Ensure Redis is running
-docker-compose up -d redis
-
-# Or start Redis manually
-redis-server
-```
+1. Verify `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set correctly
+2. Check Upstash Redis dashboard for service status
+3. Test connection with Upstash Redis CLI or REST API
 
 ### Lambda image processing failures
 
