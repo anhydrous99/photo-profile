@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
 import { findOriginalFile } from "@/infrastructure/storage";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
-import { env } from "@/infrastructure/config/env";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
@@ -24,8 +23,7 @@ interface RouteContext {
  * 3. Guard against reprocessing already-ready photos
  * 4. Discover original file path
  * 5. Reset status to "processing"
- * 6. Remove old BullMQ job (prevent ID collision)
- * 7. Re-enqueue processing job
+ * 6. Re-enqueue processing job
  *
  * Returns: { id, status: "processing" }
  */
@@ -76,21 +74,7 @@ export async function POST(_request: NextRequest, context: RouteContext) {
     photo.updatedAt = new Date();
     await photoRepository.save(photo);
 
-    // 7. Remove old job (prevents job ID collision) and re-enqueue
-    if (env.QUEUE_BACKEND === "bullmq") {
-      try {
-        const { imageQueue } = await import("@/infrastructure/jobs/queues");
-        const queue = imageQueue();
-        const oldJobId = `photo-${id}`;
-        const oldJob = await queue.getJob(oldJobId);
-        if (oldJob) {
-          await oldJob.remove();
-        }
-      } catch {
-        // Old job may not exist or already removed - safe to ignore
-      }
-    }
-
+    // 7. Re-enqueue processing job
     try {
       await Promise.race([
         enqueueImageProcessing(id, originalPath), // originalPath is S3 key or filesystem path
