@@ -8,8 +8,10 @@ const mockRatelimitInstance = vi.hoisted(() => ({
 vi.mock("@upstash/ratelimit", () => {
   const RatelimitClass = vi.fn(function () {
     return mockRatelimitInstance;
-  }) as any;
-  RatelimitClass.slidingWindow = vi.fn(() => ({}));
+  });
+  (RatelimitClass as unknown as Record<string, unknown>).slidingWindow = vi.fn(
+    () => ({}),
+  );
   return {
     Ratelimit: RatelimitClass,
   };
