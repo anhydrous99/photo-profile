@@ -16,22 +16,18 @@ npm run format                 # Prettier format all files
 npm run format:check           # Check formatting only
 npm run typecheck              # tsc --noEmit
 
-# --- Tests ---
-npm run test                   # Vitest — run all tests once
-npm run test:watch             # Vitest — watch mode
+# --- Tests (Vitest) ---
+npm run test                   # Run all tests once
+npm run test:watch             # Watch mode
 npx vitest run src/infrastructure/auth/__tests__/auth.test.ts       # Single test file
 npx vitest run --testNamePattern="encrypt"                          # Run tests matching name
 npx vitest run --coverage                                           # With V8 coverage
 
-# --- Build & Deploy ---
+# --- Build ---
 npm run build                  # Production build (output: standalone)
-
-# --- CDK (photo-profile-cdk/) ---
-# cd ../photo-profile-cdk && npm run build && npx cdk synth
-# Tests: npm test (Jest + ts-jest)
 ```
 
-Pre-commit hook (`husky` + `lint-staged`): runs `eslint --fix` + `prettier --write` on staged `.ts/.tsx/.js/.jsx` files. CI runs: lint → format:check → typecheck → build → test.
+Pre-commit hook (`husky` + `lint-staged`): runs `eslint --fix` + `prettier --write` on staged `.ts/.tsx/.js/.jsx/.json/.md/.yml/.yaml` files. CI pipeline: lint → format:check → typecheck → build → test.
 
 ## STRUCTURE
 
@@ -40,12 +36,11 @@ src/
 ├── domain/                    # Pure interfaces, ZERO external imports
 │   ├── entities/              # Photo (with ExifData), Album — plain interfaces
 │   └── repositories/          # PhotoRepository, AlbumRepository interfaces
-├── application/               # EMPTY — business logic lives in API routes + infra services
+├── application/               # EMPTY (.gitkeep) — logic lives in API routes + infra services
 ├── infrastructure/
 │   ├── auth/                  # JWT (jose HS256, 8h), bcrypt, rate limiter, DAL
 │   ├── config/                # Zod-validated env vars (crash on startup if invalid)
-│   ├── database/
-│   │   └── dynamodb/          # DynamoDB repositories, tables, client
+│   ├── database/dynamodb/     # DynamoDB repositories, tables, client
 │   ├── jobs/                  # BullMQ queue + standalone worker
 │   ├── logging/               # Structured logger (JSON in prod, pretty in dev)
 │   ├── services/              # Sharp image derivatives, EXIF extraction
@@ -77,25 +72,23 @@ src/
 | Modify auth           | `src/infrastructure/auth/` — session.ts (JWT), dal.ts, password.ts                                   |
 | Modify image pipeline | `src/infrastructure/services/imageService.ts`                                                        |
 | Modify worker         | `src/infrastructure/jobs/workers/imageProcessor.ts` (concurrency=2)                                  |
-| Add storage operation | `src/infrastructure/storage/types.ts` (interface) + both adapter impls                               |
 | Environment config    | `src/infrastructure/config/env.ts` — Zod schema, crash on invalid                                    |
 
 ## CODE STYLE
 
 ### TypeScript
 
-- **Strict mode** enabled (`strict: true` in tsconfig)
+- **Strict mode** (`strict: true` in tsconfig)
 - Path aliases: `@/*` → `./src/*`, `@/domain/*`, `@/infrastructure/*`, `@/presentation/*`, `@/application/*`
 - Domain entities are **plain interfaces** — no classes, no methods
 - Use `type` imports for type-only: `import type { Photo } from "@/domain/entities"`
-- Validate inputs with **Zod** (`z.object({...}).safeParse(body)`)
+- Validate inputs with **Zod 4** — use `z.object({...}).safeParse(body)` and `z.flattenError(result.error).fieldErrors` for error details (NOT v3's `result.error.flatten()`)
 - UUIDs for all entity IDs (`crypto.randomUUID()`)
 - Timestamps are **milliseconds** (not seconds)
 
 ### Formatting & Linting
 
-- **Prettier** for formatting (default config)
-- **ESLint 9** flat config: `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript` + `eslint-config-prettier`
+- **Prettier** (default config) + **ESLint 9** flat config: `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript` + `eslint-config-prettier`
 - Trailing commas in multi-line (Prettier default)
 
 ### Naming
@@ -111,17 +104,17 @@ src/
 - Data flow: Server Component fetches → serializes props → Client Component renders
 - Mutations: Client calls `fetch()` → `router.refresh()` to revalidate
 - No global state management (no Redux/Zustand/Context)
-- Optimistic updates with rollback on error
 - Styling: **Tailwind CSS v4** with `@tailwindcss/postcss` — no CSS-in-JS, no CSS modules
+- **Never** use `middleware.ts` — project uses `proxy.ts` (Next.js 16 proxy pattern)
 
 ### API Routes
 
 - Every admin route: `verifySession()` at top → 401 if null
 - Validate params with `isValidUUID(id)` → 400 if invalid
-- Validate body with Zod `safeParse` → 400 with `fieldErrors`
+- Validate body with Zod `safeParse` → 400 with `z.flattenError(result.error).fieldErrors`
 - Wrap handler in try/catch → `logger.error(...)` → 500
 - Return `NextResponse.json(...)` with appropriate status codes
-- Repository instantiated at module scope: `const repo = new DynamoDBPhotoRepository()`
+- Repository instantiated at **module scope**: `const repo = new DynamoDBPhotoRepository()`
 
 ### Error Handling
 
@@ -132,7 +125,7 @@ src/
 
 ### Testing
 
-- **Vitest** with globals enabled, node environment
+- **Vitest** with globals enabled, node environment (~20 test files)
 - Tests colocated: `__tests__/` directories next to source files
 - Mock pattern: `vi.hoisted()` for shared mock refs + `vi.mock()` for module mocks
 - Import `{ describe, it, expect }` from `"vitest"` explicitly (even with globals)
@@ -153,26 +146,25 @@ src/
 
 These are the ONLY acceptable non-strict type patterns in the codebase:
 
-- `session.ts:40` — `payload as unknown as SessionPayload` (jose untyped payload)
-- `imageProcessor.ts:60-61` — `rotatedMeta.width!` / `height!` (Sharp guarantees after `.rotate()`)
-- `queues.ts:80` — `job.id!` (BullMQ assigns ID after `queue.add()`)
-- `env.ts:29,31` — `eslint-disable` for NodeJS namespace augmentation
+- `session.ts:41` — `payload as unknown as SessionPayload` (jose untyped JWT payload)
+- `env.ts:89,91` — `eslint-disable-next-line` for NodeJS namespace augmentation (`@typescript-eslint/no-namespace`, `@typescript-eslint/no-empty-object-type`)
+- `imageProcessor.test.ts:112` — `as unknown as Job<ImageJobData>` (test mock casting)
+- `PhotoGrid.tsx:150`, `SortablePhotoCard.tsx:58`, `AlbumDetailClient.tsx:199` — `eslint-disable-next-line @next/next/no-img-element` (custom image serving via API, not `next/image`)
+- `global-error.tsx:74` — `eslint-disable-next-line @next/next/no-html-link-for-pages` (root layout unavailable in global error boundary)
 
 ## WATCH OUT
 
-- `application/services/` is **empty** (`.gitkeep`) — business logic is in API routes + infra services
-- **Redis unavailable** = jobs silently dropped; photo stays "processing" forever. Expected in dev without Docker.
 - `tags` on Album is **comma-separated string**, not array or JSON
 - `export const dynamic = "force-dynamic"` on homepage — random photos require no caching
 - **Storage backend**: `STORAGE_BACKEND` env var switches between `filesystem` and `s3`; `getStorageAdapter()` is a singleton factory
-- **DynamoDB**: Used for repositories; local dev via `dynamodb-local` in docker-compose (port 8000)
+- **DynamoDB**: Local dev via `dynamodb-local` in docker-compose (port 8000). Tables auto-created on first run.
 - **Image API**: Falls back to largest available derivative if requested size doesn't exist
+- **Redis unavailable** = jobs silently dropped; photo stays "processing" forever. Expected in dev without Docker.
 
 ## INFRASTRUCTURE
 
 - **Docker**: Multi-stage Dockerfile + docker-compose (web, worker, redis, dynamodb-local). Output: standalone.
 - **Redis**: Required for BullMQ + rate limiting. App degrades gracefully without it.
-- **DynamoDB**: Primary database; local development via `dynamodb-local` in docker-compose (port 8000).
 - **S3 + CloudFront**: Optional storage backend; filesystem is the default.
 - **CDK**: `photo-profile-cdk/` — AWS CDK stack (scaffold only). Jest for tests.
 - **Admin password**: `npx tsx scripts/hash-password.ts <password>` → set `ADMIN_PASSWORD_HASH` env var.
