@@ -1,6 +1,6 @@
 # Photo Profile
 
-A modern, high-performance, self-hosted photography portfolio built with **Next.js 16**, following **Clean Architecture** principles. Leverages **DynamoDB** for data storage, **BullMQ** for background image processing, and **AWS S3 + CloudFront** for scalable image delivery.
+A modern, high-performance, self-hosted photography portfolio built with **Next.js 16**, following **Clean Architecture** principles. Leverages **DynamoDB** for data storage, **BullMQ** for background image processing, and flexible storage options (local filesystem or AWS S3 + CloudFront) for image delivery.
 
 ## 🚀 Key Features
 
