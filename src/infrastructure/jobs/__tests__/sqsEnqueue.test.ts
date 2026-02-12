@@ -22,7 +22,6 @@ vi.mock("@/infrastructure/config/env", () => ({
     AWS_REGION: "us-east-1",
     SQS_QUEUE_URL:
       "https://sqs.us-east-1.amazonaws.com/123456789012/photo-queue",
-    QUEUE_BACKEND: "sqs",
   },
 }));
 

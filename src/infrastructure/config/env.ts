@@ -13,14 +13,9 @@ const envSchema = z
     AWS_CLOUDFRONT_DOMAIN: z.string().optional(),
     AWS_ACCESS_KEY_ID: z.string().optional(),
     AWS_SECRET_ACCESS_KEY: z.string().optional(),
-    REDIS_URL: z.string().url().optional().default("redis://localhost:6379"),
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
-    QUEUE_BACKEND: z
-      .enum(["bullmq", "sqs"])
-      .default("bullmq")
-      .describe("Queue backend: bullmq or sqs"),
-    SQS_QUEUE_URL: z.string().url().optional(),
+    SQS_QUEUE_URL: z.string().url(),
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
@@ -76,16 +71,6 @@ const envSchema = z
           path: ["STORAGE_PATH"],
           message:
             "STORAGE_PATH is required when STORAGE_BACKEND is filesystem",
-        });
-      }
-    }
-
-    if (data.QUEUE_BACKEND === "sqs") {
-      if (!data.SQS_QUEUE_URL) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["SQS_QUEUE_URL"],
-          message: "SQS_QUEUE_URL is required when QUEUE_BACKEND is sqs",
         });
       }
     }
