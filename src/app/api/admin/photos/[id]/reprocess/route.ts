@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/infrastructure/auth";
 import { findOriginalFile } from "@/infrastructure/storage";
-import { imageQueue, enqueueImageProcessing } from "@/infrastructure/jobs";
+import { enqueueImageProcessing } from "@/infrastructure/jobs";
+import { env } from "@/infrastructure/config/env";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
@@ -76,14 +77,18 @@ export async function POST(_request: NextRequest, context: RouteContext) {
     await photoRepository.save(photo);
 
     // 7. Remove old job (prevents job ID collision) and re-enqueue
-    try {
-      const oldJobId = `photo-${id}`;
-      const oldJob = await imageQueue().getJob(oldJobId);
-      if (oldJob) {
-        await oldJob.remove();
+    if (env.QUEUE_BACKEND === "bullmq") {
+      try {
+        const { imageQueue } = await import("@/infrastructure/jobs/queues");
+        const queue = imageQueue();
+        const oldJobId = `photo-${id}`;
+        const oldJob = await queue.getJob(oldJobId);
+        if (oldJob) {
+          await oldJob.remove();
+        }
+      } catch {
+        // Old job may not exist or already removed - safe to ignore
       }
-    } catch {
-      // Old job may not exist or already removed - safe to ignore
     }
 
     try {
