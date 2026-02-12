@@ -7,7 +7,6 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const nextConfig: NextConfig = {
-  output: process.env.VERCEL ? undefined : "standalone",
   images: {
     loader: "custom",
     loaderFile: "./src/lib/imageLoader.ts",

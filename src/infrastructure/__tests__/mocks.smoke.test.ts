@@ -1,11 +1,10 @@
 /**
- * Smoke tests for Next.js and Redis mocks.
+ * Smoke tests for Next.js mocks.
  *
  * Validates that the global test setup (setup.ts) correctly mocks:
  * - server-only (prevents crash)
  * - next/headers (cookies/headers)
  * - next/cache (revalidation functions)
- * - ioredis (prevents TCP connection hang)
  *
  * These tests also serve as usage examples for Phase 17 test authors.
  */
@@ -38,11 +37,5 @@ describe("Mock smoke tests", () => {
   it("can import auth dal module", async () => {
     const dal = await import("@/infrastructure/auth/dal");
     expect(dal.verifySession).toBeDefined();
-  });
-
-  it("can import ioredis without hanging", async () => {
-    const { default: IORedis } = await import("ioredis");
-    const instance = new IORedis();
-    expect(instance).toBeDefined();
   });
 });

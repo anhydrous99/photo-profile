@@ -14,8 +14,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepare": "husky",
-    "worker": "npx tsx src/infrastructure/jobs/worker.ts",
-    "test:pipeline": "npx tsx scripts/test-image-pipeline.ts",
     "analyze": "ANALYZE=true next build --webpack"
   },
   "lint-staged": {
@@ -38,14 +36,11 @@
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.2",
     "bcrypt": "^6.0.0",
-    "bullmq": "^5.67.2",
     "dotenv": "^17.2.3",
     "exif-reader": "^2.0.3",
-    "ioredis": "^5.9.2",
     "jose": "^6.1.3",
     "next": "16.1.6",
     "node-addon-api": "^8.5.0",
-    "rate-limiter-flexible": "^9.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-dropzone": "^14.4.0",
