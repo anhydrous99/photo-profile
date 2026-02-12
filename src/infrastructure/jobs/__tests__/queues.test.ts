@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { ImageJobData } from "../queues";
+import type { ImageJobData } from "../types";
 
 describe("ImageJobData interface", () => {
   it("should have originalKey field instead of originalPath", () => {

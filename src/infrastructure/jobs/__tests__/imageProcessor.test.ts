@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Job } from "bullmq";
-import type { ImageJobData, ImageJobResult } from "../queues";
+import type { ImageJobData, ImageJobResult } from "../types";
 
 const mockAdapter = vi.hoisted(() => ({
   getFile: vi.fn(),

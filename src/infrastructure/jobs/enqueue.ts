@@ -1,5 +1,5 @@
 import { env } from "@/infrastructure/config/env";
-import type { ImageJobData, ImageJobResult } from "./queues";
+import type { ImageJobData, ImageJobResult } from "./types";
 
 export type { ImageJobData, ImageJobResult };
 

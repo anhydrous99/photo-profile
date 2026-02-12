@@ -8,7 +8,7 @@ import {
 } from "@/infrastructure/services/imageService";
 import { extractExifData } from "@/infrastructure/services/exifService";
 import { getStorageAdapter } from "@/infrastructure/storage";
-import type { ImageJobResult } from "@/infrastructure/jobs/queues";
+import type { ImageJobResult } from "@/infrastructure/jobs/types";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".webp": "image/webp",

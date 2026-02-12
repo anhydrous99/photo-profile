@@ -1,76 +1,68 @@
-import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
-import IORedis from "ioredis";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 import { env } from "@/infrastructure/config/env";
 import { logger } from "@/infrastructure/logging/logger";
 
-let _redisClient: IORedis | undefined;
-let _loginRateLimiter: RateLimiterRedis | undefined;
+let _ratelimit: Ratelimit | undefined;
 
-function getRedisClient(): IORedis {
-  if (!_redisClient) {
-    _redisClient = new IORedis(env.REDIS_URL, {
-      enableOfflineQueue: false,
-      maxRetriesPerRequest: null,
+function getRatelimit(): Ratelimit {
+  if (!_ratelimit) {
+    const redis = new Redis({
+      url: env.UPSTASH_REDIS_REST_URL,
+      token: env.UPSTASH_REDIS_REST_TOKEN,
+    });
+    _ratelimit = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, "900 s"), // 5 requests per 15 minutes
     });
   }
-  return _redisClient;
-}
-
-function getLoginRateLimiter(): RateLimiterRedis {
-  if (!_loginRateLimiter) {
-    _loginRateLimiter = new RateLimiterRedis({
-      storeClient: getRedisClient(),
-      keyPrefix: "login_fail_ip",
-      points: 5,
-      duration: 60 * 15,
-      blockDuration: 60 * 15,
-    });
-  }
-  return _loginRateLimiter;
+  return _ratelimit;
 }
 
 /**
  * Check if IP is rate limited
  * Returns allowed: true if under limit, or retryAfter in seconds if blocked
  *
- * If Redis is unavailable (development), allows request and logs warning
+ * If Upstash is unavailable (development), allows request and logs warning
  */
 export async function checkRateLimit(
   ip: string,
 ): Promise<{ allowed: boolean; retryAfter?: number }> {
   try {
-    await getLoginRateLimiter().consume(ip);
-    return { allowed: true };
-  } catch (rateLimiterRes) {
-    // Redis connection error - allow request but warn
-    if (rateLimiterRes instanceof Error) {
-      logger.warn("Redis unavailable, rate limiting disabled", {
-        component: "rate-limiter",
-        error: rateLimiterRes.message,
-      });
+    const { success, reset } = await getRatelimit().limit(ip);
+    if (success) {
       return { allowed: true };
     }
-    // Rate limit exceeded
-    const res = rateLimiterRes as RateLimiterRes;
+    // Rate limit exceeded - reset is Unix timestamp in milliseconds
+    const retryAfter = Math.ceil((reset - Date.now()) / 1000);
     return {
       allowed: false,
-      retryAfter: Math.ceil(res.msBeforeNext / 1000),
+      retryAfter: Math.max(1, retryAfter), // Ensure at least 1 second
     };
+  } catch (error) {
+    // Upstash unavailable - allow request but warn
+    if (error instanceof Error) {
+      logger.warn("Upstash unavailable, rate limiting disabled", {
+        component: "rate-limiter",
+        error: error.message,
+      });
+    }
+    return { allowed: true };
   }
 }
 
 /**
  * Reset rate limit for IP after successful login
  *
- * If Redis is unavailable, silently continues (no-op)
+ * If Upstash is unavailable, silently continues (no-op)
  */
 export async function resetRateLimit(ip: string): Promise<void> {
   try {
-    await getLoginRateLimiter().delete(ip);
+    await getRatelimit().resetUsedTokens(ip);
   } catch (error) {
-    // Redis unavailable - silent no-op in development
+    // Upstash unavailable - silent no-op in development
     if (error instanceof Error) {
-      logger.warn("Redis unavailable, skip reset", {
+      logger.warn("Upstash unavailable, skip reset", {
         component: "rate-limiter",
       });
     }

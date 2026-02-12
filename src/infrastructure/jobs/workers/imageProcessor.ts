@@ -5,7 +5,7 @@ import { env } from "@/infrastructure/config/env";
 import { logger } from "@/infrastructure/logging/logger";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { processImageJob } from "@/infrastructure/services/imageProcessingJob";
-import { ImageJobData, ImageJobResult } from "../queues";
+import { ImageJobData, ImageJobResult } from "../types";
 
 /**
  * Redis connection configured for BullMQ worker
