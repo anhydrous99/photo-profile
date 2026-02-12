@@ -7,7 +7,6 @@ import { z } from "zod";
 const createEnvSchema = () =>
   z
     .object({
-      DATABASE_PATH: z.string().min(1, "DATABASE_PATH is required"),
       STORAGE_PATH: z.string().min(1, "STORAGE_PATH is required"),
       STORAGE_BACKEND: z
         .enum(["s3", "filesystem"])
@@ -79,7 +78,6 @@ const createEnvSchema = () =>
 
 describe("Environment Configuration", () => {
   const baseValidEnv = {
-    DATABASE_PATH: "./data/photo-profile.db",
     STORAGE_PATH: "./storage",
     AUTH_SECRET: "test-secret-key-must-be-at-least-32-chars-long!!",
     ADMIN_PASSWORD_HASH: "$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVW",
@@ -198,7 +196,6 @@ describe("Environment Configuration", () => {
     it("should require STORAGE_PATH when STORAGE_BACKEND is filesystem", () => {
       const schema = createEnvSchema();
       const result = schema.safeParse({
-        DATABASE_PATH: "./data/photo-profile.db",
         STORAGE_BACKEND: "filesystem",
         AUTH_SECRET: "test-secret-key-must-be-at-least-32-chars-long!!",
         ADMIN_PASSWORD_HASH:

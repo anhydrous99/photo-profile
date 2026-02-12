@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Photo Profile is a self-hosted photography portfolio built with Next.js 16 (App Router), TypeScript, SQLite (via Drizzle ORM), and Sharp for image processing. Single admin user, public-facing gallery.
+Photo Profile is a self-hosted photography portfolio built with Next.js 16 (App Router), TypeScript, DynamoDB, and Sharp for image processing. Single admin user, public-facing gallery.
 
 ## Commands
 
@@ -18,8 +18,6 @@ Photo Profile is a self-hosted photography portfolio built with Next.js 16 (App 
 | `npm run format:check` | Check Prettier formatting              |
 | `npm run typecheck`    | TypeScript type check (`tsc --noEmit`) |
 | `npm run worker`       | Start BullMQ image processing worker   |
-| `npm run db:push`      | Push Drizzle schema to SQLite          |
-| `npm run db:studio`    | Drizzle Studio GUI                     |
 
 Pre-commit hook runs `eslint --fix` + `prettier --write` on staged files via lint-staged.
 
@@ -29,7 +27,7 @@ The codebase follows Clean Architecture with four layers under `src/`:
 
 - **`domain/`** — Entities (`Photo`, `Album`) and repository interfaces. No external dependencies.
 - **`application/`** — Business logic services that orchestrate domain objects.
-- **`infrastructure/`** — Concrete implementations: SQLite repositories (Drizzle), auth (JWT via jose, bcrypt), file storage, Sharp image processing, BullMQ job queue.
+- **`infrastructure/`** — Concrete implementations: DynamoDB repositories, auth (JWT via jose, bcrypt), file storage, Sharp image processing, BullMQ job queue.
 - **`presentation/`** — React components, hooks, and client-side utilities.
 - **`app/`** — Next.js App Router pages, API routes, and server actions.
 
@@ -49,9 +47,9 @@ The codebase follows Clean Architecture with four layers under `src/`:
 
 **Image pipeline**: Upload saves original to `storage/originals/{photoId}/`, enqueues a BullMQ job. The worker (`npm run worker`) generates WebP + AVIF derivatives at [300, 600, 1200, 2400] widths using Sharp. Processed files go to `storage/processed/{photoId}/{width}w.{format}`. The image API route (`/api/images/[photoId]/[filename]`) serves them with immutable caching.
 
-**Data access**: Repository pattern — domain interfaces in `domain/repositories/`, SQLite implementations in `infrastructure/database/repositories/`. Repositories are instantiated directly in server components and API routes.
+**Data access**: Repository pattern — domain interfaces in `domain/repositories/`, DynamoDB implementations in `infrastructure/database/dynamodb/repositories/`. Repositories are instantiated directly in server components and API routes.
 
-**Database**: SQLite via better-sqlite3 + Drizzle ORM. Schema in `infrastructure/database/schema.ts`. Three tables: `photos`, `albums`, `photo_albums` (junction). UUIDs for IDs, timestamps as milliseconds.
+**Database**: DynamoDB with tables for photos, albums, and photo-album relationships. UUIDs for IDs, timestamps as milliseconds.
 
 **Routing**: Public pages (`/`, `/albums`, `/albums/[id]`) are Server Components. Admin pages under `/admin/(protected)/` use a route group with auth layout. Client components use `"use client"` directive.
 
@@ -60,9 +58,9 @@ The codebase follows Clean Architecture with four layers under `src/`:
 ### External Services
 
 - **Redis** (docker-compose.yml) — Required for BullMQ job queue and rate limiting. App degrades gracefully if unavailable.
-- **SQLite** — File-based at `DATABASE_PATH` (default `./data/portfolio.db`).
+- **DynamoDB** — Cloud database service (AWS). Local testing uses DynamoDB Local.
 - **File storage** — Local filesystem at `STORAGE_PATH` (default `./storage`).
 
 ## Environment Variables
 
-See `.env.example`. Required: `DATABASE_PATH`, `STORAGE_PATH`, `AUTH_SECRET` (32+ chars), `ADMIN_PASSWORD_HASH` (generate with `npx tsx scripts/hash-password.ts <password>`).
+See `.env.example`. Required: `STORAGE_PATH`, `AUTH_SECRET` (32+ chars), `ADMIN_PASSWORD_HASH` (generate with `npx tsx scripts/hash-password.ts <password>`). Optional: `DYNAMODB_ENDPOINT` (for local development with DynamoDB Local).

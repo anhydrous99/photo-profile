@@ -3,7 +3,6 @@ import { logger } from "@/infrastructure/logging/logger";
 
 const envSchema = z
   .object({
-    DATABASE_PATH: z.string().min(1, "DATABASE_PATH is required"),
     STORAGE_PATH: z.string().min(1, "STORAGE_PATH is required"),
     STORAGE_BACKEND: z
       .enum(["s3", "filesystem"])

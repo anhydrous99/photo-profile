@@ -12,8 +12,7 @@ A modern, high-performance, self-hosted photography portfolio built with **Next.
   - Automatic EXIF data extraction.
   - Smart image loading and progressive rendering.
 - **Database**:
-  - **DynamoDB** for production-grade data storage (primary).
-  - **SQLite** support for local development (legacy option).
+  - **DynamoDB** for production-grade data storage with local development support.
 - **Flexible Storage**:
   - **Local Filesystem**: Simple setup for self-hosting.
   - **AWS S3 + CloudFront**: Scalable object storage with global CDN delivery.
@@ -28,8 +27,7 @@ A modern, high-performance, self-hosted photography portfolio built with **Next.
 
 - **Framework**: Next.js 16, React 19
 - **Language**: TypeScript
-- **Database**: DynamoDB (primary), SQLite (legacy)
-- **ORM**: Drizzle ORM (SQLite only)
+- **Database**: DynamoDB
 - **Queue**: BullMQ (requires Redis)
 - **Image Processing**: Sharp
 - **Storage**: Local Filesystem or AWS S3
@@ -61,10 +59,7 @@ Create a `.env` file in the root directory. You can use the following template:
 AUTH_SECRET=your-super-secret-key-at-least-32-chars-long
 ADMIN_PASSWORD_HASH= # Generated in step 3
 
-# Database: SQLite (Legacy - for local development only)
-DATABASE_PATH=./data/photo-profile.db
-
-# Database: DynamoDB (Production)
+# Database: DynamoDB
 # DYNAMODB_ENDPOINT=http://localhost:8000  # Local development only
 # DYNAMODB_TABLE_PREFIX=dev_                # Optional prefix for local testing
 
@@ -88,7 +83,7 @@ STORAGE_PATH=./storage
 # LOG_LEVEL=info
 ```
 
-Ensure the `data` and `storage` (if using filesystem) directories exist or are writable.
+Ensure the `storage` directory (if using filesystem) exists or is writable.
 
 ### 3. Generate Admin Password
 
@@ -102,33 +97,9 @@ Copy the output hash into your `.env` file as `ADMIN_PASSWORD_HASH`.
 
 ### 4. Database Setup
 
-**Option A: DynamoDB (Recommended for Production)**
+**DynamoDB**
 
-If using AWS DynamoDB, tables are created automatically on first run. For local development with Docker Compose, tables are provisioned during startup.
-
-**Option B: SQLite to DynamoDB Migration (If migrating from existing SQLite)**
-
-If you have an existing SQLite database and want to migrate to DynamoDB:
-
-```bash
-npm run db:migrate-dynamo
-```
-
-This script:
-
-- Reads all photos and albums from SQLite
-- Batch-writes them to DynamoDB
-- Performs verification to ensure data integrity
-- Supports dry-run mode to preview changes
-
-**Option C: SQLite Only (Local Development)**
-
-For lightweight local development without Docker, SQLite is initialized automatically:
-
-```bash
-# No explicit setup needed — SQLite initializes on first run
-npm run dev
-```
+Tables are created automatically on first run. For local development with Docker Compose, tables are provisioned during startup. If developing without Docker, you can set `DYNAMODB_ENDPOINT=http://localhost:8000` to use a local DynamoDB instance.
 
 ## 🏃‍♂️ Running the Application
 
@@ -190,29 +161,27 @@ src/
 
 ## 📜 Scripts
 
-| Command                     | Description                                         |
-| --------------------------- | --------------------------------------------------- |
-| **Development**             |                                                     |
-| `npm run dev`               | Start Next.js dev server (http://localhost:3000)    |
-| `npm run worker`            | Start BullMQ background image processing worker     |
-| **Build & Production**      |                                                     |
-| `npm run build`             | Build for production (standalone output)            |
-| `npm run start`             | Start production server                             |
-| `npm run analyze`           | Analyze webpack bundle size                         |
-| **Code Quality**            |                                                     |
-| `npm run lint`              | Run ESLint                                          |
-| `npm run lint:fix`          | Run ESLint with auto-fix                            |
-| `npm run format`            | Format code with Prettier                           |
-| `npm run format:check`      | Check formatting without modifying files            |
-| `npm run typecheck`         | Run TypeScript type checking                        |
-| **Testing**                 |                                                     |
-| `npm run test`              | Run all tests with Vitest                           |
-| `npm run test:watch`        | Run tests in watch mode                             |
-| `npm run test:pipeline`     | E2E test: verify image processing pipeline          |
-| **Database & Migration**    |                                                     |
-| `npm run db:migrate-dynamo` | Migrate from SQLite to DynamoDB (with verification) |
-| **Utilities**               |                                                     |
-| `npm run prepare`           | Setup Husky pre-commit hooks                        |
+| Command                 | Description                                      |
+| ----------------------- | ------------------------------------------------ |
+| **Development**         |                                                  |
+| `npm run dev`           | Start Next.js dev server (http://localhost:3000) |
+| `npm run worker`        | Start BullMQ background image processing worker  |
+| **Build & Production**  |                                                  |
+| `npm run build`         | Build for production (standalone output)         |
+| `npm run start`         | Start production server                          |
+| `npm run analyze`       | Analyze webpack bundle size                      |
+| **Code Quality**        |                                                  |
+| `npm run lint`          | Run ESLint                                       |
+| `npm run lint:fix`      | Run ESLint with auto-fix                         |
+| `npm run format`        | Format code with Prettier                        |
+| `npm run format:check`  | Check formatting without modifying files         |
+| `npm run typecheck`     | Run TypeScript type checking                     |
+| **Testing**             |                                                  |
+| `npm run test`          | Run all tests with Vitest                        |
+| `npm run test:watch`    | Run tests in watch mode                          |
+| `npm run test:pipeline` | E2E test: verify image processing pipeline       |
+| **Utilities**           |                                                  |
+| `npm run prepare`       | Setup Husky pre-commit hooks                     |
 
 ## 🔒 Security Features
 

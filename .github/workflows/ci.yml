@@ -37,7 +37,6 @@ jobs:
         run: npm run build
         env:
           # Minimal env vars needed for build (not for runtime)
-          DATABASE_PATH: ./data/test.db
           STORAGE_PATH: ./storage
           AUTH_SECRET: test-secret-key-at-least-32-characters-long-min
           ADMIN_PASSWORD_HASH: $2b$10$test
