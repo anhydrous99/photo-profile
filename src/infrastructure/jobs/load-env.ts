@@ -13,7 +13,7 @@ config({ path: join(projectRoot, ".env") });
 config({ path: join(projectRoot, ".env.local"), override: true });
 
 logger.info("Loaded .env files", { component: "env-loader", projectRoot });
-logger.debug("DATABASE_PATH present", {
+logger.debug("DYNAMODB_ENDPOINT configured", {
   component: "env-loader",
-  present: !!process.env.DATABASE_PATH,
+  present: !!process.env.DYNAMODB_ENDPOINT,
 });

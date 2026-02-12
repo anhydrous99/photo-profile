@@ -25,8 +25,6 @@ npx vitest run --coverage                                           # With V8 co
 
 # --- Build & Deploy ---
 npm run build                  # Production build (output: standalone)
-npm run db:push                # Push Drizzle schema to SQLite
-npm run db:studio              # Drizzle Studio GUI
 
 # --- CDK (photo-profile-cdk/) ---
 # cd ../photo-profile-cdk && npm run build && npx cdk synth
@@ -47,8 +45,6 @@ src/
 │   ├── auth/                  # JWT (jose HS256, 8h), bcrypt, rate limiter, DAL
 │   ├── config/                # Zod-validated env vars (crash on startup if invalid)
 │   ├── database/
-│   │   ├── schema.ts          # Drizzle ORM SQLite schema (legacy)
-│   │   ├── client.ts          # SQLite connection + auto-migrations
 │   │   └── dynamodb/          # DynamoDB repositories, tables, client
 │   ├── jobs/                  # BullMQ queue + standalone worker
 │   ├── logging/               # Structured logger (JSON in prod, pretty in dev)
@@ -140,7 +136,7 @@ src/
 - Tests colocated: `__tests__/` directories next to source files
 - Mock pattern: `vi.hoisted()` for shared mock refs + `vi.mock()` for module mocks
 - Import `{ describe, it, expect }` from `"vitest"` explicitly (even with globals)
-- Test env vars set in `vitest.config.ts` (DATABASE_PATH=`:memory:`, etc.)
+- Test env vars set in `vitest.config.ts`
 - Coverage: V8 provider, covers `src/infrastructure/**/*.ts`
 
 ## ANTI-PATTERNS — NEVER DO
@@ -166,7 +162,6 @@ These are the ONLY acceptable non-strict type patterns in the codebase:
 
 - `application/services/` is **empty** (`.gitkeep`) — business logic is in API routes + infra services
 - **Redis unavailable** = jobs silently dropped; photo stays "processing" forever. Expected in dev without Docker.
-- `exifData` column stores **JSON string** in SQLite, parsed/serialized by repository mappers
 - `tags` on Album is **comma-separated string**, not array or JSON
 - `export const dynamic = "force-dynamic"` on homepage — random photos require no caching
 - **Storage backend**: `STORAGE_BACKEND` env var switches between `filesystem` and `s3`; `getStorageAdapter()` is a singleton factory
@@ -177,7 +172,7 @@ These are the ONLY acceptable non-strict type patterns in the codebase:
 
 - **Docker**: Multi-stage Dockerfile + docker-compose (web, worker, redis, dynamodb-local). Output: standalone.
 - **Redis**: Required for BullMQ + rate limiting. App degrades gracefully without it.
-- **SQLite**: Legacy — Drizzle ORM schema still present. DynamoDB is the active data layer.
+- **DynamoDB**: Primary database; local development via `dynamodb-local` in docker-compose (port 8000).
 - **S3 + CloudFront**: Optional storage backend; filesystem is the default.
 - **CDK**: `photo-profile-cdk/` — AWS CDK stack (scaffold only). Jest for tests.
 - **Admin password**: `npx tsx scripts/hash-password.ts <password>` → set `ADMIN_PASSWORD_HASH` env var.
