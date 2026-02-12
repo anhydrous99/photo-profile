@@ -6,6 +6,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     fileParallelism: false,
+    exclude: ["photo-profile-cdk/**", ".next/**", "node_modules/**"],
     globalSetup: ["./src/__tests__/globalSetup.ts"],
     env: {
       STORAGE_PATH: "/tmp/test-storage",

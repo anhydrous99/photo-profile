@@ -46,6 +46,17 @@ jobs:
       - name: Run tests
         run: npm run test
 
+      - name: Build Lambda package
+        run: npm run build:lambda
+
+      - name: Install CDK dependencies
+        run: npm ci
+        working-directory: photo-profile-cdk
+
+      - name: Run CDK tests
+        run: npm test
+        working-directory: photo-profile-cdk
+
       - name: Upload coverage reports
         if: always()
         uses: actions/upload-artifact@v4
