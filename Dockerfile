@@ -3,7 +3,7 @@
 # =============================================================================
 FROM node:22-slim AS deps
 
-# Install build tools for native modules (sharp, bcrypt, better-sqlite3)
+# Install build tools for native modules (sharp, bcrypt)
 RUN apt-get update && \
     apt-get install -y python3 make g++ && \
     rm -rf /var/lib/apt/lists/*
@@ -33,7 +33,6 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Provide dummy env vars for build-time Zod validation (env.ts validates at import)
-ENV DATABASE_PATH=/tmp/build.db
 ENV STORAGE_PATH=/tmp/storage
 ENV AUTH_SECRET=build-time-secret-minimum-thirty-two-chars
 ENV ADMIN_PASSWORD_HASH=build-time-hash
