@@ -65,18 +65,3 @@ vi.mock("react", async (importOriginal) => {
     cache: vi.fn((fn: (...args: unknown[]) => unknown) => fn),
   };
 });
-
-// 7. bullmq: Mock Queue and Worker to prevent Redis operations
-//    Uses regular functions (not arrows) so they can be called with `new`
-vi.mock("bullmq", () => {
-  const MockQueue = vi.fn(function (this: Record<string, unknown>) {
-    this.add = vi.fn();
-    this.close = vi.fn();
-    this.on = vi.fn();
-  });
-  const MockWorker = vi.fn(function (this: Record<string, unknown>) {
-    this.on = vi.fn();
-    this.close = vi.fn();
-  });
-  return { Queue: MockQueue, Worker: MockWorker };
-});
