@@ -14,6 +14,8 @@ const envSchema = z
     AWS_ACCESS_KEY_ID: z.string().optional(),
     AWS_SECRET_ACCESS_KEY: z.string().optional(),
     REDIS_URL: z.string().url().optional().default("redis://localhost:6379"),
+    UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
     QUEUE_BACKEND: z
       .enum(["bullmq", "sqs"])
       .default("bullmq")
@@ -86,6 +88,27 @@ const envSchema = z
           message: "SQS_QUEUE_URL is required when QUEUE_BACKEND is sqs",
         });
       }
+    }
+
+    const hasUrl = !!data.UPSTASH_REDIS_REST_URL;
+    const hasToken = !!data.UPSTASH_REDIS_REST_TOKEN;
+
+    if (hasUrl && !hasToken) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["UPSTASH_REDIS_REST_TOKEN"],
+        message:
+          "UPSTASH_REDIS_REST_TOKEN is required when UPSTASH_REDIS_REST_URL is set",
+      });
+    }
+
+    if (hasToken && !hasUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["UPSTASH_REDIS_REST_URL"],
+        message:
+          "UPSTASH_REDIS_REST_URL is required when UPSTASH_REDIS_REST_TOKEN is set",
+      });
     }
   });
 

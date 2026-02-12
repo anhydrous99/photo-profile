@@ -14,7 +14,7 @@ export default defineConfig({
       ADMIN_PASSWORD_HASH:
         "$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVW",
       NODE_ENV: "test",
-      REDIS_URL: "redis://localhost:6379",
+      SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/test-queue",
       DYNAMODB_TABLE_PREFIX: "test_",
     },
     setupFiles: ["./src/__tests__/setup.ts"],

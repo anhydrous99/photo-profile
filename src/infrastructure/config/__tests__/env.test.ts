@@ -17,12 +17,9 @@ const createEnvSchema = () =>
       AWS_CLOUDFRONT_DOMAIN: z.string().optional(),
       AWS_ACCESS_KEY_ID: z.string().optional(),
       AWS_SECRET_ACCESS_KEY: z.string().optional(),
-      REDIS_URL: z.string().url().optional().default("redis://localhost:6379"),
-      QUEUE_BACKEND: z
-        .enum(["bullmq", "sqs"])
-        .default("bullmq")
-        .describe("Queue backend: bullmq or sqs"),
-      SQS_QUEUE_URL: z.string().url().optional(),
+      SQS_QUEUE_URL: z.string().url(),
+      UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+      UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
       NODE_ENV: z
         .enum(["development", "production", "test"])
         .default("development"),
@@ -80,14 +77,25 @@ const createEnvSchema = () =>
         }
       }
 
-      if (data.QUEUE_BACKEND === "sqs") {
-        if (!data.SQS_QUEUE_URL) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["SQS_QUEUE_URL"],
-            message: "SQS_QUEUE_URL is required when QUEUE_BACKEND is sqs",
-          });
-        }
+      const hasUrl = !!data.UPSTASH_REDIS_REST_URL;
+      const hasToken = !!data.UPSTASH_REDIS_REST_TOKEN;
+
+      if (hasUrl && !hasToken) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["UPSTASH_REDIS_REST_TOKEN"],
+          message:
+            "UPSTASH_REDIS_REST_TOKEN is required when UPSTASH_REDIS_REST_URL is set",
+        });
+      }
+
+      if (hasToken && !hasUrl) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["UPSTASH_REDIS_REST_URL"],
+          message:
+            "UPSTASH_REDIS_REST_URL is required when UPSTASH_REDIS_REST_TOKEN is set",
+        });
       }
     });
 
@@ -97,6 +105,7 @@ describe("Environment Configuration", () => {
     AUTH_SECRET: "test-secret-key-must-be-at-least-32-chars-long!!",
     ADMIN_PASSWORD_HASH: "$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVW",
     NODE_ENV: "test" as const,
+    SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
   };
 
   describe("STORAGE_BACKEND enum", () => {
@@ -216,6 +225,7 @@ describe("Environment Configuration", () => {
         ADMIN_PASSWORD_HASH:
           "$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVW",
         NODE_ENV: "test" as const,
+        SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -248,57 +258,16 @@ describe("Environment Configuration", () => {
     });
   });
 
-  describe("QUEUE_BACKEND enum", () => {
-    it("should default to bullmq", () => {
-      const schema = createEnvSchema();
-      const result = schema.safeParse(baseValidEnv);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.QUEUE_BACKEND).toBe("bullmq");
-      }
-    });
-
-    it("should accept bullmq value", () => {
+  describe("SQS_QUEUE_URL validation", () => {
+    it("should require SQS_QUEUE_URL (no default)", () => {
       const schema = createEnvSchema();
       const result = schema.safeParse({
-        ...baseValidEnv,
-        QUEUE_BACKEND: "bullmq",
-      });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.QUEUE_BACKEND).toBe("bullmq");
-      }
-    });
-
-    it("should accept sqs value", () => {
-      const schema = createEnvSchema();
-      const result = schema.safeParse({
-        ...baseValidEnv,
-        QUEUE_BACKEND: "sqs",
-        SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
-      });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.QUEUE_BACKEND).toBe("sqs");
-      }
-    });
-
-    it("should reject invalid queue backend value", () => {
-      const schema = createEnvSchema();
-      const result = schema.safeParse({
-        ...baseValidEnv,
-        QUEUE_BACKEND: "invalid",
-      });
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe("Conditional validation: SQS backend", () => {
-    it("should require SQS_QUEUE_URL when QUEUE_BACKEND is sqs", () => {
-      const schema = createEnvSchema();
-      const result = schema.safeParse({
-        ...baseValidEnv,
-        QUEUE_BACKEND: "sqs",
+        STORAGE_PATH: "./storage",
+        AUTH_SECRET: "test-secret-key-must-be-at-least-32-chars-long!!",
+        ADMIN_PASSWORD_HASH:
+          "$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVW",
+        NODE_ENV: "test" as const,
+        // SQS_QUEUE_URL intentionally omitted
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -307,11 +276,10 @@ describe("Environment Configuration", () => {
       }
     });
 
-    it("should pass when SQS_QUEUE_URL is provided with sqs backend", () => {
+    it("should accept valid SQS_QUEUE_URL", () => {
       const schema = createEnvSchema();
       const result = schema.safeParse({
         ...baseValidEnv,
-        QUEUE_BACKEND: "sqs",
         SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
       });
       expect(result.success).toBe(true);
@@ -321,10 +289,62 @@ describe("Environment Configuration", () => {
       const schema = createEnvSchema();
       const result = schema.safeParse({
         ...baseValidEnv,
-        QUEUE_BACKEND: "sqs",
         SQS_QUEUE_URL: "not-a-valid-url",
       });
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe("Upstash Redis validation", () => {
+    it("should allow both UPSTASH vars to be omitted", () => {
+      const schema = createEnvSchema();
+      const result = schema.safeParse({
+        ...baseValidEnv,
+        SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
+        // Both Upstash vars omitted
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("should allow both UPSTASH vars to be set", () => {
+      const schema = createEnvSchema();
+      const result = schema.safeParse({
+        ...baseValidEnv,
+        SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
+        UPSTASH_REDIS_REST_URL: "https://redis.upstash.io",
+        UPSTASH_REDIS_REST_TOKEN: "my-token",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("should fail when UPSTASH_REDIS_REST_URL is set but UPSTASH_REDIS_REST_TOKEN is missing", () => {
+      const schema = createEnvSchema();
+      const result = schema.safeParse({
+        ...baseValidEnv,
+        SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
+        UPSTASH_REDIS_REST_URL: "https://redis.upstash.io",
+        // UPSTASH_REDIS_REST_TOKEN missing
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const errors = z.flattenError(result.error);
+        expect(errors.fieldErrors.UPSTASH_REDIS_REST_TOKEN).toBeDefined();
+      }
+    });
+
+    it("should fail when UPSTASH_REDIS_REST_TOKEN is set but UPSTASH_REDIS_REST_URL is missing", () => {
+      const schema = createEnvSchema();
+      const result = schema.safeParse({
+        ...baseValidEnv,
+        SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
+        // UPSTASH_REDIS_REST_URL missing
+        UPSTASH_REDIS_REST_TOKEN: "my-token",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const errors = z.flattenError(result.error);
+        expect(errors.fieldErrors.UPSTASH_REDIS_REST_URL).toBeDefined();
+      }
     });
   });
 
@@ -340,6 +360,7 @@ describe("Environment Configuration", () => {
         AWS_REGION: "us-east-1",
         AWS_S3_BUCKET: "my-bucket",
         AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
+        SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
         // STORAGE_PATH intentionally omitted
       });
       expect(result.success).toBe(true);
@@ -356,6 +377,7 @@ describe("Environment Configuration", () => {
         ADMIN_PASSWORD_HASH:
           "$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVW",
         NODE_ENV: "test" as const,
+        SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
         // STORAGE_PATH intentionally omitted
       });
       expect(result.success).toBe(false);
