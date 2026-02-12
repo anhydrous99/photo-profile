@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "prepare": "husky",
     "analyze": "ANALYZE=true next build --webpack",
-    "build:lambda": "bash scripts/build-lambda.sh"
+    "build:lambda": "bash scripts/build-lambda.sh",
+    "clean": "rm -rf .next out node_modules/.cache && find lambda-package -mindepth 1 ! -name '.gitkeep' -delete 2>/dev/null || true"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
