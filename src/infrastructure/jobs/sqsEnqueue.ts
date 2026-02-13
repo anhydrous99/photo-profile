@@ -7,6 +7,12 @@ export async function enqueueSQS(
   photoId: string,
   originalKey: string,
 ): Promise<string> {
+  if (!env.SQS_QUEUE_URL) {
+    throw new Error(
+      "SQS_QUEUE_URL is not configured. Image processing queue is unavailable.",
+    );
+  }
+
   const result = await sqsClient.send(
     new SendMessageCommand({
       QueueUrl: env.SQS_QUEUE_URL,

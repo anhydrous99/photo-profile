@@ -77,4 +77,21 @@ describe("sqsEnqueue", () => {
       region: "us-east-1",
     });
   });
+
+  it("throws error when SQS_QUEUE_URL is not configured", async () => {
+    vi.resetModules();
+    vi.doMock("@/infrastructure/config/env", () => ({
+      env: {
+        AWS_REGION: "us-east-1",
+        SQS_QUEUE_URL: undefined,
+      },
+    }));
+
+    const { enqueueSQS } = await import("../sqsEnqueue");
+    await expect(
+      enqueueSQS("photo-004", "originals/photo-004/image.jpg"),
+    ).rejects.toThrow(
+      "SQS_QUEUE_URL is not configured. Image processing queue is unavailable.",
+    );
+  });
 });

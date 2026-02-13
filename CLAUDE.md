@@ -17,7 +17,7 @@ Photo Profile is a self-hosted photography portfolio built with Next.js 16 (App 
 | `npm run format`       | Prettier format all files              |
 | `npm run format:check` | Check Prettier formatting              |
 | `npm run typecheck`    | TypeScript type check (`tsc --noEmit`) |
-| `npm run worker`       | Start BullMQ image processing worker   |
+| `npm run build:lambda` | Build Lambda deployment package        |
 
 Pre-commit hook runs `eslint --fix` + `prettier --write` on staged files via lint-staged.
 
@@ -27,7 +27,7 @@ The codebase follows Clean Architecture with four layers under `src/`:
 
 - **`domain/`** — Entities (`Photo`, `Album`) and repository interfaces. No external dependencies.
 - **`application/`** — Business logic services that orchestrate domain objects.
-- **`infrastructure/`** — Concrete implementations: DynamoDB repositories, auth (JWT via jose, bcrypt), file storage, Sharp image processing, BullMQ job queue.
+- **`infrastructure/`** — Concrete implementations: DynamoDB repositories, auth (JWT via jose, bcrypt), file storage, Sharp image processing, SQS job queue.
 - **`presentation/`** — React components, hooks, and client-side utilities.
 - **`app/`** — Next.js App Router pages, API routes, and server actions.
 
@@ -45,7 +45,7 @@ The codebase follows Clean Architecture with four layers under `src/`:
 
 **Auth flow**: `proxy.ts` (Edge) checks cookie existence on `/admin/*` routes, returning 404 if missing (hides admin panel). The `(protected)/layout.tsx` Server Component performs full JWT verification.
 
-**Image pipeline**: Upload saves original to `storage/originals/{photoId}/`, enqueues a BullMQ job. The worker (`npm run worker`) generates WebP + AVIF derivatives at [300, 600, 1200, 2400] widths using Sharp. Processed files go to `storage/processed/{photoId}/{width}w.{format}`. The image API route (`/api/images/[photoId]/[filename]`) serves them with immutable caching.
+**Image pipeline**: Upload saves original to `storage/originals/{photoId}/` (or S3), enqueues a message to SQS. An AWS Lambda function (deployed via CDK in `photo-profile-cdk/`) processes the queue, generating WebP + AVIF derivatives at [300, 600, 1200, 2400] widths using Sharp. Processed files go to `storage/processed/{photoId}/{width}w.{format}` (or S3). The image API route (`/api/images/[photoId]/[filename]`) serves them with immutable caching.
 
 **Data access**: Repository pattern — domain interfaces in `domain/repositories/`, DynamoDB implementations in `infrastructure/database/dynamodb/repositories/`. Repositories are instantiated directly in server components and API routes.
 
@@ -57,10 +57,28 @@ The codebase follows Clean Architecture with four layers under `src/`:
 
 ### External Services
 
-- **Redis** (docker-compose.yml) — Required for BullMQ job queue and rate limiting. App degrades gracefully if unavailable.
+- **Redis** (docker-compose.yml) — Optional for rate limiting. App degrades gracefully if unavailable.
+- **SQS** — AWS Simple Queue Service for image processing jobs. Optional for development/CI, required for production deployment.
+- **Lambda** — AWS Lambda function for processing images from SQS queue (see `photo-profile-cdk/`).
 - **DynamoDB** — Cloud database service (AWS). Local testing uses DynamoDB Local.
-- **File storage** — Local filesystem at `STORAGE_PATH` (default `./storage`).
+- **File storage** — Local filesystem at `STORAGE_PATH` (default `./storage`) or S3 (set `STORAGE_BACKEND=s3`).
 
 ## Environment Variables
 
-See `.env.example`. Required: `STORAGE_PATH`, `AUTH_SECRET` (32+ chars), `ADMIN_PASSWORD_HASH` (generate with `npx tsx scripts/hash-password.ts <password>`). Optional: `DYNAMODB_ENDPOINT` (for local development with DynamoDB Local).
+See `.env.example`.
+
+**Required for all deployments:**
+
+- `AUTH_SECRET` (32+ chars)
+- `ADMIN_PASSWORD_HASH` (generate with `npx tsx scripts/hash-password.ts <password>`)
+
+**Storage (choose one):**
+
+- Filesystem: `STORAGE_PATH` (default `./storage`)
+- S3: `STORAGE_BACKEND=s3`, `AWS_REGION`, `AWS_S3_BUCKET`, `AWS_CLOUDFRONT_DOMAIN`
+
+**Optional:**
+
+- `SQS_QUEUE_URL` — Required for production image processing, optional for dev/CI
+- `DYNAMODB_ENDPOINT` — For local development with DynamoDB Local
+- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` — For rate limiting
