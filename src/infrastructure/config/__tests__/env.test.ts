@@ -17,7 +17,7 @@ const createEnvSchema = () =>
       AWS_CLOUDFRONT_DOMAIN: z.string().optional(),
       AWS_ACCESS_KEY_ID: z.string().optional(),
       AWS_SECRET_ACCESS_KEY: z.string().optional(),
-      SQS_QUEUE_URL: z.string().url(),
+      SQS_QUEUE_URL: z.string().url().optional(),
       UPSTASH_REDIS_REST_URL: z.string().url().optional(),
       UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
       NODE_ENV: z
@@ -259,7 +259,7 @@ describe("Environment Configuration", () => {
   });
 
   describe("SQS_QUEUE_URL validation", () => {
-    it("should require SQS_QUEUE_URL (no default)", () => {
+    it("should allow SQS_QUEUE_URL to be omitted (optional)", () => {
       const schema = createEnvSchema();
       const result = schema.safeParse({
         STORAGE_PATH: "./storage",
@@ -269,11 +269,7 @@ describe("Environment Configuration", () => {
         NODE_ENV: "test" as const,
         // SQS_QUEUE_URL intentionally omitted
       });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        const errors = z.flattenError(result.error);
-        expect(errors.fieldErrors.SQS_QUEUE_URL).toBeDefined();
-      }
+      expect(result.success).toBe(true);
     });
 
     it("should accept valid SQS_QUEUE_URL", () => {

@@ -15,7 +15,7 @@ const envSchema = z
     AWS_SECRET_ACCESS_KEY: z.string().optional(),
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
-    SQS_QUEUE_URL: z.string().url(),
+    SQS_QUEUE_URL: z.string().url().optional(),
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
