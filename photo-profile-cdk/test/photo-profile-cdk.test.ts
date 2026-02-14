@@ -45,7 +45,6 @@ describe("PhotoProfileCdkStack", () => {
       Runtime: "nodejs22.x",
       Timeout: 120,
       MemorySize: 2048,
-      ReservedConcurrentExecutions: 5,
       Handler: "src/infrastructure/jobs/lambdaHandler.handler",
       Architectures: ["arm64"],
     });
@@ -67,7 +66,7 @@ describe("PhotoProfileCdkStack", () => {
           DYNAMODB_TABLE_PREFIX: "test_",
           STORAGE_BACKEND: "s3",
           STORAGE_PATH: "",
-          AUTH_SECRET: "dummy-not-used-by-lambda",
+          AUTH_SECRET: "dummy-not-used-by-lambda-at-all!",
           ADMIN_PASSWORD_HASH: "dummy-not-used-by-lambda",
         }),
       },

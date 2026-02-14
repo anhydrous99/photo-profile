@@ -132,10 +132,11 @@ export class PhotoProfileCdkStack extends cdk.Stack {
       ephemeralStorageSize: cdk.Size.mebibytes(1024),
       environment: {
         AWS_S3_BUCKET: props.s3BucketName,
+        AWS_CLOUDFRONT_DOMAIN: this.distribution.distributionDomainName,
         DYNAMODB_TABLE_PREFIX: tablePrefix,
         STORAGE_BACKEND: "s3",
         STORAGE_PATH: "",
-        AUTH_SECRET: "dummy-not-used-by-lambda",
+        AUTH_SECRET: "dummy-not-used-by-lambda-at-all!",
         ADMIN_PASSWORD_HASH: "dummy-not-used-by-lambda",
       },
       description:
