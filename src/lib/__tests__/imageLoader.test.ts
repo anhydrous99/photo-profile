@@ -132,4 +132,222 @@ describe("imageLoader", () => {
       );
     });
   });
+
+  describe("maxWidth parameter (derivative capping)", () => {
+    describe("without CloudFront (local dev)", () => {
+      it("caps derivative width to maxWidth when specified", async () => {
+        delete process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1?maxWidth=600",
+          width: 1200,
+        });
+
+        expect(result).toBe("/api/images/photo-1/600w.webp");
+      });
+
+      it("falls back to smallest width when maxWidth is smaller than all derivatives", async () => {
+        delete process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1?maxWidth=200",
+          width: 100,
+        });
+
+        expect(result).toBe("/api/images/photo-1/300w.webp");
+      });
+
+      it("respects maxWidth=300 (smallest derivative)", async () => {
+        delete process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1?maxWidth=300",
+          width: 500,
+        });
+
+        expect(result).toBe("/api/images/photo-1/300w.webp");
+      });
+
+      it("respects maxWidth=1200 (middle derivative)", async () => {
+        delete process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1?maxWidth=1200",
+          width: 2000,
+        });
+
+        expect(result).toBe("/api/images/photo-1/1200w.webp");
+      });
+
+      it("ignores maxWidth when not specified (backward compat)", async () => {
+        delete process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1",
+          width: 1200,
+        });
+
+        expect(result).toBe("/api/images/photo-1/1200w.webp");
+      });
+
+      it("strips query params from src path in returned URL", async () => {
+        delete process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1?maxWidth=600&other=param",
+          width: 400,
+        });
+
+        expect(result).toBe("/api/images/photo-1/600w.webp");
+      });
+    });
+
+    describe("with CloudFront (production/S3)", () => {
+      it("caps derivative width to maxWidth with CloudFront", async () => {
+        process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN = "d1234.cloudfront.net";
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1?maxWidth=600",
+          width: 1200,
+        });
+
+        expect(result).toBe(
+          "https://d1234.cloudfront.net/processed/photo-1/600w.webp",
+        );
+      });
+
+      it("falls back to smallest width when maxWidth is smaller than all derivatives (CloudFront)", async () => {
+        process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN = "cdn.example.com";
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1?maxWidth=200",
+          width: 100,
+        });
+
+        expect(result).toBe(
+          "https://cdn.example.com/processed/photo-1/300w.webp",
+        );
+      });
+
+      it("respects maxWidth=1200 with CloudFront", async () => {
+        process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN = "cdn.example.com";
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1?maxWidth=1200",
+          width: 2000,
+        });
+
+        expect(result).toBe(
+          "https://cdn.example.com/processed/photo-1/1200w.webp",
+        );
+      });
+
+      it("ignores maxWidth when not specified with CloudFront (backward compat)", async () => {
+        process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN = "cdn.example.com";
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1",
+          width: 1200,
+        });
+
+        expect(result).toBe(
+          "https://cdn.example.com/processed/photo-1/1200w.webp",
+        );
+      });
+
+      it("extracts photoId correctly when maxWidth query param is present", async () => {
+        process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN = "cdn.example.com";
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/550e8400-e29b-41d4-a716-446655440000?maxWidth=600",
+          width: 400,
+        });
+
+        expect(result).toBe(
+          "https://cdn.example.com/processed/550e8400-e29b-41d4-a716-446655440000/600w.webp",
+        );
+      });
+
+      it("handles multiple query params with maxWidth", async () => {
+        process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN = "cdn.example.com";
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1?maxWidth=600&other=value&another=param",
+          width: 400,
+        });
+
+        expect(result).toBe(
+          "https://cdn.example.com/processed/photo-1/600w.webp",
+        );
+      });
+    });
+
+    describe("edge cases", () => {
+      it("handles maxWidth equal to exact derivative size", async () => {
+        delete process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+        const { default: imageLoader } = await import("../imageLoader");
+
+        expect(
+          imageLoader({ src: "/api/images/p1?maxWidth=300", width: 100 }),
+        ).toBe("/api/images/p1/300w.webp");
+        expect(
+          imageLoader({ src: "/api/images/p1?maxWidth=600", width: 100 }),
+        ).toBe("/api/images/p1/300w.webp");
+        expect(
+          imageLoader({ src: "/api/images/p1?maxWidth=1200", width: 100 }),
+        ).toBe("/api/images/p1/300w.webp");
+        expect(
+          imageLoader({ src: "/api/images/p1?maxWidth=2400", width: 100 }),
+        ).toBe("/api/images/p1/300w.webp");
+      });
+
+      it("handles maxWidth larger than all derivatives", async () => {
+        delete process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1?maxWidth=5000",
+          width: 1200,
+        });
+
+        expect(result).toBe("/api/images/photo-1/1200w.webp");
+      });
+
+      it("handles maxWidth=0 (edge case)", async () => {
+        delete process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1?maxWidth=0",
+          width: 100,
+        });
+
+        expect(result).toBe("/api/images/photo-1/300w.webp");
+      });
+
+      it("handles invalid maxWidth (non-numeric)", async () => {
+        delete process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+        const { default: imageLoader } = await import("../imageLoader");
+
+        const result = imageLoader({
+          src: "/api/images/photo-1?maxWidth=invalid",
+          width: 400,
+        });
+
+        expect(result).toBe("/api/images/photo-1/600w.webp");
+      });
+    });
+  });
 });
