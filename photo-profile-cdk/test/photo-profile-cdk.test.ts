@@ -292,6 +292,58 @@ describe("PhotoProfileCdkStack", () => {
     template.hasOutput("VercelSecretAccessKey", {});
   });
 
+  test("creates S3 bucket policy for CloudFront access", () => {
+    template.resourceCountIs("AWS::S3::BucketPolicy", 1);
+  });
+
+  test("bucket policy allows CloudFront s3:GetObject on bucket/*", () => {
+    template.hasResourceProperties("AWS::S3::BucketPolicy", {
+      Bucket: "test-photo-bucket",
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Sid: "AllowCloudFrontGetObject",
+            Effect: "Allow",
+            Principal: {
+              Service: "cloudfront.amazonaws.com",
+            },
+            Action: "s3:GetObject",
+            Resource: "arn:aws:s3:::test-photo-bucket/*",
+            Condition: Match.objectLike({
+              StringEquals: Match.objectLike({
+                "AWS:SourceArn": Match.anyValue(),
+              }),
+            }),
+          }),
+        ]),
+      },
+    });
+  });
+
+  test("bucket policy allows CloudFront s3:ListBucket on bucket", () => {
+    template.hasResourceProperties("AWS::S3::BucketPolicy", {
+      Bucket: "test-photo-bucket",
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Sid: "AllowCloudFrontListBucket",
+            Effect: "Allow",
+            Principal: {
+              Service: "cloudfront.amazonaws.com",
+            },
+            Action: "s3:ListBucket",
+            Resource: "arn:aws:s3:::test-photo-bucket",
+            Condition: Match.objectLike({
+              StringEquals: Match.objectLike({
+                "AWS:SourceArn": Match.anyValue(),
+              }),
+            }),
+          }),
+        ]),
+      },
+    });
+  });
+
   test("creates CloudFront distribution", () => {
     template.resourceCountIs("AWS::CloudFront::Distribution", 1);
   });

@@ -108,6 +108,46 @@ export class PhotoProfileCdkStack extends cdk.Stack {
       comment: "Photo Profile CDN - serves processed images from S3",
     });
 
+    // S3 bucket policy for CloudFront access
+    // Includes both s3:GetObject (on bucket/*) and s3:ListBucket (on bucket)
+    // to enable proper 404 responses for missing objects
+    new s3.CfnBucketPolicy(this, "BucketPolicy", {
+      bucket: props.s3BucketName,
+      policyDocument: {
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Sid: "AllowCloudFrontGetObject",
+            Effect: "Allow",
+            Principal: {
+              Service: "cloudfront.amazonaws.com",
+            },
+            Action: "s3:GetObject",
+            Resource: `arn:aws:s3:::${props.s3BucketName}/*`,
+            Condition: {
+              StringEquals: {
+                "AWS:SourceArn": this.distribution.distributionArn,
+              },
+            },
+          },
+          {
+            Sid: "AllowCloudFrontListBucket",
+            Effect: "Allow",
+            Principal: {
+              Service: "cloudfront.amazonaws.com",
+            },
+            Action: "s3:ListBucket",
+            Resource: `arn:aws:s3:::${props.s3BucketName}`,
+            Condition: {
+              StringEquals: {
+                "AWS:SourceArn": this.distribution.distributionArn,
+              },
+            },
+          },
+        ],
+      },
+    });
+
     this.deadLetterQueue = new sqs.Queue(this, "ImageProcessingDLQ", {
       queueName: `${id}-image-processing-dlq`,
       retentionPeriod: cdk.Duration.days(14),
