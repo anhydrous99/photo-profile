@@ -4,8 +4,8 @@ import { useState, useCallback, useRef } from "react";
 import type { FileRejection } from "react-dropzone";
 import { DropZone, UploadQueue } from "@/presentation/components";
 import type { UploadItem } from "@/presentation/components";
-import { uploadFile } from "@/presentation/lib";
 import Link from "next/link";
+import { getUploadAdapter } from "./uploadAdapter";
 
 /**
  * Admin Upload Page
@@ -26,77 +26,80 @@ export default function UploadPage() {
   const [rejections, setRejections] = useState<string[]>([]);
   const processingRef = useRef(false);
   const rejectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const uploadAdapter = getUploadAdapter();
 
   // Process upload queue sequentially
-  const processQueue = useCallback(async (queue: UploadItem[]) => {
-    if (processingRef.current) return; // Prevent double processing
-    processingRef.current = true;
-    setIsUploading(true);
+  const processQueue = useCallback(
+    async (queue: UploadItem[]) => {
+      if (processingRef.current) return; // Prevent double processing
+      processingRef.current = true;
+      setIsUploading(true);
 
-    for (const item of queue) {
-      if (item.status !== "pending") continue;
+      for (const item of queue) {
+        if (item.status !== "pending") continue;
 
-      // Update to uploading
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === item.id
-            ? { ...i, status: "uploading" as const, startedAt: Date.now() }
-            : i,
-        ),
-      );
-
-      try {
-        const controller = uploadFile(item.file, (progress) => {
-          setItems((prev) =>
-            prev.map((i) => {
-              if (i.id !== item.id) return i;
-
-              const update: Partial<UploadItem> = { progress };
-
-              // Calculate ETA only after 10% progress
-              if (progress >= 10 && i.startedAt) {
-                const elapsedMs = Date.now() - i.startedAt;
-                const bytesUploaded = (progress / 100) * i.file.size;
-                const speedBps = bytesUploaded / (elapsedMs / 1000);
-                const remainingBytes = i.file.size - bytesUploaded;
-                update.estimatedSecondsRemaining = remainingBytes / speedBps;
-              }
-
-              return { ...i, ...update };
-            }),
-          );
-        });
-
-        const result = await controller.promise;
-
-        // Update to complete
+        // Update to uploading
         setItems((prev) =>
           prev.map((i) =>
             i.id === item.id
-              ? { ...i, status: "complete" as const, photoId: result.photoId }
+              ? { ...i, status: "uploading" as const, startedAt: Date.now() }
               : i,
           ),
         );
-      } catch (error) {
-        // Update to error
-        setItems((prev) =>
-          prev.map((i) =>
-            i.id === item.id
-              ? {
-                  ...i,
-                  status: "error" as const,
-                  error:
-                    error instanceof Error ? error.message : "Upload failed",
+
+        try {
+          const controller = uploadAdapter(item.file, (progress) => {
+            setItems((prev) =>
+              prev.map((i) => {
+                if (i.id !== item.id) return i;
+
+                const update: Partial<UploadItem> = { progress };
+
+                if (progress >= 10 && i.startedAt) {
+                  const elapsedMs = Date.now() - i.startedAt;
+                  const bytesUploaded = (progress / 100) * i.file.size;
+                  const speedBps = bytesUploaded / (elapsedMs / 1000);
+                  const remainingBytes = i.file.size - bytesUploaded;
+                  update.estimatedSecondsRemaining = remainingBytes / speedBps;
                 }
-              : i,
-          ),
-        );
-      }
-    }
 
-    setIsUploading(false);
-    processingRef.current = false;
-  }, []);
+                return { ...i, ...update };
+              }),
+            );
+          });
+
+          const result = await controller.promise;
+
+          // Update to complete
+          setItems((prev) =>
+            prev.map((i) =>
+              i.id === item.id
+                ? { ...i, status: "complete" as const, photoId: result.photoId }
+                : i,
+            ),
+          );
+        } catch (error) {
+          // Update to error
+          setItems((prev) =>
+            prev.map((i) =>
+              i.id === item.id
+                ? {
+                    ...i,
+                    status: "error" as const,
+                    error:
+                      error instanceof Error ? error.message : "Upload failed",
+                  }
+                : i,
+            ),
+          );
+        }
+      }
+
+      setIsUploading(false);
+      processingRef.current = false;
+    },
+    [uploadAdapter],
+  );
 
   // Handle files rejected by DropZone (wrong type, too large, etc.)
   const handleFilesRejected = useCallback((fileRejections: FileRejection[]) => {

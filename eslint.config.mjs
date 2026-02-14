@@ -10,13 +10,12 @@ const eslintConfig = defineConfig([
   prettier,
   // Override default ignores of eslint-config-next.
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Lambda package (generated code):
     "lambda-package/**",
+    "photo-profile-cdk/**",
   ]),
 ]);
 
