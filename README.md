@@ -291,6 +291,52 @@ cd photo-profile-cdk
 npm test  # Run Jest tests for infrastructure
 ```
 
+### S3 CORS Configuration
+
+When using S3 as the storage backend (`STORAGE_BACKEND=s3`), you must configure CORS on your S3 bucket to allow direct browser uploads via presigned URLs.
+
+**Why CORS is Required:**
+
+Direct browser uploads to S3 require the bucket to allow `PUT` requests from your application's domain. Without CORS configuration, browsers will block the upload with a cross-origin error.
+
+**Configure CORS:**
+
+Use the provided script to apply CORS configuration:
+
+```bash
+./scripts/configure-s3-cors.sh <bucket-name> <allowed-origin>
+```
+
+**Examples:**
+
+```bash
+# For Vercel production deployment
+./scripts/configure-s3-cors.sh my-photo-bucket https://mysite.vercel.app
+
+# For local development
+./scripts/configure-s3-cors.sh my-photo-bucket http://localhost:3000
+
+# For multiple origins, run the script multiple times
+./scripts/configure-s3-cors.sh my-photo-bucket https://mysite.vercel.app
+./scripts/configure-s3-cors.sh my-photo-bucket http://localhost:3000
+```
+
+**CORS Configuration Details:**
+
+The script applies the following CORS rules:
+
+- **AllowedOrigins**: Your application domain (no wildcards for security)
+- **AllowedMethods**: `PUT` only (required for uploads)
+- **AllowedHeaders**: `Content-Type` (required for multipart uploads)
+- **ExposeHeaders**: `ETag` (required to read upload response)
+- **MaxAgeSeconds**: 3600 (1 hour cache for preflight requests)
+
+**Verify Configuration:**
+
+```bash
+aws s3api get-bucket-cors --bucket my-photo-bucket
+```
+
 ## 🔒 Security Features
 
 The admin panel includes multiple layers of security:

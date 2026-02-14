@@ -2,6 +2,7 @@ import { extname } from "path";
 import { getStorageAdapter, getImageUrl } from "./factory";
 
 export { getStorageAdapter, getImageUrl } from "./factory";
+export { presignS3Upload } from "./presignS3Upload";
 export type { StorageAdapter } from "./types";
 
 export async function saveOriginalFile(

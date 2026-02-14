@@ -125,7 +125,7 @@ src/
 
 ### Testing
 
-- **Vitest** with globals enabled, node environment (~20 test files)
+- **Vitest** with globals enabled, node environment (23 test files)
 - Tests colocated: `__tests__/` directories next to source files
 - Mock pattern: `vi.hoisted()` for shared mock refs + `vi.mock()` for module mocks
 - Import `{ describe, it, expect }` from `"vitest"` explicitly (even with globals)
@@ -146,8 +146,8 @@ src/
 These are the ONLY acceptable non-strict type patterns in the codebase:
 
 - `session.ts:41` — `payload as unknown as SessionPayload` (jose untyped JWT payload)
-- `env.ts:89,91` — `eslint-disable-next-line` for NodeJS namespace augmentation (`@typescript-eslint/no-namespace`, `@typescript-eslint/no-empty-object-type`)
-- `imageProcessor.test.ts:112` — `as unknown as Job<ImageJobData>` (test mock casting)
+- `env.ts:112,114` — `eslint-disable-next-line` for NodeJS namespace augmentation (`@typescript-eslint/no-namespace`, `@typescript-eslint/no-empty-object-type`)
+- `rateLimiter.test.ts:12` — `as unknown as Record<string, unknown>` (mock class casting)
 - `PhotoGrid.tsx:150`, `SortablePhotoCard.tsx:58`, `AlbumDetailClient.tsx:199` — `eslint-disable-next-line @next/next/no-img-element` (custom image serving via API, not `next/image`)
 - `global-error.tsx:74` — `eslint-disable-next-line @next/next/no-html-link-for-pages` (root layout unavailable in global error boundary)
 
@@ -158,6 +158,7 @@ These are the ONLY acceptable non-strict type patterns in the codebase:
 - **Storage backend**: `STORAGE_BACKEND` env var switches between `filesystem` and `s3`; `getStorageAdapter()` is a singleton factory
 - **DynamoDB**: Local dev via `dynamodb-local` in docker-compose (port 8000). Tables auto-created on first run.
 - **Image API**: Falls back to largest available derivative if requested size doesn't exist
+- **Test parallelism**: `fileParallelism: false` in vitest config — tests run sequentially (DynamoDB shared state)
 
 ## INFRASTRUCTURE
 
