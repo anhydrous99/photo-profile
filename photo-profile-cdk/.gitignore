@@ -6,3 +6,8 @@ node_modules
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+
+# Test/build artifacts
+resource-mapping.json
+test-output.log
+test-debug.js
