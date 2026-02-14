@@ -4,13 +4,14 @@
  */
 
 import { createTables } from "./database/dynamodb/tables";
+import { env } from "./config/env";
 import { logger } from "./logging/logger";
 
 let initialized = false;
 
 /**
  * Initialize application infrastructure
- * - Creates DynamoDB tables (idempotent)
+ * - Creates DynamoDB tables (idempotent, skipped in production where tables are CDK-managed)
  * Safe to call multiple times
  */
 export async function initializeApp(): Promise<void> {
@@ -23,8 +24,17 @@ export async function initializeApp(): Promise<void> {
       component: "initialization",
     });
 
-    // Create DynamoDB tables (idempotent - safe to call on every startup)
-    await createTables();
+    // In production, tables are managed by CDK — skip auto-provisioning
+    if (env.NODE_ENV === "production") {
+      logger.info(
+        "Skipping table creation in production (CDK-managed tables)",
+        {
+          component: "initialization",
+        },
+      );
+    } else {
+      await createTables();
+    }
 
     logger.info("Application initialization complete", {
       component: "initialization",

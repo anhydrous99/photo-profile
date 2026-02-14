@@ -79,9 +79,19 @@ describe("PhotoProfileCdkStack", () => {
       PolicyDocument: {
         Statement: Match.arrayWith([
           Match.objectLike({
-            Action: ["s3:GetObject", "s3:PutObject"],
+            Action: [
+              "s3:GetObject",
+              "s3:PutObject",
+              "s3:DeleteObject",
+              "s3:HeadObject",
+            ],
             Effect: "Allow",
             Resource: "arn:aws:s3:::test-photo-bucket/*",
+          }),
+          Match.objectLike({
+            Action: "s3:ListBucket",
+            Effect: "Allow",
+            Resource: "arn:aws:s3:::test-photo-bucket",
           }),
         ]),
       },
@@ -97,6 +107,11 @@ describe("PhotoProfileCdkStack", () => {
               "dynamodb:GetItem",
               "dynamodb:PutItem",
               "dynamodb:UpdateItem",
+              "dynamodb:DeleteItem",
+              "dynamodb:Query",
+              "dynamodb:Scan",
+              "dynamodb:BatchGetItem",
+              "dynamodb:BatchWriteItem",
             ],
             Effect: "Allow",
           }),
@@ -128,5 +143,172 @@ describe("PhotoProfileCdkStack", () => {
         ]),
       },
     });
+  });
+
+  test("creates Photos table with correct schema", () => {
+    template.hasResourceProperties("AWS::DynamoDB::Table", {
+      TableName: "test_Photos",
+      KeySchema: [{ AttributeName: "id", KeyType: "HASH" }],
+      BillingMode: "PAY_PER_REQUEST",
+    });
+  });
+
+  test("Photos table has GSIs", () => {
+    template.hasResourceProperties("AWS::DynamoDB::Table", {
+      TableName: "test_Photos",
+      GlobalSecondaryIndexes: Match.arrayWith([
+        Match.objectLike({ IndexName: "status-createdAt-index" }),
+        Match.objectLike({ IndexName: "createdAt-index" }),
+      ]),
+    });
+  });
+
+  test("creates Albums table with correct schema", () => {
+    template.hasResourceProperties("AWS::DynamoDB::Table", {
+      TableName: "test_Albums",
+      KeySchema: [{ AttributeName: "id", KeyType: "HASH" }],
+      BillingMode: "PAY_PER_REQUEST",
+    });
+  });
+
+  test("Albums table has GSIs", () => {
+    template.hasResourceProperties("AWS::DynamoDB::Table", {
+      TableName: "test_Albums",
+      GlobalSecondaryIndexes: Match.arrayWith([
+        Match.objectLike({ IndexName: "isPublished-sortOrder-index" }),
+        Match.objectLike({ IndexName: "sortOrder-index" }),
+      ]),
+    });
+  });
+
+  test("creates AlbumPhotos table with correct schema", () => {
+    template.hasResourceProperties("AWS::DynamoDB::Table", {
+      TableName: "test_AlbumPhotos",
+      KeySchema: [
+        { AttributeName: "albumId", KeyType: "HASH" },
+        { AttributeName: "photoId", KeyType: "RANGE" },
+      ],
+      BillingMode: "PAY_PER_REQUEST",
+    });
+  });
+
+  test("AlbumPhotos table has GSI", () => {
+    template.hasResourceProperties("AWS::DynamoDB::Table", {
+      TableName: "test_AlbumPhotos",
+      GlobalSecondaryIndexes: Match.arrayWith([
+        Match.objectLike({ IndexName: "photoId-albumId-index" }),
+      ]),
+    });
+  });
+
+  test("DynamoDB tables have RETAIN removal policy", () => {
+    const resources = template.findResources("AWS::DynamoDB::Table");
+    const tableLogicalIds = Object.keys(resources);
+    expect(tableLogicalIds.length).toBe(3);
+    for (const logicalId of tableLogicalIds) {
+      expect(resources[logicalId].DeletionPolicy).toBe("Retain");
+    }
+  });
+
+  test("creates Vercel IAM user", () => {
+    template.hasResourceProperties("AWS::IAM::User", {
+      UserName: "TestStack-vercel-app",
+    });
+  });
+
+  test("creates Vercel access key", () => {
+    template.resourceCountIs("AWS::IAM::AccessKey", 1);
+  });
+
+  test("Vercel user has S3 permissions", () => {
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: [
+              "s3:GetObject",
+              "s3:PutObject",
+              "s3:DeleteObject",
+              "s3:HeadObject",
+            ],
+            Effect: "Allow",
+            Resource: "arn:aws:s3:::test-photo-bucket/*",
+          }),
+        ]),
+      },
+    });
+  });
+
+  test("Vercel user has DynamoDB data-plane permissions", () => {
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: [
+              "dynamodb:GetItem",
+              "dynamodb:PutItem",
+              "dynamodb:UpdateItem",
+              "dynamodb:DeleteItem",
+              "dynamodb:Query",
+              "dynamodb:Scan",
+              "dynamodb:BatchGetItem",
+              "dynamodb:BatchWriteItem",
+            ],
+            Effect: "Allow",
+          }),
+        ]),
+      },
+    });
+  });
+
+  test("Vercel user has DynamoDB ListTables permission", () => {
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: "dynamodb:ListTables",
+            Effect: "Allow",
+            Resource: "*",
+          }),
+        ]),
+      },
+    });
+  });
+
+  test("Vercel user has SQS SendMessage permission", () => {
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: "sqs:SendMessage",
+            Effect: "Allow",
+          }),
+        ]),
+      },
+    });
+  });
+
+  test("outputs Vercel access key credentials", () => {
+    template.hasOutput("VercelAccessKeyId", {});
+    template.hasOutput("VercelSecretAccessKey", {});
+  });
+
+  test("creates CloudFront distribution", () => {
+    template.resourceCountIs("AWS::CloudFront::Distribution", 1);
+  });
+
+  test("CloudFront distribution uses HTTPS redirect", () => {
+    template.hasResourceProperties("AWS::CloudFront::Distribution", {
+      DistributionConfig: Match.objectLike({
+        DefaultCacheBehavior: Match.objectLike({
+          ViewerProtocolPolicy: "redirect-to-https",
+        }),
+      }),
+    });
+  });
+
+  test("outputs CloudFront domain", () => {
+    template.hasOutput("CloudFrontDomain", {});
+    template.hasOutput("CloudFrontDistributionId", {});
   });
 });

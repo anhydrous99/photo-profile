@@ -3,6 +3,10 @@ import { Construct } from "constructs";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
+import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
 export interface PhotoProfileStackProps extends cdk.StackProps {
@@ -22,11 +26,87 @@ export class PhotoProfileCdkStack extends cdk.Stack {
   public readonly queue: sqs.Queue;
   public readonly deadLetterQueue: sqs.Queue;
   public readonly imageProcessor: lambda.Function;
+  public readonly photosTable: dynamodb.Table;
+  public readonly albumsTable: dynamodb.Table;
+  public readonly albumPhotosTable: dynamodb.Table;
+  public readonly distribution: cloudfront.Distribution;
 
   constructor(scope: Construct, id: string, props: PhotoProfileStackProps) {
     super(scope, id, props);
 
     const tablePrefix = props.dynamodbTablePrefix ?? "";
+
+    // DynamoDB Tables
+    this.photosTable = new dynamodb.Table(this, "PhotosTable", {
+      tableName: `${tablePrefix}Photos`,
+      partitionKey: { name: "id", type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+    this.photosTable.addGlobalSecondaryIndex({
+      indexName: "status-createdAt-index",
+      partitionKey: { name: "status", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "createdAt", type: dynamodb.AttributeType.NUMBER },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+    this.photosTable.addGlobalSecondaryIndex({
+      indexName: "createdAt-index",
+      partitionKey: { name: "_type", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "createdAt", type: dynamodb.AttributeType.NUMBER },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    this.albumsTable = new dynamodb.Table(this, "AlbumsTable", {
+      tableName: `${tablePrefix}Albums`,
+      partitionKey: { name: "id", type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+    this.albumsTable.addGlobalSecondaryIndex({
+      indexName: "isPublished-sortOrder-index",
+      partitionKey: {
+        name: "isPublished",
+        type: dynamodb.AttributeType.NUMBER,
+      },
+      sortKey: { name: "sortOrder", type: dynamodb.AttributeType.NUMBER },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+    this.albumsTable.addGlobalSecondaryIndex({
+      indexName: "sortOrder-index",
+      partitionKey: { name: "_type", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "sortOrder", type: dynamodb.AttributeType.NUMBER },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    this.albumPhotosTable = new dynamodb.Table(this, "AlbumPhotosTable", {
+      tableName: `${tablePrefix}AlbumPhotos`,
+      partitionKey: { name: "albumId", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "photoId", type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+    this.albumPhotosTable.addGlobalSecondaryIndex({
+      indexName: "photoId-albumId-index",
+      partitionKey: { name: "photoId", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "albumId", type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    const bucket = s3.Bucket.fromBucketName(
+      this,
+      "PhotoBucket",
+      props.s3BucketName,
+    );
+
+    this.distribution = new cloudfront.Distribution(this, "CDN", {
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+      },
+      comment: "Photo Profile CDN - serves processed images from S3",
+    });
 
     this.deadLetterQueue = new sqs.Queue(this, "ImageProcessingDLQ", {
       queueName: `${id}-image-processing-dlq`,
@@ -50,7 +130,6 @@ export class PhotoProfileCdkStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(120),
       memorySize: 2048,
       ephemeralStorageSize: cdk.Size.mebibytes(1024),
-      reservedConcurrentExecutions: 5,
       environment: {
         AWS_S3_BUCKET: props.s3BucketName,
         DYNAMODB_TABLE_PREFIX: tablePrefix,
@@ -72,8 +151,21 @@ export class PhotoProfileCdkStack extends cdk.Stack {
     this.imageProcessor.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ["s3:GetObject", "s3:PutObject"],
+        actions: [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:HeadObject",
+        ],
         resources: [`arn:aws:s3:::${props.s3BucketName}/*`],
+      }),
+    );
+
+    this.imageProcessor.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["s3:ListBucket"],
+        resources: [`arn:aws:s3:::${props.s3BucketName}`],
       }),
     );
 
@@ -84,12 +176,108 @@ export class PhotoProfileCdkStack extends cdk.Stack {
           "dynamodb:GetItem",
           "dynamodb:PutItem",
           "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:BatchGetItem",
+          "dynamodb:BatchWriteItem",
         ],
         resources: [
-          `arn:aws:dynamodb:${this.region}:${this.account}:table/${tablePrefix}photos`,
+          this.photosTable.tableArn,
+          `${this.photosTable.tableArn}/index/*`,
+          this.albumsTable.tableArn,
+          `${this.albumsTable.tableArn}/index/*`,
+          this.albumPhotosTable.tableArn,
+          `${this.albumPhotosTable.tableArn}/index/*`,
         ],
       }),
     );
+
+    // Vercel IAM user for app deployment
+    const vercelUser = new iam.User(this, "VercelAppUser", {
+      userName: `${id}-vercel-app`,
+    });
+
+    const vercelAccessKey = new iam.AccessKey(this, "VercelAppAccessKey", {
+      user: vercelUser,
+    });
+
+    // S3 permissions (object-level)
+    vercelUser.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:HeadObject",
+        ],
+        resources: [`arn:aws:s3:::${props.s3BucketName}/*`],
+      }),
+    );
+
+    // S3 permissions (bucket-level)
+    vercelUser.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["s3:ListBucket"],
+        resources: [`arn:aws:s3:::${props.s3BucketName}`],
+      }),
+    );
+
+    // DynamoDB permissions (data-plane only)
+    vercelUser.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:BatchGetItem",
+          "dynamodb:BatchWriteItem",
+        ],
+        resources: [
+          this.photosTable.tableArn,
+          `${this.photosTable.tableArn}/index/*`,
+          this.albumsTable.tableArn,
+          `${this.albumsTable.tableArn}/index/*`,
+          this.albumPhotosTable.tableArn,
+          `${this.albumPhotosTable.tableArn}/index/*`,
+        ],
+      }),
+    );
+
+    // DynamoDB ListTables (health endpoint)
+    vercelUser.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["dynamodb:ListTables"],
+        resources: ["*"],
+      }),
+    );
+
+    // SQS SendMessage (enqueue image processing jobs)
+    vercelUser.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["sqs:SendMessage"],
+        resources: [this.queue.queueArn],
+      }),
+    );
+
+    new cdk.CfnOutput(this, "CloudFrontDomain", {
+      value: this.distribution.distributionDomainName,
+      description:
+        "CloudFront distribution domain name (set as AWS_CLOUDFRONT_DOMAIN and NEXT_PUBLIC_CLOUDFRONT_DOMAIN)",
+    });
+
+    new cdk.CfnOutput(this, "CloudFrontDistributionId", {
+      value: this.distribution.distributionId,
+      description: "CloudFront distribution ID",
+    });
 
     new cdk.CfnOutput(this, "QueueUrl", {
       value: this.queue.queueUrl,
@@ -109,6 +297,16 @@ export class PhotoProfileCdkStack extends cdk.Stack {
     new cdk.CfnOutput(this, "DLQUrl", {
       value: this.deadLetterQueue.queueUrl,
       description: "Dead letter queue URL",
+    });
+
+    new cdk.CfnOutput(this, "VercelAccessKeyId", {
+      value: vercelAccessKey.accessKeyId,
+      description: "Vercel IAM user access key ID",
+    });
+
+    new cdk.CfnOutput(this, "VercelSecretAccessKey", {
+      value: vercelAccessKey.secretAccessKey.unsafeUnwrap(),
+      description: "Vercel IAM user secret access key (store securely)",
     });
   }
 }
