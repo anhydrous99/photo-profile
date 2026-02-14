@@ -110,6 +110,7 @@ export function AlbumGalleryClient({
                   alt={photo.title || photo.originalFilename}
                   blurDataUrl={photo.blurDataUrl}
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  maxWidth={photo.width ?? undefined}
                 />
               </div>
             </button>

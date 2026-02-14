@@ -83,6 +83,7 @@ export function HomepageClient({
             blurDataUrl={heroPhoto.blurDataUrl}
             sizes="(max-width: 1280px) 100vw, 1152px"
             preload
+            maxWidth={heroPhoto.width ?? undefined}
           />
         </button>
       </section>
@@ -103,6 +104,7 @@ export function HomepageClient({
                 alt={photo.title || photo.originalFilename}
                 blurDataUrl={photo.blurDataUrl}
                 sizes="(max-width: 768px) 50vw, 33vw"
+                maxWidth={photo.width ?? undefined}
               />
             </button>
           ))}

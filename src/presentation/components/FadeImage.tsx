@@ -10,6 +10,7 @@ interface FadeImageProps {
   sizes: string;
   preload?: boolean;
   className?: string;
+  maxWidth?: number;
 }
 
 export function FadeImage({
@@ -19,6 +20,7 @@ export function FadeImage({
   sizes,
   preload,
   className,
+  maxWidth,
 }: FadeImageProps) {
   const [loaded, setLoaded] = useState(false);
 
@@ -36,7 +38,7 @@ export function FadeImage({
 
       {/* Full-resolution image with fade-in */}
       <Image
-        src={`/api/images/${photoId}`}
+        src={`/api/images/${photoId}${maxWidth ? `?maxWidth=${maxWidth}` : ""}`}
         alt={alt}
         fill
         sizes={sizes}
