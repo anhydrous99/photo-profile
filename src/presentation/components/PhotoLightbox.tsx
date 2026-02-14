@@ -32,11 +32,25 @@ const DERIVATIVE_WIDTHS = [300, 600, 1200, 2400] as const;
 
 function buildSrcSet(photoId: string, width: number, height: number) {
   const aspectRatio = height / width;
-  return DERIVATIVE_WIDTHS.map((w) => ({
+  return DERIVATIVE_WIDTHS.filter((w) => w <= width).map((w) => ({
     src: getClientImageUrl(photoId, `${w}w.webp`),
     width: w,
     height: Math.round(w * aspectRatio),
   }));
+}
+
+/**
+ * Get the largest available derivative width that doesn't exceed the photo's actual width.
+ * Falls back to the smallest derivative (300) if photo.width is null or very small.
+ */
+function getLargestAvailableWidth(photoWidth: number | null): number {
+  if (!photoWidth) {
+    return DERIVATIVE_WIDTHS[0];
+  }
+  const availableWidths = DERIVATIVE_WIDTHS.filter((w) => w <= photoWidth);
+  return availableWidths.length > 0
+    ? availableWidths[availableWidths.length - 1]
+    : DERIVATIVE_WIDTHS[0];
 }
 
 export function PhotoLightbox({
@@ -55,21 +69,24 @@ export function PhotoLightbox({
   const effectiveExifVisible = exifOpen && currentZoom <= 1;
 
   // Transform photo data to YARL slide format
-  // Use 600w as baseline - guaranteed to exist for all photos
+  // Use largest available derivative based on photo's actual width
   // Only include srcSet when dimensions are known (graceful fallback for legacy photos)
-  const slides = photos.map((photo) => ({
-    src: getClientImageUrl(photo.id, "600w.webp"),
-    alt: photo.title || photo.originalFilename,
-    ...(photo.width && photo.height
-      ? {
-          width: photo.width,
-          height: photo.height,
-          srcSet: buildSrcSet(photo.id, photo.width, photo.height),
-        }
-      : {}),
-    title: photo.title || undefined,
-    description: photo.description || undefined,
-  }));
+  const slides = photos.map((photo) => {
+    const largestWidth = getLargestAvailableWidth(photo.width);
+    return {
+      src: getClientImageUrl(photo.id, `${largestWidth}w.webp`),
+      alt: photo.title || photo.originalFilename,
+      ...(photo.width && photo.height
+        ? {
+            width: photo.width,
+            height: photo.height,
+            srcSet: buildSrcSet(photo.id, photo.width, photo.height),
+          }
+        : {}),
+      title: photo.title || undefined,
+      description: photo.description || undefined,
+    };
+  });
 
   return (
     <>
