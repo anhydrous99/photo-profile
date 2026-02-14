@@ -90,6 +90,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     await albumRepository.save(album);
 
+    revalidatePath("/admin/albums");
+    revalidatePath("/admin");
+    revalidatePath("/albums");
+    revalidatePath(`/albums/${id}`);
+
     return NextResponse.json(album);
   } catch (error) {
     logger.error("PATCH /api/admin/albums/[id] failed", {

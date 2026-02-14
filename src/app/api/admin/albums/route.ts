@@ -4,6 +4,7 @@ import {
   DynamoDBAlbumRepository,
   DynamoDBPhotoRepository,
 } from "@/infrastructure/database/dynamodb/repositories";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 
@@ -96,6 +97,10 @@ export async function POST(request: NextRequest) {
     };
 
     await albumRepository.save(album);
+
+    revalidatePath("/admin/albums");
+    revalidatePath("/admin");
+    revalidatePath("/albums");
 
     return NextResponse.json(album, { status: 201 });
   } catch (error) {

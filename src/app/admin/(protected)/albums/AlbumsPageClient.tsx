@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -52,6 +52,10 @@ export function AlbumsPageClient({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor),
   );
+
+  useEffect(() => {
+    setAlbums(initialAlbums);
+  }, [initialAlbums]);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
