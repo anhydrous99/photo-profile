@@ -66,10 +66,18 @@ describe("PhotoProfileCdkStack", () => {
           DYNAMODB_TABLE_PREFIX: "test_",
           STORAGE_BACKEND: "s3",
           STORAGE_PATH: "",
+          NODE_ENV: "production",
+          LOG_LEVEL: "info",
           AUTH_SECRET: "dummy-not-used-by-lambda-at-all!",
           ADMIN_PASSWORD_HASH: "dummy-not-used-by-lambda",
         }),
       },
+    });
+  });
+
+  test("creates CloudWatch log group with one month retention for Lambda", () => {
+    template.hasResourceProperties("AWS::Logs::LogGroup", {
+      RetentionInDays: 30,
     });
   });
 

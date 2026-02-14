@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { SQSEvent, SQSRecord } from "aws-lambda";
+import type { Context, SQSEvent, SQSRecord } from "aws-lambda";
 import type { Photo } from "@/domain/entities";
 
 // --- Hoisted mocks ---
@@ -78,6 +78,24 @@ function createMockPhoto(photoId: string): Photo {
   };
 }
 
+function createLambdaContext(): Context {
+  return {
+    callbackWaitsForEmptyEventLoop: false,
+    functionName: "image-processor",
+    functionVersion: "$LATEST",
+    invokedFunctionArn:
+      "arn:aws:lambda:us-east-1:123456789:function:image-processor",
+    memoryLimitInMB: "2048",
+    awsRequestId: "request-123",
+    logGroupName: "/aws/lambda/image-processor",
+    logStreamName: "2026/02/14/[$LATEST]abc123",
+    getRemainingTimeInMillis: () => 1000,
+    done: () => undefined,
+    fail: () => undefined,
+    succeed: () => undefined,
+  };
+}
+
 // --- Tests ---
 
 beforeEach(() => {
@@ -107,7 +125,7 @@ describe("Lambda SQS handler", () => {
     );
     mockPhotoRepository.save.mockResolvedValue(undefined);
 
-    await handler(event);
+    await handler(event, createLambdaContext());
 
     expect(mockProcessImageJob).toHaveBeenCalledWith({
       photoId: "photo-abc",
@@ -137,7 +155,7 @@ describe("Lambda SQS handler", () => {
     );
     mockPhotoRepository.save.mockResolvedValue(undefined);
 
-    await handler(event);
+    await handler(event, createLambdaContext());
 
     expect(mockProcessImageJob).toHaveBeenCalledTimes(1);
     expect(mockProcessImageJob).toHaveBeenCalledWith({
@@ -167,7 +185,7 @@ describe("Lambda SQS handler", () => {
     mockPhotoRepository.findById.mockResolvedValue(photo);
     mockPhotoRepository.save.mockResolvedValue(undefined);
 
-    await handler(event);
+    await handler(event, createLambdaContext());
 
     expect(mockPhotoRepository.findById).toHaveBeenCalledWith("photo-123");
     expect(mockPhotoRepository.save).toHaveBeenCalledWith(
@@ -203,7 +221,7 @@ describe("Lambda SQS handler", () => {
     mockPhotoRepository.findById.mockResolvedValue(photo);
     mockPhotoRepository.save.mockResolvedValue(undefined);
 
-    const result = await handler(event);
+    const result = await handler(event, createLambdaContext());
 
     expect(result.batchItemFailures).toEqual([{ itemIdentifier: "msg-fail" }]);
 
@@ -216,7 +234,7 @@ describe("Lambda SQS handler", () => {
 
     expect(mockLogger.error).toHaveBeenCalledWith(
       "Lambda image processing failed",
-      expect.objectContaining({ record: "msg-fail" }),
+      expect.objectContaining({ messageId: "msg-fail" }),
     );
   });
 
@@ -251,7 +269,7 @@ describe("Lambda SQS handler", () => {
     );
     mockPhotoRepository.save.mockResolvedValue(undefined);
 
-    const result = await handler(event);
+    const result = await handler(event, createLambdaContext());
 
     expect(mockProcessImageJob).toHaveBeenCalledTimes(3);
     expect(mockPhotoRepository.save).toHaveBeenCalledTimes(3);
@@ -287,7 +305,7 @@ describe("Lambda SQS handler", () => {
     );
     mockPhotoRepository.save.mockResolvedValue(undefined);
 
-    const result = await handler(event);
+    const result = await handler(event, createLambdaContext());
 
     expect(result.batchItemFailures).toEqual([{ itemIdentifier: "msg-bad" }]);
 
@@ -319,7 +337,7 @@ describe("Lambda SQS handler", () => {
     mockPhotoRepository.findById.mockResolvedValue(createMockPhoto("photo-ok"));
     mockPhotoRepository.save.mockResolvedValue(undefined);
 
-    const result = await handler(event);
+    const result = await handler(event, createLambdaContext());
 
     expect(result.batchItemFailures).toEqual([]);
   });
@@ -338,7 +356,7 @@ describe("Lambda SQS handler", () => {
       new Error("DynamoDB unavailable"),
     );
 
-    const result = await handler(event);
+    const result = await handler(event, createLambdaContext());
 
     expect(result.batchItemFailures).toEqual([
       { itemIdentifier: "msg-dbfail" },
@@ -364,7 +382,7 @@ describe("Lambda SQS handler", () => {
     });
     mockPhotoRepository.findById.mockResolvedValue(null);
 
-    const result = await handler(event);
+    const result = await handler(event, createLambdaContext());
 
     expect(mockPhotoRepository.save).not.toHaveBeenCalled();
     expect(result.batchItemFailures).toEqual([]);

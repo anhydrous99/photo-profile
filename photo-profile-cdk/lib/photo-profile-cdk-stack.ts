@@ -7,6 +7,7 @@ import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as logs from "aws-cdk-lib/aws-logs";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
 export interface PhotoProfileStackProps extends cdk.StackProps {
@@ -162,6 +163,14 @@ export class PhotoProfileCdkStack extends cdk.Stack {
       },
     });
 
+    const imageProcessorLogGroup = new logs.LogGroup(
+      this,
+      "ImageProcessorLogGroup",
+      {
+        retention: logs.RetentionDays.ONE_MONTH,
+      },
+    );
+
     this.imageProcessor = new lambda.Function(this, "ImageProcessor", {
       runtime: lambda.Runtime.NODEJS_22_X,
       architecture: lambda.Architecture.ARM_64,
@@ -176,11 +185,14 @@ export class PhotoProfileCdkStack extends cdk.Stack {
         DYNAMODB_TABLE_PREFIX: tablePrefix,
         STORAGE_BACKEND: "s3",
         STORAGE_PATH: "",
+        NODE_ENV: "production",
+        LOG_LEVEL: "info",
         AUTH_SECRET: "dummy-not-used-by-lambda-at-all!",
         ADMIN_PASSWORD_HASH: "dummy-not-used-by-lambda",
       },
       description:
         "Processes uploaded photos: generates derivatives, extracts EXIF data",
+      logGroup: imageProcessorLogGroup,
     });
 
     this.imageProcessor.addEventSource(
