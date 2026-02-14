@@ -8,6 +8,9 @@ const envSchema = z
       .enum(["s3", "filesystem"])
       .default("filesystem")
       .describe("Storage backend: s3 or filesystem"),
+    // Client-side companion: NEXT_PUBLIC_STORAGE_BACKEND must be set to match STORAGE_BACKEND.
+    // It's a NEXT_PUBLIC_ var (inlined at build time) so the upload page knows which flow to use.
+    // Set in Vercel dashboard alongside STORAGE_BACKEND.
     AWS_REGION: z.string().optional(),
     AWS_S3_BUCKET: z.string().optional(),
     AWS_CLOUDFRONT_DOMAIN: z.string().optional(),

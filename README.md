@@ -73,6 +73,7 @@ STORAGE_PATH=./storage  # Optional when STORAGE_BACKEND=s3
 
 # Option B: AWS S3 + CloudFront (Required for Vercel)
 # STORAGE_BACKEND=s3
+# NEXT_PUBLIC_STORAGE_BACKEND=s3  # Must match STORAGE_BACKEND — used by upload page
 # AWS_REGION=us-east-1
 # AWS_S3_BUCKET=your-bucket-name
 # AWS_CLOUDFRONT_DOMAIN=d12345.cloudfront.net
@@ -154,12 +155,13 @@ Deploy to Vercel with AWS Lambda + SQS for image processing:
    # Queue Backend (Required)
    SQS_QUEUE_URL=<from CDK output>
 
-   # Storage (Required)
-   STORAGE_BACKEND=s3
-   AWS_S3_BUCKET=<your-bucket>
-   AWS_REGION=<your-region>
-   AWS_CLOUDFRONT_DOMAIN=<your-cloudfront-domain>
-   NEXT_PUBLIC_CLOUDFRONT_DOMAIN=<your-cloudfront-domain>
+    # Storage (Required)
+    STORAGE_BACKEND=s3
+    NEXT_PUBLIC_STORAGE_BACKEND=s3  # Must match STORAGE_BACKEND — used by upload page
+    AWS_S3_BUCKET=<your-bucket>
+    AWS_REGION=<your-region>
+    AWS_CLOUDFRONT_DOMAIN=<your-cloudfront-domain>
+    NEXT_PUBLIC_CLOUDFRONT_DOMAIN=<your-cloudfront-domain>
 
    # Authentication (Required)
    AUTH_SECRET=<your-secret-key-at-least-32-chars>
