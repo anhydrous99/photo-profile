@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { Header } from "@/presentation/components/Header";
 import { HomepageClient } from "@/presentation/components/HomepageClient";
+import { SocialFooter } from "@/presentation/components/SocialFooter";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,7 @@ export default async function Home() {
           />
         )}
       </main>
+      <SocialFooter />
     </>
   );
 }
