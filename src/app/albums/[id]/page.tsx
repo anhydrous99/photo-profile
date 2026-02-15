@@ -2,6 +2,7 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AlbumGalleryClient } from "@/presentation/components/AlbumGalleryClient";
+import { SocialFooter } from "@/presentation/components/SocialFooter";
 import {
   DynamoDBAlbumRepository,
   DynamoDBPhotoRepository,
@@ -81,22 +82,25 @@ export default async function AlbumPage({ params }: PageProps) {
 
   // Pass only serializable data to client component
   return (
-    <AlbumGalleryClient
-      album={{
-        id: album.id,
-        title: album.title,
-        description: album.description,
-      }}
-      photos={photos.map((p) => ({
-        id: p.id,
-        title: p.title,
-        description: p.description,
-        originalFilename: p.originalFilename,
-        blurDataUrl: p.blurDataUrl,
-        exifData: p.exifData,
-        width: p.width,
-        height: p.height,
-      }))}
-    />
+    <>
+      <AlbumGalleryClient
+        album={{
+          id: album.id,
+          title: album.title,
+          description: album.description,
+        }}
+        photos={photos.map((p) => ({
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          originalFilename: p.originalFilename,
+          blurDataUrl: p.blurDataUrl,
+          exifData: p.exifData,
+          width: p.width,
+          height: p.height,
+        }))}
+      />
+      <SocialFooter />
+    </>
   );
 }

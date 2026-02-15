@@ -4,6 +4,7 @@ import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repo
 import { getImageUrl } from "@/infrastructure/storage";
 import { Header } from "@/presentation/components/Header";
 import { HomepageClient } from "@/presentation/components/HomepageClient";
+import { SocialFooter } from "@/presentation/components/SocialFooter";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,7 @@ export default async function PhotoDeepLinkPage({ params }: PageProps) {
           />
         )}
       </main>
+      <SocialFooter />
     </>
   );
 }
