@@ -43,7 +43,7 @@ describe("PhotoProfileCdkStack", () => {
   test("creates Lambda function with correct configuration", () => {
     template.hasResourceProperties("AWS::Lambda::Function", {
       Runtime: "nodejs22.x",
-      Timeout: 120,
+      Timeout: 180,
       MemorySize: 2048,
       Handler: "src/infrastructure/jobs/lambdaHandler.handler",
       Architectures: ["arm64"],
@@ -157,6 +157,7 @@ describe("PhotoProfileCdkStack", () => {
       TableName: "test_Photos",
       KeySchema: [{ AttributeName: "id", KeyType: "HASH" }],
       BillingMode: "PAY_PER_REQUEST",
+      DeletionProtectionEnabled: true,
     });
   });
 
@@ -175,6 +176,7 @@ describe("PhotoProfileCdkStack", () => {
       TableName: "test_Albums",
       KeySchema: [{ AttributeName: "id", KeyType: "HASH" }],
       BillingMode: "PAY_PER_REQUEST",
+      DeletionProtectionEnabled: true,
     });
   });
 
@@ -196,6 +198,7 @@ describe("PhotoProfileCdkStack", () => {
         { AttributeName: "photoId", KeyType: "RANGE" },
       ],
       BillingMode: "PAY_PER_REQUEST",
+      DeletionProtectionEnabled: true,
     });
   });
 

@@ -42,6 +42,7 @@ export class PhotoProfileCdkStack extends cdk.Stack {
       tableName: `${tablePrefix}Photos`,
       partitionKey: { name: "id", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      deletionProtection: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
     this.photosTable.addGlobalSecondaryIndex({
@@ -61,6 +62,7 @@ export class PhotoProfileCdkStack extends cdk.Stack {
       tableName: `${tablePrefix}Albums`,
       partitionKey: { name: "id", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      deletionProtection: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
     this.albumsTable.addGlobalSecondaryIndex({
@@ -84,6 +86,7 @@ export class PhotoProfileCdkStack extends cdk.Stack {
       partitionKey: { name: "albumId", type: dynamodb.AttributeType.STRING },
       sortKey: { name: "photoId", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      deletionProtection: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
     this.albumPhotosTable.addGlobalSecondaryIndex({
@@ -176,7 +179,7 @@ export class PhotoProfileCdkStack extends cdk.Stack {
       architecture: lambda.Architecture.ARM_64,
       handler: "src/infrastructure/jobs/lambdaHandler.handler",
       code: lambda.Code.fromAsset("../lambda-package"),
-      timeout: cdk.Duration.seconds(120),
+      timeout: cdk.Duration.minutes(3),
       memorySize: 2048,
       ephemeralStorageSize: cdk.Size.mebibytes(1024),
       environment: {
