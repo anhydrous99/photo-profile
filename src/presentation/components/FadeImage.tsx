@@ -25,7 +25,12 @@ export function FadeImage({
   const [loaded, setLoaded] = useState(false);
 
   return (
-    <div className={`absolute inset-0 overflow-hidden ${className ?? ""}`}>
+    <div
+      className={`absolute inset-0 overflow-hidden select-none ${className ?? ""}`}
+      onContextMenu={(e) => e.preventDefault()}
+      onDragStart={(e) => e.preventDefault()}
+      style={{ WebkitTouchCallout: "none" }}
+    >
       {/* Blur placeholder background */}
       {blurDataUrl && (
         <img
@@ -43,6 +48,7 @@ export function FadeImage({
         fill
         sizes={sizes}
         preload={preload}
+        draggable={false}
         className={`object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
         onLoad={() => setLoaded(true)}
       />

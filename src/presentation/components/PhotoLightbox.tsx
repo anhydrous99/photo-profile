@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Lightbox from "yet-another-react-lightbox";
+import Lightbox, { isImageSlide } from "yet-another-react-lightbox";
 import Captions from "yet-another-react-lightbox/plugins/captions";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
 import "yet-another-react-lightbox/styles.css";
 import "yet-another-react-lightbox/plugins/captions.css";
+import type { RenderSlideProps } from "yet-another-react-lightbox";
 import type { ExifData } from "@/domain/entities/Photo";
 import { ExifPanel } from "./ExifPanel";
 import { getClientImageUrl } from "@/lib/imageLoader";
@@ -68,6 +69,35 @@ export function PhotoLightbox({
   // Hide EXIF panel when zoomed in
   const effectiveExifVisible = exifOpen && currentZoom <= 1;
 
+  // Custom slide renderer with image download protections
+  const renderSlide = (props: RenderSlideProps) => {
+    if (isImageSlide(props.slide)) {
+      const slide = props.slide;
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={slide.src}
+          alt={slide.alt || ""}
+          srcSet={
+            slide.srcSet
+              ? slide.srcSet.map((s) => `${s.src} ${s.width}w`).join(", ")
+              : undefined
+          }
+          className="yarl__slide_image"
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
+          draggable={false}
+          style={{
+            userSelect: "none",
+            WebkitUserSelect: "none",
+            WebkitTouchCallout: "none",
+          }}
+        />
+      );
+    }
+    return undefined;
+  };
+
   // Transform photo data to YARL slide format
   // Use largest available derivative based on photo's actual width
   // Only include srcSet when dimensions are known (graceful fallback for legacy photos)
@@ -95,6 +125,7 @@ export function PhotoLightbox({
         close={onClose}
         index={index}
         slides={slides}
+        render={{ slide: renderSlide }}
         plugins={[Zoom, Fullscreen, Captions]}
         // Solid black background (phase decision)
         styles={{

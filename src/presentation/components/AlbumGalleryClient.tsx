@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ExifData } from "@/domain/entities/Photo";
 import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 import { FadeImage } from "./FadeImage";
@@ -51,6 +51,18 @@ export function AlbumGalleryClient({
     if (!initialPhotoSlug) return false;
     return photos.some((p) => p.id.startsWith(initialPhotoSlug));
   });
+
+  // Intercept Ctrl+S / Cmd+S to prevent browser save dialog
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handlePhotoClick = (index: number) => {
     setLightboxIndex(index);
