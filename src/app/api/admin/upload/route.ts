@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
+import { requireAuth } from "@/lib/requireAuth";
 import { saveOriginalFile } from "@/infrastructure/storage";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
@@ -31,11 +31,8 @@ const photoRepository = new DynamoDBPhotoRepository();
  */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Verify session
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     // 2. Early reject oversized uploads before reading into memory
     const contentLength = parseInt(

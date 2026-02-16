@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
+import { requireAuth } from "@/lib/requireAuth";
 import {
   DynamoDBAlbumRepository,
   DynamoDBPhotoRepository,
@@ -25,10 +25,8 @@ const reorderSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const body = await request.json();
     const result = reorderSchema.safeParse(body);

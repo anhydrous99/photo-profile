@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { requireAuth } from "@/lib/requireAuth";
 import { HeadObjectCommand } from "@aws-sdk/client-s3";
-import { verifySession } from "@/infrastructure/auth";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { s3Client } from "@/infrastructure/storage/s3Client";
@@ -16,10 +16,8 @@ const photoRepository = new DynamoDBPhotoRepository();
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const body = await request.json();
 

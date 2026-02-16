@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
+import { requireAuth } from "@/lib/requireAuth";
 import { deletePhotoFiles } from "@/infrastructure/storage";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
@@ -26,11 +26,8 @@ interface RouteContext {
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
-    // 1. Verify admin session
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     // 2. Get photo ID from route params
     const { id } = await context.params;
@@ -98,11 +95,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
  */
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   try {
-    // 1. Verify admin session
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     // 2. Get photo ID from route params
     const { id } = await context.params;

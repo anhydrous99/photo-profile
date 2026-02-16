@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
+import { requireAuth } from "@/lib/requireAuth";
 import { findOriginalFile } from "@/infrastructure/storage";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
@@ -29,11 +29,8 @@ interface RouteContext {
  */
 export async function POST(_request: NextRequest, context: RouteContext) {
   try {
-    // 1. Verify admin session
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     // 2. Get photo ID
     const { id } = await context.params;

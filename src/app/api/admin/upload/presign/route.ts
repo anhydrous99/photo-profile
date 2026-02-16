@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
+import { requireAuth } from "@/lib/requireAuth";
 import { presignS3Upload } from "@/infrastructure/storage";
 import { env } from "@/infrastructure/config/env";
 import { z } from "zod";
@@ -33,10 +33,8 @@ function extractExtension(filename: string, contentType: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const body = await request.json();
     const result = presignSchema.safeParse(body);

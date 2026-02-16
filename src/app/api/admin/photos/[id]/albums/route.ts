@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
+import { requireAuth } from "@/lib/requireAuth";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
@@ -25,10 +25,8 @@ export async function GET(
   { params }: RouteParams,
 ): Promise<NextResponse> {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id: photoId } = await params;
 
@@ -68,10 +66,8 @@ export async function POST(
   { params }: RouteParams,
 ): Promise<NextResponse> {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id: photoId } = await params;
 
@@ -131,10 +127,8 @@ export async function DELETE(
   { params }: RouteParams,
 ): Promise<NextResponse> {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id: photoId } = await params;
 

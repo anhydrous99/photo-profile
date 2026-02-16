@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
+import { requireAuth } from "@/lib/requireAuth";
 import {
   DynamoDBAlbumRepository,
   DynamoDBPhotoRepository,
 } from "@/infrastructure/database/dynamodb/repositories";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
+import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
 
 const photoRepository = new DynamoDBPhotoRepository();
 const albumRepository = new DynamoDBAlbumRepository(photoRepository);
@@ -24,10 +24,8 @@ const createAlbumSchema = z.object({
  */
 export async function GET() {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const albums = await albumRepository.findAll();
     const photoCounts = await albumRepository.getPhotoCounts();
@@ -65,10 +63,8 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const body = await request.json();
     const result = createAlbumSchema.safeParse(body);
@@ -98,9 +94,7 @@ export async function POST(request: NextRequest) {
 
     await albumRepository.save(album);
 
-    revalidatePath("/admin/albums");
-    revalidatePath("/admin");
-    revalidatePath("/albums");
+    revalidateAlbumPaths();
 
     return NextResponse.json(album, { status: 201 });
   } catch (error) {

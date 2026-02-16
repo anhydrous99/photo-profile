@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
+import { requireAuth } from "@/lib/requireAuth";
 import { deletePhotoFiles } from "@/infrastructure/storage";
 import {
   DynamoDBAlbumRepository,
   DynamoDBPhotoRepository,
 } from "@/infrastructure/database/dynamodb/repositories";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
+import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
 
 const photoRepository = new DynamoDBPhotoRepository();
 const albumRepository = new DynamoDBAlbumRepository(photoRepository);
@@ -39,10 +39,8 @@ interface RouteContext {
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id } = await context.params;
 
@@ -90,10 +88,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     await albumRepository.save(album);
 
-    revalidatePath("/admin/albums");
-    revalidatePath("/admin");
-    revalidatePath("/albums");
-    revalidatePath(`/albums/${id}`);
+    revalidateAlbumPaths(id);
 
     return NextResponse.json(album);
   } catch (error) {
@@ -123,10 +118,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
  */
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id: albumId } = await context.params;
 
@@ -164,8 +157,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       }
     }
 
-    revalidatePath("/admin/albums");
-    revalidatePath("/admin");
+    revalidateAlbumPaths();
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
