@@ -12,7 +12,10 @@ import { createTables, deleteTables, TABLE_NAMES } from "../tables";
 import { docClient } from "../client";
 import { ScanCommand, DeleteCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import type { Photo, ExifData } from "@/domain/entities/Photo";
-import { DynamoDBPhotoRepository } from "../repositories/DynamoDBPhotoRepository";
+import {
+  DynamoDBPhotoRepository,
+  calculateAlbumWeight,
+} from "../repositories/DynamoDBPhotoRepository";
 
 // ---- Factories ----
 
@@ -715,6 +718,17 @@ describe("DynamoDBPhotoRepository", () => {
         const results = await repo.findRandomFromPublishedAlbums(3);
         expect(results).toHaveLength(3);
       });
+    });
+  });
+
+  // ---- calculateAlbumWeight ----
+
+  describe("calculateAlbumWeight", () => {
+    it("produces correct weights for album rankings", () => {
+      expect(calculateAlbumWeight(0, 4)).toBe(3.0);
+      expect(calculateAlbumWeight(4, 4)).toBe(1.0);
+      expect(calculateAlbumWeight(2, 4)).toBe(2.0);
+      expect(calculateAlbumWeight(0, 0)).toBe(3.0);
     });
   });
 
