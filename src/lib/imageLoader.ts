@@ -1,15 +1,15 @@
-const AVAILABLE_WIDTHS = [300, 600, 1200, 2400];
+import { THUMBNAIL_SIZES } from "@/lib/constants";
 
 const cloudfrontDomain = process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
 
 function selectBestWidth(width: number, maxWidth?: number): number {
   const availableWidths =
     maxWidth !== undefined
-      ? AVAILABLE_WIDTHS.filter((w) => w <= maxWidth)
-      : AVAILABLE_WIDTHS;
+      ? THUMBNAIL_SIZES.filter((w) => w <= maxWidth)
+      : THUMBNAIL_SIZES;
 
   if (availableWidths.length === 0) {
-    return AVAILABLE_WIDTHS[0];
+    return THUMBNAIL_SIZES[0];
   }
 
   return (

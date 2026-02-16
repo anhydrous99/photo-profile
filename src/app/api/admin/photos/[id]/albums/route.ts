@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
-import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import { requireAuth } from "@/lib/requireAuth";
+import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
+import { serializeError } from "@/lib/serializeError";
 
-const photoRepository = new DynamoDBPhotoRepository();
+const photoRepository = getPhotoRepository();
 
 const albumIdSchema = z.object({
   albumId: z.string().uuid("Invalid album ID format"),
@@ -25,10 +26,8 @@ export async function GET(
   { params }: RouteParams,
 ): Promise<NextResponse> {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id: photoId } = await params;
 
@@ -45,10 +44,7 @@ export async function GET(
     return NextResponse.json({ albumIds });
   } catch (error) {
     logger.error("GET /api/admin/photos/[id]/albums failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },
@@ -68,10 +64,8 @@ export async function POST(
   { params }: RouteParams,
 ): Promise<NextResponse> {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id: photoId } = await params;
 
@@ -108,10 +102,7 @@ export async function POST(
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
     logger.error("POST /api/admin/photos/[id]/albums failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },
@@ -131,10 +122,8 @@ export async function DELETE(
   { params }: RouteParams,
 ): Promise<NextResponse> {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id: photoId } = await params;
 
@@ -165,10 +154,7 @@ export async function DELETE(
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     logger.error("DELETE /api/admin/photos/[id]/albums failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

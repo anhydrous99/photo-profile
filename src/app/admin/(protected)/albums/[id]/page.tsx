@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import {
-  DynamoDBAlbumRepository,
-  DynamoDBPhotoRepository,
+  getAlbumRepository,
+  getPhotoRepository,
 } from "@/infrastructure/database/dynamodb/repositories";
 import { AlbumDetailClient } from "./AlbumDetailClient";
 
@@ -9,9 +9,8 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const photoRepository = new DynamoDBPhotoRepository();
-const albumRepository = new DynamoDBAlbumRepository(photoRepository);
-// photoRepository already instantiated above
+const photoRepository = getPhotoRepository();
+const albumRepository = getAlbumRepository();
 
 /**
  * Admin Album Detail Page (Server Component)

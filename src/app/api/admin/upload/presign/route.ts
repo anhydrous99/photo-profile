@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
+import { requireAuth } from "@/lib/requireAuth";
 import { presignS3Upload } from "@/infrastructure/storage";
 import { env } from "@/infrastructure/config/env";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
+import { PRESIGN_MIME_TYPES, MAX_FILE_SIZE } from "@/lib/constants";
+import { serializeError } from "@/lib/serializeError";
 
 const presignSchema = z.object({
   filename: z.string().min(1),
-  contentType: z.enum([
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/heic",
-    "image/heif",
-  ]),
-  fileSize: z
-    .number()
-    .int()
-    .positive()
-    .max(100 * 1024 * 1024),
+  contentType: z.enum(PRESIGN_MIME_TYPES),
+  fileSize: z.number().int().positive().max(MAX_FILE_SIZE),
 });
 
 function extractExtension(filename: string, contentType: string): string {
@@ -42,10 +34,8 @@ function extractExtension(filename: string, contentType: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const body = await request.json();
     const result = presignSchema.safeParse(body);
@@ -74,10 +64,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ presignedUrl, photoId, key }, { status: 200 });
   } catch (error) {
     logger.error("POST /api/admin/upload/presign failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

@@ -28,6 +28,8 @@ vi.mock("@/infrastructure/database/dynamodb/repositories", () => ({
   DynamoDBPhotoRepository: vi.fn(function () {
     return mockPhotoRepository;
   }),
+  getPhotoRepository: vi.fn(() => mockPhotoRepository),
+  getAlbumRepository: vi.fn(),
 }));
 
 vi.mock("@/infrastructure/logging/logger", () => ({
@@ -36,14 +38,29 @@ vi.mock("@/infrastructure/logging/logger", () => ({
 
 // --- Helpers ---
 
+const TEST_PHOTO_IDS: Record<string, string> = {
+  "photo-abc": "00000000-0000-0000-0000-000000000001",
+  "photo-xyz": "00000000-0000-0000-0000-000000000002",
+  "photo-123": "00000000-0000-0000-0000-000000000003",
+  "photo-fail": "00000000-0000-0000-0000-000000000004",
+  "photo-1": "00000000-0000-0000-0000-000000000011",
+  "photo-2": "00000000-0000-0000-0000-000000000012",
+  "photo-3": "00000000-0000-0000-0000-000000000013",
+  "photo-ok": "00000000-0000-0000-0000-000000000021",
+  "photo-bad": "00000000-0000-0000-0000-000000000022",
+  "photo-dbfail": "00000000-0000-0000-0000-000000000031",
+  "photo-gone": "00000000-0000-0000-0000-000000000041",
+};
+
 function createSQSRecord(
   body: { photoId: string; originalKey: string },
   messageId = "msg-001",
 ): SQSRecord {
+  const photoId = TEST_PHOTO_IDS[body.photoId] || body.photoId;
   return {
     messageId,
     receiptHandle: "receipt-handle",
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, photoId }),
     attributes: {
       ApproximateReceiveCount: "1",
       SentTimestamp: "1234567890",
@@ -62,9 +79,13 @@ function createSQSEvent(records: SQSRecord[]): SQSEvent {
   return { Records: records };
 }
 
-function createMockPhoto(photoId: string): Photo {
+function createMockPhoto(photoIdOrUuid: string): Photo {
+  const isUuid = photoIdOrUuid.includes("-") && photoIdOrUuid.length === 36;
+  const id = isUuid
+    ? photoIdOrUuid
+    : TEST_PHOTO_IDS[photoIdOrUuid] || photoIdOrUuid;
   return {
-    id: photoId,
+    id,
     title: null,
     description: null,
     originalFilename: "test.jpg",
@@ -128,7 +149,7 @@ describe("Lambda SQS handler", () => {
     await handler(event, createLambdaContext());
 
     expect(mockProcessImageJob).toHaveBeenCalledWith({
-      photoId: "photo-abc",
+      photoId: TEST_PHOTO_IDS["photo-abc"],
       originalKey: "originals/photo-abc/original.jpg",
     });
   });
@@ -159,7 +180,7 @@ describe("Lambda SQS handler", () => {
 
     expect(mockProcessImageJob).toHaveBeenCalledTimes(1);
     expect(mockProcessImageJob).toHaveBeenCalledWith({
-      photoId: "photo-xyz",
+      photoId: TEST_PHOTO_IDS["photo-xyz"],
       originalKey: "originals/photo-xyz/image.png",
     });
   });
@@ -187,10 +208,12 @@ describe("Lambda SQS handler", () => {
 
     await handler(event, createLambdaContext());
 
-    expect(mockPhotoRepository.findById).toHaveBeenCalledWith("photo-123");
+    expect(mockPhotoRepository.findById).toHaveBeenCalledWith(
+      TEST_PHOTO_IDS["photo-123"],
+    );
     expect(mockPhotoRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: "photo-123",
+        id: TEST_PHOTO_IDS["photo-123"],
         status: "ready",
         blurDataUrl: "data:image/webp;base64,abc",
         exifData: { cameraMake: "Nikon", cameraModel: "Z9" },
@@ -227,7 +250,7 @@ describe("Lambda SQS handler", () => {
 
     expect(mockPhotoRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: "photo-fail",
+        id: TEST_PHOTO_IDS["photo-fail"],
         status: "error",
       }),
     );
@@ -310,10 +333,16 @@ describe("Lambda SQS handler", () => {
     expect(result.batchItemFailures).toEqual([{ itemIdentifier: "msg-bad" }]);
 
     expect(mockPhotoRepository.save).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "photo-ok", status: "ready" }),
+      expect.objectContaining({
+        id: TEST_PHOTO_IDS["photo-ok"],
+        status: "ready",
+      }),
     );
     expect(mockPhotoRepository.save).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "photo-bad", status: "error" }),
+      expect.objectContaining({
+        id: TEST_PHOTO_IDS["photo-bad"],
+        status: "error",
+      }),
     );
   });
 

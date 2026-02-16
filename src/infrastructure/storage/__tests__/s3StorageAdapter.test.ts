@@ -306,14 +306,12 @@ describe("S3StorageAdapter", () => {
     });
 
     it("handles paginated results (IsTruncated)", async () => {
-      // list page 1 → delete batch 1 → list page 2 → delete batch 2
       mockSend
         .mockResolvedValueOnce({
           Contents: [{ Key: "prefix/file1.jpg" }],
           IsTruncated: true,
           NextContinuationToken: "token-1",
         })
-        .mockResolvedValueOnce({})
         .mockResolvedValueOnce({
           Contents: [{ Key: "prefix/file2.jpg" }],
           IsTruncated: false,
@@ -322,11 +320,14 @@ describe("S3StorageAdapter", () => {
 
       await adapter.deleteFiles("prefix/");
 
-      expect(mockSend).toHaveBeenCalledTimes(4);
+      expect(mockSend).toHaveBeenCalledTimes(3);
       expect(sentCommand(0)).toBeInstanceOf(ListObjectsV2Command);
-      expect(sentCommand(1)).toBeInstanceOf(DeleteObjectsCommand);
-      expect(sentCommand(2)).toBeInstanceOf(ListObjectsV2Command);
-      expect(sentCommand(3)).toBeInstanceOf(DeleteObjectsCommand);
+      expect(sentCommand(1)).toBeInstanceOf(ListObjectsV2Command);
+      expect(sentCommand(2)).toBeInstanceOf(DeleteObjectsCommand);
+      expect(sentCommand(2).input.Delete.Objects).toEqual([
+        { Key: "prefix/file1.jpg" },
+        { Key: "prefix/file2.jpg" },
+      ]);
     });
   });
 

@@ -6,6 +6,7 @@
 import { createTables } from "./database/dynamodb/tables";
 import { env } from "./config/env";
 import { logger } from "./logging/logger";
+import { serializeError } from "@/lib/serializeError";
 
 let initialized = false;
 
@@ -44,10 +45,7 @@ export async function initializeApp(): Promise<void> {
   } catch (error) {
     logger.error("Application initialization failed", {
       component: "initialization",
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     throw error;
   }

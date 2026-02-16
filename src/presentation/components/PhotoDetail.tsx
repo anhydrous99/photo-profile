@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Photo, Album } from "@/domain/entities";
+import { StatusBadge } from "@/presentation/components/StatusBadge";
+import { formatDateFull } from "@/lib/formatDate";
 
 interface PhotoDetailProps {
   photo: Photo;
@@ -110,13 +112,13 @@ export function PhotoDetail({ photo }: PhotoDetailProps) {
           <div>
             <span className="text-text-secondary">Created:</span>
             <span className="ml-2 text-text-primary">
-              {formatDate(photo.createdAt)}
+              {formatDateFull(photo.createdAt)}
             </span>
           </div>
           <div>
             <span className="text-text-secondary">Updated:</span>
             <span className="ml-2 text-text-primary">
-              {formatDate(photo.updatedAt)}
+              {formatDateFull(photo.updatedAt)}
             </span>
           </div>
         </div>
@@ -158,22 +160,6 @@ export function PhotoDetail({ photo }: PhotoDetailProps) {
   );
 }
 
-function StatusBadge({ status }: { status: Photo["status"] }) {
-  const styles = {
-    processing: "bg-status-warning-bg text-status-warning-text",
-    ready: "bg-status-success-bg text-status-success-text",
-    error: "bg-status-error-bg text-status-error-text",
-  };
-
-  return (
-    <span
-      className={`rounded-full px-2 py-0.5 text-xs font-medium ${styles[status]}`}
-    >
-      {status}
-    </span>
-  );
-}
-
 function SaveIndicator({
   status,
 }: {
@@ -198,14 +184,4 @@ function SaveIndicator({
       {labels[status]}
     </span>
   );
-}
-
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
 }

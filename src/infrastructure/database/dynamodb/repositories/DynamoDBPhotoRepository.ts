@@ -16,16 +16,19 @@ import type {
   PaginationOptions,
 } from "@/domain/repositories/PhotoRepository";
 import type { Photo, ExifData } from "@/domain/entities/Photo";
+import { PhotoRandomService } from "./PhotoRandomService";
+import { logger } from "@/infrastructure/logging/logger";
+import { serializeError } from "@/lib/serializeError";
 
-export function calculateAlbumWeight(
-  rankIndex: number,
-  maxRankIndex: number,
-  biasFactor: number = 3,
-): number {
-  return 1 + (1 - rankIndex / Math.max(1, maxRankIndex)) * (biasFactor - 1);
-}
+export { calculateAlbumWeight } from "./PhotoRandomService";
 
 export class DynamoDBPhotoRepository implements PhotoRepository {
+  private randomService: PhotoRandomService;
+
+  constructor() {
+    this.randomService = new PhotoRandomService(this.batchGetPhotos.bind(this));
+  }
+
   async findById(id: string): Promise<Photo | null> {
     const result = await docClient.send(
       new GetCommand({
@@ -402,62 +405,7 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
     limit: number,
     options?: { weighted?: boolean },
   ): Promise<Photo[]> {
-    const publishedAlbums = await docClient.send(
-      new QueryCommand({
-        TableName: TABLE_NAMES.ALBUMS,
-        IndexName: "isPublished-sortOrder-index",
-        KeyConditionExpression: "isPublished = :published",
-        ExpressionAttributeValues: { ":published": 1 },
-      }),
-    );
-
-    const albumsWithRank = (publishedAlbums.Items ?? []).map((item, index) => ({
-      id: item.id as string,
-      rankIndex: index,
-    }));
-    if (albumsWithRank.length === 0) return [];
-
-    const allPhotoIds = new Set<string>();
-    const photoToBestRank = new Map<string, number>();
-    for (const { id: albumId, rankIndex } of albumsWithRank) {
-      const albumPhotos = await docClient.send(
-        new QueryCommand({
-          TableName: TABLE_NAMES.ALBUM_PHOTOS,
-          KeyConditionExpression: "albumId = :albumId",
-          ExpressionAttributeValues: { ":albumId": albumId },
-        }),
-      );
-
-      for (const item of albumPhotos.Items ?? []) {
-        const photoId = item.photoId as string;
-        allPhotoIds.add(photoId);
-        const currentBest = photoToBestRank.get(photoId);
-        if (currentBest === undefined || rankIndex < currentBest) {
-          photoToBestRank.set(photoId, rankIndex);
-        }
-      }
-    }
-
-    if (allPhotoIds.size === 0) return [];
-
-    const photos = await this.batchGetPhotos([...allPhotoIds]);
-    const readyPhotos = photos.filter((p) => p.status === "ready");
-
-    if (options?.weighted && albumsWithRank.length > 1) {
-      const maxRankIndex = albumsWithRank.length - 1;
-      const weights = readyPhotos.map((photo) => {
-        const rank = photoToBestRank.get(photo.id) ?? maxRankIndex;
-        return calculateAlbumWeight(rank, maxRankIndex);
-      });
-      return this.weightedSample(
-        readyPhotos,
-        weights,
-        Math.min(limit, readyPhotos.length),
-      );
-    }
-
-    this.shuffleArray(readyPhotos);
-    return readyPhotos.slice(0, limit);
+    return this.randomService.findRandomFromPublishedAlbums(limit, options);
   }
 
   async findBySlugPrefix(slug: string): Promise<Photo | null> {
@@ -550,7 +498,7 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
 
   private async incrementAlbumPhotoCount(
     albumId: string,
-    photoId: string,
+    _photoId: string,
   ): Promise<void> {
     try {
       await docClient.send(
@@ -565,8 +513,11 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
           },
         }),
       );
-    } catch {
-      // no-op: album may not exist
+    } catch (error) {
+      logger.debug("Album photo count increment failed (album may not exist)", {
+        albumId,
+        error: serializeError(error),
+      });
     }
   }
 
@@ -583,45 +534,11 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
           },
         }),
       );
-    } catch {
-      // no-op: album may not exist
-    }
-  }
-
-  private weightedSample<T>(items: T[], weights: number[], count: number): T[] {
-    const selected: T[] = [];
-    const workingWeights = [...weights];
-
-    for (let pick = 0; pick < count; pick++) {
-      const cumulative: number[] = [];
-      let total = 0;
-      for (let i = 0; i < workingWeights.length; i++) {
-        total += workingWeights[i];
-        cumulative.push(total);
-      }
-
-      if (total <= 0) break;
-
-      const random = Math.random() * total;
-      let selectedIndex = 0;
-      for (let i = 0; i < cumulative.length; i++) {
-        if (random < cumulative[i]) {
-          selectedIndex = i;
-          break;
-        }
-      }
-
-      selected.push(items[selectedIndex]);
-      workingWeights[selectedIndex] = 0;
-    }
-
-    return selected;
-  }
-
-  private shuffleArray<T>(array: T[]): void {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
+    } catch (error) {
+      logger.debug("Album photo count decrement failed (album may not exist)", {
+        albumId,
+        error: serializeError(error),
+      });
     }
   }
 

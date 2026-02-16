@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import type { ExifData } from "@/domain/entities/Photo";
 import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 import { FadeImage } from "./FadeImage";
+import { getSlug } from "@/lib/getSlug";
 
 // Dynamic import - lightbox bundle only loads when user clicks
 const PhotoLightbox = dynamic(
@@ -31,10 +32,6 @@ interface AlbumGalleryClientProps {
   };
   photos: PhotoData[];
   initialPhotoSlug?: string;
-}
-
-function getSlug(photoId: string): string {
-  return photoId.slice(0, 8);
 }
 
 export function AlbumGalleryClient({

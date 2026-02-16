@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
+import { requireAuth } from "@/lib/requireAuth";
 import { deletePhotoFiles } from "@/infrastructure/storage";
-import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
+import { serializeError } from "@/lib/serializeError";
 
-const photoRepository = new DynamoDBPhotoRepository();
+const photoRepository = getPhotoRepository();
 
 const updatePhotoSchema = z.object({
   description: z.string().nullable(),
@@ -26,11 +27,8 @@ interface RouteContext {
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
-    // 1. Verify admin session
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     // 2. Get photo ID from route params
     const { id } = await context.params;
@@ -71,10 +69,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json(photo);
   } catch (error) {
     logger.error("PATCH /api/admin/photos/[id] failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },
@@ -98,11 +93,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
  */
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   try {
-    // 1. Verify admin session
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     // 2. Get photo ID from route params
     const { id } = await context.params;
@@ -130,10 +122,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     logger.error("DELETE /api/admin/photos/[id] failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

@@ -1,32 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { requireAuth } from "@/lib/requireAuth";
 import { HeadObjectCommand } from "@aws-sdk/client-s3";
-import { verifySession } from "@/infrastructure/auth";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
-import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { s3Client } from "@/infrastructure/storage/s3Client";
 import { env } from "@/infrastructure/config/env";
 import type { Photo } from "@/domain/entities";
 import { logger } from "@/infrastructure/logging/logger";
+import { PRESIGN_MIME_TYPES } from "@/lib/constants";
+import { enqueueWithTimeout } from "@/lib/enqueueWithTimeout";
+import { serializeError } from "@/lib/serializeError";
 
 export const maxDuration = 300;
 
-const photoRepository = new DynamoDBPhotoRepository();
-
-const ALLOWED_CONTENT_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/heic",
-  "image/heif",
-];
+const photoRepository = getPhotoRepository();
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const body = await request.json();
 
@@ -39,7 +32,10 @@ export async function POST(request: NextRequest) {
     const result = schema.safeParse(body);
     if (!result.success) {
       const errors = z.flattenError(result.error).fieldErrors;
-      return NextResponse.json({ error: errors }, { status: 400 });
+      return NextResponse.json(
+        { error: "Validation failed", details: errors },
+        { status: 400 },
+      );
     }
 
     const { photoId, key, originalFilename } = result.data;
@@ -69,7 +65,9 @@ export async function POST(request: NextRequest) {
 
       if (
         !headResult.ContentType ||
-        !ALLOWED_CONTENT_TYPES.includes(headResult.ContentType)
+        !PRESIGN_MIME_TYPES.includes(
+          headResult.ContentType as (typeof PRESIGN_MIME_TYPES)[number],
+        )
       ) {
         return NextResponse.json(
           {
@@ -105,20 +103,12 @@ export async function POST(request: NextRequest) {
     await photoRepository.save(photo);
 
     try {
-      await Promise.race([
-        enqueueImageProcessing(photoId, key),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Job enqueue timeout")), 10000),
-        ),
-      ]);
+      await enqueueWithTimeout(enqueueImageProcessing(photoId, key), 10000);
     } catch (enqueueError) {
       logger.error(`Failed to enqueue processing for photo ${photoId}`, {
         component: "upload-confirm",
         photoId,
-        error:
-          enqueueError instanceof Error
-            ? { message: enqueueError.message, stack: enqueueError.stack }
-            : enqueueError,
+        error: serializeError(enqueueError),
       });
     }
 
@@ -128,10 +118,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     logger.error("POST /api/admin/upload/confirm failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

@@ -1,13 +1,9 @@
-import {
-  DynamoDBAlbumRepository,
-  DynamoDBPhotoRepository,
-} from "@/infrastructure/database/dynamodb/repositories";
+import { getAlbumRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { AlbumsPageClient } from "./AlbumsPageClient";
 
 export const dynamic = "force-dynamic";
 
-const photoRepository = new DynamoDBPhotoRepository();
-const albumRepository = new DynamoDBAlbumRepository(photoRepository);
+const albumRepository = getAlbumRepository();
 
 /**
  * Albums Management Page (Server Component)

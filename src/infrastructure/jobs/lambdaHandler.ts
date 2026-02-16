@@ -4,11 +4,18 @@ import type {
   SQSBatchItemFailure,
   Context,
 } from "aws-lambda";
+import { z } from "zod";
 import { processImageJob } from "@/infrastructure/services/imageProcessingJob";
-import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { logger } from "@/infrastructure/logging/logger";
+import { serializeError } from "@/lib/serializeError";
 
-const photoRepository = new DynamoDBPhotoRepository();
+const JobMessageSchema = z.object({
+  photoId: z.string().min(1),
+  originalKey: z.string().min(1),
+});
+
+const photoRepository = getPhotoRepository();
 
 export async function handler(
   event: SQSEvent,
@@ -24,7 +31,18 @@ export async function handler(
 
   for (const record of event.Records) {
     try {
-      const { photoId, originalKey } = JSON.parse(record.body);
+      const parsed = JobMessageSchema.safeParse(JSON.parse(record.body));
+      if (!parsed.success) {
+        logger.error("Invalid SQS message body", {
+          component: "lambda-image-processor",
+          awsRequestId: context.awsRequestId,
+          messageId: record.messageId,
+          body: record.body,
+          errors: parsed.error.flatten().fieldErrors,
+        });
+        continue; // Skip invalid message
+      }
+      const { photoId, originalKey } = parsed.data;
 
       logger.info("Lambda image processing record started", {
         component: "lambda-image-processor",
@@ -58,35 +76,29 @@ export async function handler(
       batchItemFailures.push({ itemIdentifier: record.messageId });
 
       try {
-        const { photoId } = JSON.parse(record.body);
-        const photo = await photoRepository.findById(photoId);
-        if (photo) {
-          photo.status = "error";
-          photo.updatedAt = new Date();
-          await photoRepository.save(photo);
+        const parsed = JobMessageSchema.safeParse(JSON.parse(record.body));
+        if (parsed.success) {
+          const { photoId } = parsed.data;
+          const photo = await photoRepository.findById(photoId);
+          if (photo) {
+            photo.status = "error";
+            photo.updatedAt = new Date();
+            await photoRepository.save(photo);
+          }
         }
       } catch (statusUpdateError) {
         logger.warn("Lambda failed to mark photo as error", {
           component: "lambda-image-processor",
           awsRequestId: context.awsRequestId,
           messageId: record.messageId,
-          error:
-            statusUpdateError instanceof Error
-              ? {
-                  message: statusUpdateError.message,
-                  stack: statusUpdateError.stack,
-                }
-              : statusUpdateError,
+          error: serializeError(statusUpdateError),
         });
       }
 
       logger.error("Lambda image processing failed", {
         component: "lambda-image-processor",
         awsRequestId: context.awsRequestId,
-        error:
-          error instanceof Error
-            ? { message: error.message, stack: error.stack }
-            : error,
+        error: serializeError(error),
         messageId: record.messageId,
       });
     }

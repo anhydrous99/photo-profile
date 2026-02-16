@@ -9,27 +9,6 @@ import { env } from "@/infrastructure/config/env";
 import { headers } from "next/headers";
 
 /**
- * Check if an IP address is from a trusted proxy
- *
- * Compares the given IP against the TRUSTED_PROXIES configuration.
- * Only IPs from trusted proxies are allowed to set x-forwarded-for headers.
- *
- * @param ip - IP address to check
- * @returns true if IP is in trusted proxies list, false otherwise
- */
-function isTrustedProxy(ip: string): boolean {
-  const trustedProxies = env.TRUSTED_PROXIES || [];
-
-  // If no trusted proxies configured, don't trust any
-  if (trustedProxies.length === 0) {
-    return false;
-  }
-
-  // Direct string match (supports both IPv4 and IPv6)
-  return trustedProxies.includes(ip);
-}
-
-/**
  * Validate if an IP address looks reasonable
  *
  * Performs basic sanity checks to reject obviously invalid or
@@ -74,33 +53,42 @@ function isValidPublicIP(ip: string): boolean {
 }
 
 /**
- * Extract real client IP address with spoofing protection
+ * Extract real client IP address with optional spoofing protection
  *
  * This function securely extracts the client IP address by:
- * 1. Checking if the request comes from a trusted proxy
- * 2. If trusted, parsing x-forwarded-for header (leftmost = original client)
- * 3. If not trusted, using direct connection IP
- * 4. Validating extracted IP for sanity
+ * 1. If trustProxies is true (default): validates against TRUSTED_PROXIES configuration
+ * 2. Parsing x-forwarded-for header (leftmost = original client)
+ * 3. Validating extracted IP for sanity
  *
- * This prevents IP spoofing attacks where attackers set fake x-forwarded-for
- * headers to bypass rate limiting or other IP-based security controls.
+ * When trustProxies is true, this prevents IP spoofing attacks where attackers set
+ * fake x-forwarded-for headers to bypass rate limiting or other IP-based security controls.
  *
+ * When trustProxies is false, uses a simpler extraction that doesn't require
+ * trusted proxy configuration (useful for development or when proxy validation isn't needed).
+ *
+ * @param options - Optional configuration object
+ * @param options.trustProxies - Whether to validate against TRUSTED_PROXIES (default: true)
  * @returns Client IP address string, or "unknown" if cannot be determined
  *
  * @example
- * // Behind trusted proxy (e.g., Cloudflare, nginx)
+ * // Production: with trusted proxy validation (default)
  * // x-forwarded-for: "203.0.113.1, 198.51.100.1"
  * // Returns: "203.0.113.1" (leftmost = original client)
+ * const ip = await getClientIP();
  *
  * @example
- * // Direct connection or untrusted proxy
- * // Returns: connection IP (x-forwarded-for ignored)
+ * // Development: without trusted proxy validation
+ * // Returns: best available IP without validation
+ * const ip = await getClientIP({ trustProxies: false });
  *
  * @example
  * // Configuration in .env:
  * // TRUSTED_PROXIES=127.0.0.1,10.0.0.1
  */
-export async function getClientIP(): Promise<string> {
+export async function getClientIP(options?: {
+  trustProxies?: boolean;
+}): Promise<string> {
+  const trustProxies = options?.trustProxies ?? true;
   const headersList = await headers();
 
   // Get the x-real-ip header (simpler alternative to x-forwarded-for)
@@ -110,68 +98,54 @@ export async function getClientIP(): Promise<string> {
   // Get x-forwarded-for header
   const xForwardedFor = headersList.get("x-forwarded-for");
 
-  // Get direct connection info if available
-  // Note: Next.js doesn't expose socket info in headers()
-  // We'll rely on x-forwarded-for with trusted proxy validation
+  // If trustProxies is true, validate against TRUSTED_PROXIES configuration
+  if (trustProxies) {
+    // If we have x-forwarded-for, parse it
+    if (xForwardedFor) {
+      // x-forwarded-for format: "client, proxy1, proxy2"
+      // The leftmost IP is the original client
+      const ips = xForwardedFor
+        .split(",")
+        .map((ip) => ip.trim())
+        .filter((ip) => ip.length > 0);
 
-  // If we have x-forwarded-for, parse it
-  if (xForwardedFor) {
-    // x-forwarded-for format: "client, proxy1, proxy2"
-    // The leftmost IP is the original client
-    const ips = xForwardedFor
-      .split(",")
-      .map((ip) => ip.trim())
-      .filter((ip) => ip.length > 0);
+      if (ips.length > 0) {
+        // Get leftmost (original client) IP
+        const clientIP = ips[0];
 
-    if (ips.length > 0) {
-      // Get leftmost (original client) IP
-      const clientIP = ips[0];
+        // Only trust x-forwarded-for if we have trusted proxies configured
+        // In production, this prevents spoofing
+        const trustedProxies = env.TRUSTED_PROXIES || [];
 
-      // Only trust x-forwarded-for if we have trusted proxies configured
-      // In production, this prevents spoofing
-      const trustedProxies = env.TRUSTED_PROXIES || [];
-
-      if (trustedProxies.length > 0) {
-        // We have trusted proxies - validate the IP
-        if (isValidPublicIP(clientIP)) {
-          return clientIP;
+        if (trustedProxies.length > 0) {
+          // We have trusted proxies - validate the IP
+          if (isValidPublicIP(clientIP)) {
+            return clientIP;
+          }
         }
       }
     }
-  }
 
-  // If we have x-real-ip and trusted proxies configured, use it
-  if (xRealIP && env.TRUSTED_PROXIES && env.TRUSTED_PROXIES.length > 0) {
-    if (isValidPublicIP(xRealIP)) {
-      return xRealIP;
+    // If we have x-real-ip and trusted proxies configured, use it
+    if (xRealIP && env.TRUSTED_PROXIES && env.TRUSTED_PROXIES.length > 0) {
+      if (isValidPublicIP(xRealIP)) {
+        return xRealIP;
+      }
     }
+
+    // No trusted proxy configuration or invalid IPs
+    // In development without trusted proxies, we can't reliably get real IP
+    // Return a safe default
+    return "unknown";
   }
 
-  // No trusted proxy configuration or invalid IPs
-  // In development without trusted proxies, we can't reliably get real IP
-  // Return a safe default
-  return "unknown";
-}
-
-/**
- * Extract client IP with direct connection fallback
- *
- * This is a simpler version that tries to get the best available IP.
- * Use getClientIP() for production with trusted proxy configuration.
- *
- * @returns Client IP address or "unknown"
- */
-export async function getClientIPSimple(): Promise<string> {
-  const headersList = await headers();
-
+  // trustProxies is false: use simpler extraction without validation
   // Try x-real-ip first (if set by proxy)
-  const xRealIP = headersList.get("x-real-ip");
   if (xRealIP && isValidPublicIP(xRealIP)) {
     return xRealIP;
   }
 
   // Try first IP from x-forwarded-for
-  const xForwardedFor = headersList.get("x-forwarded-for");
   if (xForwardedFor) {
     const firstIP = xForwardedFor.split(",")[0]?.trim();
     if (firstIP && isValidPublicIP(firstIP)) {

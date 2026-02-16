@@ -3,11 +3,8 @@ import { createHash } from "crypto";
 import { getStorageAdapter } from "@/infrastructure/storage";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
-
-const MIME_TYPES: Record<string, string> = {
-  ".webp": "image/webp",
-  ".avif": "image/avif",
-};
+import { SERVE_MIME_TYPES } from "@/lib/constants";
+import { serializeError } from "@/lib/serializeError";
 
 function getExtension(filename: string): string {
   const lastDot = filename.lastIndexOf(".");
@@ -20,7 +17,7 @@ function isValidFilename(filename: string): boolean {
     return false;
   }
   const ext = getExtension(filename);
-  return ext in MIME_TYPES;
+  return ext in SERVE_MIME_TYPES;
 }
 
 function isFileNotFoundError(error: unknown): boolean {
@@ -117,7 +114,7 @@ export async function GET(
     }
 
     const ext = getExtension(filename);
-    const mimeType = MIME_TYPES[ext];
+    const mimeType = SERVE_MIME_TYPES[ext];
     const key = `processed/${photoId}/${filename}`;
     const prefix = `processed/${photoId}/`;
 
@@ -139,10 +136,7 @@ export async function GET(
     }
   } catch (error) {
     logger.error("GET /api/images/[photoId]/[filename] failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return new NextResponse("Internal server error", { status: 500 });
   }

@@ -1,6 +1,8 @@
 import type { Photo } from "@/domain/entities";
 import Link from "next/link";
 import { getClientImageUrl } from "@/lib/imageLoader";
+import { StatusBadge } from "@/presentation/components/StatusBadge";
+import { formatDateShort } from "@/lib/formatDate";
 
 interface PhotoGridProps {
   photos: Photo[];
@@ -171,7 +173,7 @@ function PhotoCard({
         <div className="mt-1 flex items-center justify-between">
           <StatusBadge status={photo.status} />
           <span className="text-xs text-text-tertiary">
-            {formatDate(photo.createdAt)}
+            {formatDateShort(photo.createdAt)}
           </span>
         </div>
       </div>
@@ -188,27 +190,4 @@ function PhotoCard({
   }
 
   return cardContent;
-}
-
-function StatusBadge({ status }: { status: Photo["status"] }) {
-  const styles = {
-    processing: "bg-yellow-100 text-yellow-800",
-    ready: "bg-green-100 text-green-800",
-    error: "bg-red-100 text-red-800",
-  };
-
-  return (
-    <span
-      className={`rounded-full px-2 py-0.5 text-xs font-medium ${styles[status]}`}
-    >
-      {status}
-    </span>
-  );
-}
-
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(date);
 }

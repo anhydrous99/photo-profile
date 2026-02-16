@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
-import {
-  DynamoDBAlbumRepository,
-  DynamoDBPhotoRepository,
-} from "@/infrastructure/database/dynamodb/repositories";
-import { revalidatePath } from "next/cache";
+import { requireAuth } from "@/lib/requireAuth";
+import { getAlbumRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
+import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
+import { serializeError } from "@/lib/serializeError";
 
-const photoRepository = new DynamoDBPhotoRepository();
-const albumRepository = new DynamoDBAlbumRepository(photoRepository);
+const albumRepository = getAlbumRepository();
 
 const createAlbumSchema = z.object({
   title: z.string().min(1).max(100),
@@ -24,10 +21,8 @@ const createAlbumSchema = z.object({
  */
 export async function GET() {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const albums = await albumRepository.findAll();
     const photoCounts = await albumRepository.getPhotoCounts();
@@ -43,10 +38,7 @@ export async function GET() {
     return NextResponse.json(albumsWithCounts);
   } catch (error) {
     logger.error("GET /api/admin/albums failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },
@@ -65,10 +57,8 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const body = await request.json();
     const result = createAlbumSchema.safeParse(body);
@@ -98,17 +88,12 @@ export async function POST(request: NextRequest) {
 
     await albumRepository.save(album);
 
-    revalidatePath("/admin/albums");
-    revalidatePath("/admin");
-    revalidatePath("/albums");
+    revalidateAlbumPaths();
 
     return NextResponse.json(album, { status: 201 });
   } catch (error) {
     logger.error("POST /api/admin/albums failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

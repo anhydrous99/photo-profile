@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  DynamoDBPhotoRepository,
-  DynamoDBAlbumRepository,
+  getPhotoRepository,
+  getAlbumRepository,
 } from "@/infrastructure/database/dynamodb/repositories";
 import { PhotoDetail, AlbumSelector } from "@/presentation/components";
 
-const photoRepository = new DynamoDBPhotoRepository();
-const albumRepository = new DynamoDBAlbumRepository(photoRepository);
+const photoRepository = getPhotoRepository();
+const albumRepository = getAlbumRepository();
 
 interface PageProps {
   params: Promise<{ id: string }>;

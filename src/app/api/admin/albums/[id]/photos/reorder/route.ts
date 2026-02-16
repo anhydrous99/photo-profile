@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
-import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import { requireAuth } from "@/lib/requireAuth";
+import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
+import { serializeError } from "@/lib/serializeError";
 
-const photoRepository = new DynamoDBPhotoRepository();
+const photoRepository = getPhotoRepository();
 
 const reorderSchema = z.object({
   photoIds: z.array(z.string().uuid("Invalid photo ID format")),
@@ -26,10 +27,8 @@ interface RouteContext {
  */
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id: albumId } = await context.params;
 
@@ -57,10 +56,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error("POST /api/admin/albums/[id]/photos/reorder failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

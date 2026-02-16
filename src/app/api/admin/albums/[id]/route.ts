@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
+import { requireAuth } from "@/lib/requireAuth";
 import { deletePhotoFiles } from "@/infrastructure/storage";
 import {
-  DynamoDBAlbumRepository,
-  DynamoDBPhotoRepository,
+  getAlbumRepository,
+  getPhotoRepository,
 } from "@/infrastructure/database/dynamodb/repositories";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
+import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
+import { serializeError } from "@/lib/serializeError";
 
-const photoRepository = new DynamoDBPhotoRepository();
-const albumRepository = new DynamoDBAlbumRepository(photoRepository);
+const photoRepository = getPhotoRepository();
+const albumRepository = getAlbumRepository();
 
 const updateAlbumSchema = z.object({
   title: z.string().min(1).max(100).optional(),
@@ -39,10 +40,8 @@ interface RouteContext {
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id } = await context.params;
 
@@ -90,18 +89,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     await albumRepository.save(album);
 
-    revalidatePath("/admin/albums");
-    revalidatePath("/admin");
-    revalidatePath("/albums");
-    revalidatePath(`/albums/${id}`);
+    revalidateAlbumPaths(id);
 
     return NextResponse.json(album);
   } catch (error) {
     logger.error("PATCH /api/admin/albums/[id] failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },
@@ -123,10 +116,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
  */
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id: albumId } = await context.params;
 
@@ -145,9 +136,12 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
 
     // Parse request body for delete mode
-    const body = (await request.json().catch(() => ({}))) as {
-      deletePhotos?: boolean;
-    };
+    let body: { deletePhotos?: boolean };
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
     const deletePhotos = body.deletePhotos === true;
 
     // Delete album (and get photo IDs if deleting photos)
@@ -164,16 +158,12 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       }
     }
 
-    revalidatePath("/admin/albums");
-    revalidatePath("/admin");
+    revalidateAlbumPaths();
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     logger.error("DELETE /api/admin/albums/[id] failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

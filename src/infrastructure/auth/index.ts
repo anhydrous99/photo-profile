@@ -27,4 +27,4 @@ export { verifySession } from "./dal";
 export { enforceMinimumDuration, addRandomJitter } from "./timing";
 
 // IP extraction
-export { getClientIP, getClientIPSimple } from "./ipExtractor";
+export { getClientIP } from "./ipExtractor";

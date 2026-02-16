@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/infrastructure/auth";
+import { requireAuth } from "@/lib/requireAuth";
 import { saveOriginalFile } from "@/infrastructure/storage";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
-import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import type { Photo } from "@/domain/entities";
 import { logger } from "@/infrastructure/logging/logger";
+import {
+  UPLOAD_MIME_TYPES,
+  MAX_FILE_SIZE,
+  MULTIPART_OVERHEAD,
+} from "@/lib/constants";
+import { enqueueWithTimeout } from "@/lib/enqueueWithTimeout";
+import { serializeError } from "@/lib/serializeError";
 
 export const maxDuration = 300;
 
-const photoRepository = new DynamoDBPhotoRepository();
-
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-const MULTIPART_OVERHEAD = 5 * 1024 * 1024; // 5MB
+const photoRepository = getPhotoRepository();
 
 /**
  * POST /api/admin/upload
@@ -28,11 +32,8 @@ const MULTIPART_OVERHEAD = 5 * 1024 * 1024; // 5MB
  */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Verify session
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (authResult instanceof NextResponse) return authResult;
 
     // 2. Early reject oversized uploads before reading into memory
     const contentLength = parseInt(
@@ -63,13 +64,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "image/heic",
-    ];
-    if (!allowedTypes.includes(file.type)) {
+    if (
+      !UPLOAD_MIME_TYPES.includes(
+        file.type as (typeof UPLOAD_MIME_TYPES)[number],
+      )
+    ) {
       return NextResponse.json(
         {
           error: `Invalid file type: ${file.type}. Allowed: JPEG, PNG, WebP, HEIC`,
@@ -103,22 +102,11 @@ export async function POST(request: NextRequest) {
 
     // 7. Enqueue processing job (gracefully handle Redis unavailable)
     try {
-      // Add timeout to prevent hanging when Redis is unavailable
-      await Promise.race([
+      await enqueueWithTimeout(
         enqueueImageProcessing(photoId, filePath), // filePath is S3 key or filesystem path
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Job enqueue timeout")), 10000),
-        ),
-      ]);
-    } catch (enqueueError) {
-      logger.error(`Failed to enqueue processing for photo ${photoId}`, {
-        component: "upload",
-        photoId,
-        error:
-          enqueueError instanceof Error
-            ? { message: enqueueError.message, stack: enqueueError.stack }
-            : enqueueError,
-      });
+        10000,
+      );
+    } catch {
       // Photo saved with "processing" status - will need manual requeue when Redis is available
     }
 
@@ -128,10 +116,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     logger.error("POST /api/admin/upload failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },
