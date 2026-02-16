@@ -7,6 +7,7 @@ import type {
 import { processImageJob } from "@/infrastructure/services/imageProcessingJob";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { logger } from "@/infrastructure/logging/logger";
+import { serializeError } from "@/lib/serializeError";
 
 const photoRepository = new DynamoDBPhotoRepository();
 
@@ -70,23 +71,14 @@ export async function handler(
           component: "lambda-image-processor",
           awsRequestId: context.awsRequestId,
           messageId: record.messageId,
-          error:
-            statusUpdateError instanceof Error
-              ? {
-                  message: statusUpdateError.message,
-                  stack: statusUpdateError.stack,
-                }
-              : statusUpdateError,
+          error: serializeError(statusUpdateError),
         });
       }
 
       logger.error("Lambda image processing failed", {
         component: "lambda-image-processor",
         awsRequestId: context.awsRequestId,
-        error:
-          error instanceof Error
-            ? { message: error.message, stack: error.stack }
-            : error,
+        error: serializeError(error),
         messageId: record.messageId,
       });
     }

@@ -6,6 +6,7 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import { dynamodbClient, tableName } from "./client";
 import { logger } from "@/infrastructure/logging/logger";
+import { serializeError } from "@/lib/serializeError";
 
 export const TABLE_NAMES = {
   PHOTOS: tableName("Photos"),
@@ -41,10 +42,7 @@ export async function createTables(): Promise<void> {
   } catch (error) {
     logger.error("Failed to create DynamoDB tables", {
       component: "dynamodb",
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     throw error;
   }
@@ -71,10 +69,7 @@ export async function deleteTables(): Promise<void> {
     }
     logger.error("Failed to delete DynamoDB tables", {
       component: "dynamodb",
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     throw error;
   }

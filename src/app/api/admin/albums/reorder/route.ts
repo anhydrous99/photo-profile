@@ -6,6 +6,7 @@ import {
 } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
+import { serializeError } from "@/lib/serializeError";
 
 const photoRepository = new DynamoDBPhotoRepository();
 const albumRepository = new DynamoDBAlbumRepository(photoRepository);
@@ -44,10 +45,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error("POST /api/admin/albums/reorder failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

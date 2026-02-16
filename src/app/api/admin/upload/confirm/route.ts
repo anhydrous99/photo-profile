@@ -9,6 +9,8 @@ import { env } from "@/infrastructure/config/env";
 import type { Photo } from "@/domain/entities";
 import { logger } from "@/infrastructure/logging/logger";
 import { PRESIGN_MIME_TYPES } from "@/lib/constants";
+import { enqueueWithTimeout } from "@/lib/enqueueWithTimeout";
+import { serializeError } from "@/lib/serializeError";
 
 export const maxDuration = 300;
 
@@ -30,7 +32,10 @@ export async function POST(request: NextRequest) {
     const result = schema.safeParse(body);
     if (!result.success) {
       const errors = z.flattenError(result.error).fieldErrors;
-      return NextResponse.json({ error: errors }, { status: 400 });
+      return NextResponse.json(
+        { error: "Validation failed", details: errors },
+        { status: 400 },
+      );
     }
 
     const { photoId, key, originalFilename } = result.data;
@@ -98,20 +103,12 @@ export async function POST(request: NextRequest) {
     await photoRepository.save(photo);
 
     try {
-      await Promise.race([
-        enqueueImageProcessing(photoId, key),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Job enqueue timeout")), 10000),
-        ),
-      ]);
+      await enqueueWithTimeout(enqueueImageProcessing(photoId, key), 10000);
     } catch (enqueueError) {
       logger.error(`Failed to enqueue processing for photo ${photoId}`, {
         component: "upload-confirm",
         photoId,
-        error:
-          enqueueError instanceof Error
-            ? { message: enqueueError.message, stack: enqueueError.stack }
-            : enqueueError,
+        error: serializeError(enqueueError),
       });
     }
 
@@ -121,10 +118,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     logger.error("POST /api/admin/upload/confirm failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

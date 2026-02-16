@@ -4,6 +4,7 @@ import { getStorageAdapter } from "@/infrastructure/storage";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
 import { SERVE_MIME_TYPES } from "@/lib/constants";
+import { serializeError } from "@/lib/serializeError";
 
 function getExtension(filename: string): string {
   const lastDot = filename.lastIndexOf(".");
@@ -135,10 +136,7 @@ export async function GET(
     }
   } catch (error) {
     logger.error("GET /api/images/[photoId]/[filename] failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return new NextResponse("Internal server error", { status: 500 });
   }

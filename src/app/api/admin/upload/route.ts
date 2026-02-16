@@ -11,6 +11,7 @@ import {
   MULTIPART_OVERHEAD,
 } from "@/lib/constants";
 import { enqueueWithTimeout } from "@/lib/enqueueWithTimeout";
+import { serializeError } from "@/lib/serializeError";
 
 export const maxDuration = 300;
 
@@ -115,10 +116,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     logger.error("POST /api/admin/upload failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

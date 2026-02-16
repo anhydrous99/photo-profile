@@ -5,6 +5,7 @@ import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repo
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
+import { serializeError } from "@/lib/serializeError";
 
 const photoRepository = new DynamoDBPhotoRepository();
 
@@ -68,10 +69,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json(photo);
   } catch (error) {
     logger.error("PATCH /api/admin/photos/[id] failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },
@@ -124,10 +122,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     logger.error("DELETE /api/admin/photos/[id] failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

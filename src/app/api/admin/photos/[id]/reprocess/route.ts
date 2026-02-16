@@ -5,6 +5,8 @@ import { enqueueImageProcessing } from "@/infrastructure/jobs";
 import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
+import { enqueueWithTimeout } from "@/lib/enqueueWithTimeout";
+import { serializeError } from "@/lib/serializeError";
 
 const photoRepository = new DynamoDBPhotoRepository();
 
@@ -73,20 +75,15 @@ export async function POST(_request: NextRequest, context: RouteContext) {
 
     // 7. Re-enqueue processing job
     try {
-      await Promise.race([
+      await enqueueWithTimeout(
         enqueueImageProcessing(id, originalPath), // originalPath is S3 key or filesystem path
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Job enqueue timeout")), 10000),
-        ),
-      ]);
+        10000,
+      );
     } catch (enqueueError) {
       logger.error(`Failed to enqueue reprocess for photo ${id}`, {
         component: "reprocess",
         photoId: id,
-        error:
-          enqueueError instanceof Error
-            ? { message: enqueueError.message, stack: enqueueError.stack }
-            : enqueueError,
+        error: serializeError(enqueueError),
       });
       // Status already set to "processing" - will appear as stale if worker never picks it up
     }
@@ -94,10 +91,7 @@ export async function POST(_request: NextRequest, context: RouteContext) {
     return NextResponse.json({ id, status: "processing" });
   } catch (error) {
     logger.error("POST /api/admin/photos/[id]/reprocess failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

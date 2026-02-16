@@ -9,6 +9,7 @@ import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
 import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
+import { serializeError } from "@/lib/serializeError";
 
 const photoRepository = new DynamoDBPhotoRepository();
 const albumRepository = new DynamoDBAlbumRepository(photoRepository);
@@ -93,10 +94,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json(album);
   } catch (error) {
     logger.error("PATCH /api/admin/albums/[id] failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },
@@ -138,9 +136,12 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
 
     // Parse request body for delete mode
-    const body = (await request.json().catch(() => ({}))) as {
-      deletePhotos?: boolean;
-    };
+    let body: { deletePhotos?: boolean };
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
     const deletePhotos = body.deletePhotos === true;
 
     // Delete album (and get photo IDs if deleting photos)
@@ -162,10 +163,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     logger.error("DELETE /api/admin/albums/[id] failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

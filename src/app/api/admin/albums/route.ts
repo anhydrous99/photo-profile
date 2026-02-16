@@ -7,6 +7,7 @@ import {
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
+import { serializeError } from "@/lib/serializeError";
 
 const photoRepository = new DynamoDBPhotoRepository();
 const albumRepository = new DynamoDBAlbumRepository(photoRepository);
@@ -41,10 +42,7 @@ export async function GET() {
     return NextResponse.json(albumsWithCounts);
   } catch (error) {
     logger.error("GET /api/admin/albums failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },
@@ -99,10 +97,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(album, { status: 201 });
   } catch (error) {
     logger.error("POST /api/admin/albums failed", {
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     return NextResponse.json(
       { error: "Internal server error" },

@@ -1,4 +1,5 @@
 import { logger } from "@/infrastructure/logging/logger";
+import { serializeError } from "@/lib/serializeError";
 
 /**
  * Enqueue job with timeout wrapper
@@ -19,10 +20,7 @@ export async function enqueueWithTimeout<T>(
   } catch (error) {
     logger.error("Failed to enqueue job", {
       component: "enqueueWithTimeout",
-      error:
-        error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : error,
+      error: serializeError(error),
     });
     throw error;
   }
