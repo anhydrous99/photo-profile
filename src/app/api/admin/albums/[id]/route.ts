@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/requireAuth";
 import { deletePhotoFiles } from "@/infrastructure/storage";
 import {
-  DynamoDBAlbumRepository,
-  DynamoDBPhotoRepository,
+  getAlbumRepository,
+  getPhotoRepository,
 } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
@@ -11,8 +11,8 @@ import { isValidUUID } from "@/infrastructure/validation";
 import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
 import { serializeError } from "@/lib/serializeError";
 
-const photoRepository = new DynamoDBPhotoRepository();
-const albumRepository = new DynamoDBAlbumRepository(photoRepository);
+const photoRepository = getPhotoRepository();
+const albumRepository = getAlbumRepository();
 
 const updateAlbumSchema = z.object({
   title: z.string().min(1).max(100).optional(),

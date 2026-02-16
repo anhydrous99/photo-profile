@@ -5,11 +5,11 @@ import type {
   Context,
 } from "aws-lambda";
 import { processImageJob } from "@/infrastructure/services/imageProcessingJob";
-import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { logger } from "@/infrastructure/logging/logger";
 import { serializeError } from "@/lib/serializeError";
 
-const photoRepository = new DynamoDBPhotoRepository();
+const photoRepository = getPhotoRepository();
 
 export async function handler(
   event: SQSEvent,

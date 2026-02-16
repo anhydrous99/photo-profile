@@ -24,6 +24,11 @@ vi.mock("@/infrastructure/database/dynamodb/repositories", () => ({
     save = mockPhotoRepositorySave;
     findById = mockPhotoRepositoryFindById;
   },
+  getPhotoRepository: vi.fn(() => ({
+    save: mockPhotoRepositorySave,
+    findById: mockPhotoRepositoryFindById,
+  })),
+  getAlbumRepository: vi.fn(),
 }));
 
 vi.mock("@/infrastructure/jobs", () => ({

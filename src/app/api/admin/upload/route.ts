@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/requireAuth";
 import { saveOriginalFile } from "@/infrastructure/storage";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
-import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import type { Photo } from "@/domain/entities";
 import { logger } from "@/infrastructure/logging/logger";
 import {
@@ -15,7 +15,7 @@ import { serializeError } from "@/lib/serializeError";
 
 export const maxDuration = 300;
 
-const photoRepository = new DynamoDBPhotoRepository();
+const photoRepository = getPhotoRepository();
 
 /**
  * POST /api/admin/upload

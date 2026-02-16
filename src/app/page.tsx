@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { Header } from "@/presentation/components/Header";
 import { HomepageClient } from "@/presentation/components/HomepageClient";
 import { SocialFooter } from "@/presentation/components/SocialFooter";
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const photoRepository = new DynamoDBPhotoRepository();
+  const photoRepository = getPhotoRepository();
   const photos = await photoRepository.findRandomFromPublishedAlbums(10, {
     weighted: true,
   });

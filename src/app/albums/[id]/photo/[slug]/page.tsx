@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AlbumGalleryClient } from "@/presentation/components/AlbumGalleryClient";
 import {
-  DynamoDBAlbumRepository,
-  DynamoDBPhotoRepository,
+  getAlbumRepository,
+  getPhotoRepository,
 } from "@/infrastructure/database/dynamodb/repositories";
 import { getImageUrl } from "@/infrastructure/storage";
 
@@ -12,10 +12,10 @@ interface PageProps {
   params: Promise<{ id: string; slug: string }>;
 }
 
-const photoRepo = new DynamoDBPhotoRepository();
+const photoRepo = getPhotoRepository();
 
 const getAlbum = cache(async (id: string) => {
-  const albumRepo = new DynamoDBAlbumRepository(photoRepo);
+  const albumRepo = getAlbumRepository();
   return albumRepo.findById(id);
 });
 

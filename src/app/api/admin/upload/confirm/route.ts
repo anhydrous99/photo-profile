@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/requireAuth";
 import { HeadObjectCommand } from "@aws-sdk/client-s3";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
-import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { s3Client } from "@/infrastructure/storage/s3Client";
 import { env } from "@/infrastructure/config/env";
 import type { Photo } from "@/domain/entities";
@@ -14,7 +14,7 @@ import { serializeError } from "@/lib/serializeError";
 
 export const maxDuration = 300;
 
-const photoRepository = new DynamoDBPhotoRepository();
+const photoRepository = getPhotoRepository();
 
 export async function POST(request: NextRequest) {
   try {

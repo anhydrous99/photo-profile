@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/requireAuth";
 import { findOriginalFile } from "@/infrastructure/storage";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
-import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
 import { enqueueWithTimeout } from "@/lib/enqueueWithTimeout";
 import { serializeError } from "@/lib/serializeError";
 
-const photoRepository = new DynamoDBPhotoRepository();
+const photoRepository = getPhotoRepository();
 
 interface RouteContext {
   params: Promise<{ id: string }>;

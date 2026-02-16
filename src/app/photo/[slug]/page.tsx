@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { DynamoDBPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { getImageUrl } from "@/infrastructure/storage";
 import { Header } from "@/presentation/components/Header";
 import { HomepageClient } from "@/presentation/components/HomepageClient";
@@ -16,7 +16,7 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const photoRepo = new DynamoDBPhotoRepository();
+  const photoRepo = getPhotoRepository();
   const photo = await photoRepo.findBySlugPrefix(slug);
 
   if (!photo) {
@@ -64,7 +64,7 @@ export async function generateMetadata({
 export default async function PhotoDeepLinkPage({ params }: PageProps) {
   const { slug } = await params;
 
-  const photoRepo = new DynamoDBPhotoRepository();
+  const photoRepo = getPhotoRepository();
   const photo = await photoRepo.findBySlugPrefix(slug);
 
   if (!photo) {

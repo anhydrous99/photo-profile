@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/requireAuth";
-import {
-  DynamoDBAlbumRepository,
-  DynamoDBPhotoRepository,
-} from "@/infrastructure/database/dynamodb/repositories";
+import { getAlbumRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { serializeError } from "@/lib/serializeError";
 
-const photoRepository = new DynamoDBPhotoRepository();
-const albumRepository = new DynamoDBAlbumRepository(photoRepository);
+const albumRepository = getAlbumRepository();
 
 const reorderSchema = z.object({
   albumIds: z.array(z.string()),

@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  DynamoDBAlbumRepository,
-  DynamoDBPhotoRepository,
+  getAlbumRepository,
+  getPhotoRepository,
 } from "@/infrastructure/database/dynamodb/repositories";
 import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 import { SocialFooter } from "@/presentation/components/SocialFooter";
@@ -34,8 +34,8 @@ function ImagePlaceholder() {
 async function getAlbumsWithCovers(): Promise<
   Array<{ album: Album; coverPhotoId: string | null }>
 > {
-  const photoRepo = new DynamoDBPhotoRepository();
-  const albumRepo = new DynamoDBAlbumRepository(photoRepo);
+  const photoRepo = getPhotoRepository();
+  const albumRepo = getAlbumRepository();
 
   const albums = await albumRepo.findPublished();
 

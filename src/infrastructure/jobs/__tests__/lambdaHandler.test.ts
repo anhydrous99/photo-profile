@@ -28,6 +28,8 @@ vi.mock("@/infrastructure/database/dynamodb/repositories", () => ({
   DynamoDBPhotoRepository: vi.fn(function () {
     return mockPhotoRepository;
   }),
+  getPhotoRepository: vi.fn(() => mockPhotoRepository),
+  getAlbumRepository: vi.fn(),
 }));
 
 vi.mock("@/infrastructure/logging/logger", () => ({

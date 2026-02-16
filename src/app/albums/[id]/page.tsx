@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { AlbumGalleryClient } from "@/presentation/components/AlbumGalleryClient";
 import { SocialFooter } from "@/presentation/components/SocialFooter";
 import {
-  DynamoDBAlbumRepository,
-  DynamoDBPhotoRepository,
+  getAlbumRepository,
+  getPhotoRepository,
 } from "@/infrastructure/database/dynamodb/repositories";
 import { getImageUrl } from "@/infrastructure/storage";
 
@@ -14,8 +14,7 @@ interface PageProps {
 }
 
 const getAlbum = cache(async (id: string) => {
-  const photoRepo = new DynamoDBPhotoRepository();
-  const albumRepo = new DynamoDBAlbumRepository(photoRepo);
+  const albumRepo = getAlbumRepository();
   return albumRepo.findById(id);
 });
 
@@ -50,7 +49,7 @@ export async function generateMetadata({
     ];
     metadata.twitter!.images = [ogImageUrl];
   } else {
-    const photoRepo = new DynamoDBPhotoRepository();
+    const photoRepo = getPhotoRepository();
     const photos = await photoRepo.findByAlbumId(id);
     const firstReady = photos.find((p) => p.status === "ready");
     if (firstReady) {
@@ -69,7 +68,7 @@ export default async function AlbumPage({ params }: PageProps) {
   const { id } = await params;
 
   const album = await getAlbum(id);
-  const photoRepo = new DynamoDBPhotoRepository();
+  const photoRepo = getPhotoRepository();
   const allPhotos = await photoRepo.findByAlbumId(id);
 
   // 404 if album doesn't exist or isn't published
