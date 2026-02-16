@@ -23,7 +23,9 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   const photoRepository = new DynamoDBPhotoRepository();
-  const photos = await photoRepository.findRandomFromPublishedAlbums(10);
+  const photos = await photoRepository.findRandomFromPublishedAlbums(10, {
+    weighted: true,
+  });
 
   return (
     <>
