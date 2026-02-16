@@ -17,6 +17,8 @@ import type {
 } from "@/domain/repositories/PhotoRepository";
 import type { Photo, ExifData } from "@/domain/entities/Photo";
 import { PhotoRandomService } from "./PhotoRandomService";
+import { logger } from "@/infrastructure/logging/logger";
+import { serializeError } from "@/lib/serializeError";
 
 export { calculateAlbumWeight } from "./PhotoRandomService";
 
@@ -496,7 +498,7 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
 
   private async incrementAlbumPhotoCount(
     albumId: string,
-    photoId: string,
+    _photoId: string,
   ): Promise<void> {
     try {
       await docClient.send(
@@ -511,8 +513,11 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
           },
         }),
       );
-    } catch {
-      // no-op: album may not exist
+    } catch (error) {
+      logger.debug("Album photo count increment failed (album may not exist)", {
+        albumId,
+        error: serializeError(error),
+      });
     }
   }
 
@@ -529,8 +534,11 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
           },
         }),
       );
-    } catch {
-      // no-op: album may not exist
+    } catch (error) {
+      logger.debug("Album photo count decrement failed (album may not exist)", {
+        albumId,
+        error: serializeError(error),
+      });
     }
   }
 

@@ -7,6 +7,8 @@ import type { UploadItem } from "@/presentation/components";
 import Link from "next/link";
 import { getUploadAdapter } from "./uploadAdapter";
 
+const AUTO_CLEAR_TIMEOUT_MS = 8000;
+
 /**
  * Admin Upload Page
  *
@@ -120,11 +122,10 @@ export default function UploadPage() {
       clearTimeout(rejectionTimerRef.current);
     }
 
-    // Auto-clear after 8 seconds
     rejectionTimerRef.current = setTimeout(() => {
       setRejections([]);
       rejectionTimerRef.current = null;
-    }, 8000);
+    }, AUTO_CLEAR_TIMEOUT_MS);
   }, []);
 
   // Handle files dropped onto zone

@@ -94,37 +94,20 @@ export class S3StorageAdapter implements StorageAdapter {
   }
 
   async deleteFiles(prefix: string): Promise<void> {
-    let continuationToken: string | undefined;
+    const objects = await this.listAllObjects(prefix);
 
-    do {
-      const listResponse = await s3Client.send(
-        new ListObjectsV2Command({
+    if (objects.length > 0) {
+      await s3Client.send(
+        new DeleteObjectsCommand({
           Bucket: this.bucket,
-          Prefix: prefix,
-          ...(continuationToken
-            ? { ContinuationToken: continuationToken }
-            : {}),
+          Delete: {
+            Objects: objects.map((obj) => ({ Key: obj.Key })),
+            Quiet: true,
+          },
         }),
       );
-
-      const objects = listResponse.Contents;
-      if (objects && objects.length > 0) {
-        await s3Client.send(
-          new DeleteObjectsCommand({
-            Bucket: this.bucket,
-            Delete: {
-              Objects: objects.map((obj) => ({ Key: obj.Key })),
-              Quiet: true,
-            },
-          }),
-        );
-        logger.debug("S3 files deleted", { prefix, count: objects.length });
-      }
-
-      continuationToken = listResponse.IsTruncated
-        ? listResponse.NextContinuationToken
-        : undefined;
-    } while (continuationToken);
+      logger.debug("S3 files deleted", { prefix, count: objects.length });
+    }
   }
 
   async fileExists(key: string): Promise<boolean> {
@@ -145,7 +128,14 @@ export class S3StorageAdapter implements StorageAdapter {
   }
 
   async listFiles(prefix: string): Promise<string[]> {
-    const keys: string[] = [];
+    const objects = await this.listAllObjects(prefix);
+    return objects.map((obj) => obj.Key).filter((key): key is string => !!key);
+  }
+
+  private async listAllObjects(
+    prefix: string,
+  ): Promise<Array<{ Key?: string }>> {
+    const allObjects: Array<{ Key?: string }> = [];
     let continuationToken: string | undefined;
 
     do {
@@ -153,25 +143,17 @@ export class S3StorageAdapter implements StorageAdapter {
         new ListObjectsV2Command({
           Bucket: this.bucket,
           Prefix: prefix,
-          ...(continuationToken
-            ? { ContinuationToken: continuationToken }
-            : {}),
+          ContinuationToken: continuationToken,
         }),
       );
 
       if (response.Contents) {
-        for (const obj of response.Contents) {
-          if (obj.Key) {
-            keys.push(obj.Key);
-          }
-        }
+        allObjects.push(...response.Contents);
       }
 
-      continuationToken = response.IsTruncated
-        ? response.NextContinuationToken
-        : undefined;
+      continuationToken = response.NextContinuationToken;
     } while (continuationToken);
 
-    return keys;
+    return allObjects;
   }
 }

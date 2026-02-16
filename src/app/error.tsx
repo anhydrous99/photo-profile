@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
+import { ErrorBoundaryContent } from "@/presentation/components";
 
 export default function Error({
   error,
@@ -15,27 +15,12 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4">
-      <h2 className="text-xl font-semibold text-text-primary">
-        Something went wrong
-      </h2>
-      <p className="text-text-secondary mb-6">
-        An unexpected error occurred. Please try again.
-      </p>
-      <div className="flex gap-3">
-        <button
-          onClick={() => reset()}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
-        >
-          Try again
-        </button>
-        <Link
-          href="/"
-          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover"
-        >
-          Go home
-        </Link>
-      </div>
-    </div>
+    <ErrorBoundaryContent
+      heading="Something went wrong"
+      message="An unexpected error occurred. Please try again."
+      backHref="/"
+      backLabel="Go home"
+      onReset={reset}
+    />
   );
 }

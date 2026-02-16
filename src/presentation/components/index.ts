@@ -14,3 +14,4 @@ export { DeleteAlbumModal } from "./DeleteAlbumModal";
 export { SortablePhotoCard } from "./SortablePhotoCard";
 export { Pagination } from "./Pagination";
 export { SocialFooter } from "./SocialFooter";
+export { ErrorBoundaryContent } from "./ErrorBoundaryContent";
