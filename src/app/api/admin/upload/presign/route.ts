@@ -4,21 +4,12 @@ import { presignS3Upload } from "@/infrastructure/storage";
 import { env } from "@/infrastructure/config/env";
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
+import { PRESIGN_MIME_TYPES, MAX_FILE_SIZE } from "@/lib/constants";
 
 const presignSchema = z.object({
   filename: z.string().min(1),
-  contentType: z.enum([
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/heic",
-    "image/heif",
-  ]),
-  fileSize: z
-    .number()
-    .int()
-    .positive()
-    .max(100 * 1024 * 1024),
+  contentType: z.enum(PRESIGN_MIME_TYPES),
+  fileSize: z.number().int().positive().max(MAX_FILE_SIZE),
 });
 
 function extractExtension(filename: string, contentType: string): string {

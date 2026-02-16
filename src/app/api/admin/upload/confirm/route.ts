@@ -8,18 +8,11 @@ import { s3Client } from "@/infrastructure/storage/s3Client";
 import { env } from "@/infrastructure/config/env";
 import type { Photo } from "@/domain/entities";
 import { logger } from "@/infrastructure/logging/logger";
+import { PRESIGN_MIME_TYPES } from "@/lib/constants";
 
 export const maxDuration = 300;
 
 const photoRepository = new DynamoDBPhotoRepository();
-
-const ALLOWED_CONTENT_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/heic",
-  "image/heif",
-];
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,7 +62,9 @@ export async function POST(request: NextRequest) {
 
       if (
         !headResult.ContentType ||
-        !ALLOWED_CONTENT_TYPES.includes(headResult.ContentType)
+        !PRESIGN_MIME_TYPES.includes(
+          headResult.ContentType as (typeof PRESIGN_MIME_TYPES)[number],
+        )
       ) {
         return NextResponse.json(
           {

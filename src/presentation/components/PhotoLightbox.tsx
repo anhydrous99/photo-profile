@@ -11,6 +11,7 @@ import type { RenderSlideProps } from "yet-another-react-lightbox";
 import type { ExifData } from "@/domain/entities/Photo";
 import { ExifPanel } from "./ExifPanel";
 import { getClientImageUrl } from "@/lib/imageLoader";
+import { THUMBNAIL_SIZES } from "@/lib/constants";
 
 export interface PhotoData {
   id: string;
@@ -29,11 +30,9 @@ interface PhotoLightboxProps {
   onIndexChange?: (index: number) => void;
 }
 
-const DERIVATIVE_WIDTHS = [300, 600, 1200, 2400] as const;
-
 function buildSrcSet(photoId: string, width: number, height: number) {
   const aspectRatio = height / width;
-  return DERIVATIVE_WIDTHS.filter((w) => w <= width).map((w) => ({
+  return THUMBNAIL_SIZES.filter((w) => w <= width).map((w) => ({
     src: getClientImageUrl(photoId, `${w}w.webp`),
     width: w,
     height: Math.round(w * aspectRatio),
@@ -46,12 +45,12 @@ function buildSrcSet(photoId: string, width: number, height: number) {
  */
 function getLargestAvailableWidth(photoWidth: number | null): number {
   if (!photoWidth) {
-    return DERIVATIVE_WIDTHS[0];
+    return THUMBNAIL_SIZES[0];
   }
-  const availableWidths = DERIVATIVE_WIDTHS.filter((w) => w <= photoWidth);
+  const availableWidths = THUMBNAIL_SIZES.filter((w) => w <= photoWidth);
   return availableWidths.length > 0
     ? availableWidths[availableWidths.length - 1]
-    : DERIVATIVE_WIDTHS[0];
+    : THUMBNAIL_SIZES[0];
 }
 
 export function PhotoLightbox({

@@ -3,6 +3,7 @@ export { UploadQueue } from "./UploadQueue";
 export type { UploadItem, UploadStatus } from "./UploadQueue";
 export { PhotoGrid } from "./PhotoGrid";
 export { PhotoDetail } from "./PhotoDetail";
+export { StatusBadge } from "./StatusBadge";
 export { AlbumSelector } from "./AlbumSelector";
 export { BatchActions } from "./BatchActions";
 export { TagsInput } from "./TagsInput";

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ExifData } from "@/domain/entities/Photo";
+import { formatExifDate } from "@/lib/formatDate";
 
 interface ExifPanelProps {
   exifData: ExifData | null;
@@ -17,14 +18,6 @@ function formatCamera(
   // If model already includes make, just show model
   if (model.startsWith(make)) return model;
   return `${make} ${model}`;
-}
-
-function formatDate(dateTaken: string): string {
-  return new Date(dateTaken).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 interface ExifField {
@@ -61,7 +54,7 @@ function getExifFields(exifData: ExifData): ExifField[] {
   if (exifData.flash) fields.push({ label: "Flash", value: exifData.flash });
 
   if (exifData.dateTaken)
-    fields.push({ label: "Date", value: formatDate(exifData.dateTaken) });
+    fields.push({ label: "Date", value: formatExifDate(exifData.dateTaken) });
 
   return fields;
 }

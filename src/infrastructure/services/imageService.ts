@@ -1,12 +1,10 @@
 import sharp from "sharp";
 import fs from "fs/promises";
 import path from "path";
+import { THUMBNAIL_SIZES } from "@/lib/constants";
 
-/**
- * Thumbnail sizes for derivative generation
- * Images are resized to fit within these widths while maintaining aspect ratio
- */
-export const THUMBNAIL_SIZES = [300, 600, 1200, 2400] as const;
+// Re-export for backward compatibility
+export { THUMBNAIL_SIZES };
 
 /**
  * Quality settings for output formats
