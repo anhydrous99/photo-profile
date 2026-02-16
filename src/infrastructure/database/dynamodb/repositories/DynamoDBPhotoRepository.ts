@@ -390,7 +390,10 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
     }
   }
 
-  async findRandomFromPublishedAlbums(limit: number): Promise<Photo[]> {
+  async findRandomFromPublishedAlbums(
+    limit: number,
+    options?: { weighted?: boolean },
+  ): Promise<Photo[]> {
     const publishedAlbums = await docClient.send(
       new QueryCommand({
         TableName: TABLE_NAMES.ALBUMS,

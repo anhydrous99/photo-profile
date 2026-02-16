@@ -613,6 +613,109 @@ describe("DynamoDBPhotoRepository", () => {
       expect(results).toHaveLength(1);
       expect(results[0].id).toBe(photo.id);
     });
+
+    describe("weighted mode", () => {
+      it("returns photos when weighted option is true", async () => {
+        const album0 = makeAlbumValues({
+          isPublished: true,
+          sortOrder: 0,
+        });
+        const album1 = makeAlbumValues({
+          isPublished: true,
+          sortOrder: 1,
+        });
+        const album2 = makeAlbumValues({
+          isPublished: true,
+          sortOrder: 2,
+        });
+        await insertAlbum(album0);
+        await insertAlbum(album1);
+        await insertAlbum(album2);
+
+        const photo0 = makePhoto({ status: "ready" });
+        const photo1 = makePhoto({ status: "ready" });
+        const photo2 = makePhoto({ status: "ready" });
+        await repo.save(photo0);
+        await repo.save(photo1);
+        await repo.save(photo2);
+
+        await repo.addToAlbum(photo0.id, album0.id);
+        await repo.addToAlbum(photo1.id, album1.id);
+        await repo.addToAlbum(photo2.id, album2.id);
+
+        const results = await repo.findRandomFromPublishedAlbums(10, {
+          weighted: true,
+        });
+        expect(results).toHaveLength(3);
+
+        const resultIds = results.map((p) => p.id).sort();
+        const expectedIds = [photo0.id, photo1.id, photo2.id].sort();
+        expect(resultIds).toEqual(expectedIds);
+      });
+
+      it("handles single published album without error", async () => {
+        const album = makeAlbumValues({ isPublished: true });
+        await insertAlbum(album);
+
+        const photos = [
+          makePhoto({ status: "ready" }),
+          makePhoto({ status: "ready" }),
+          makePhoto({ status: "ready" }),
+        ];
+        for (const photo of photos) {
+          await repo.save(photo);
+          await repo.addToAlbum(photo.id, album.id);
+        }
+
+        const results = await repo.findRandomFromPublishedAlbums(10, {
+          weighted: true,
+        });
+        expect(results).toHaveLength(3);
+      });
+
+      it("deduplicates photos across multiple albums in weighted mode", async () => {
+        const photo = makePhoto({ status: "ready" });
+        await repo.save(photo);
+
+        const album1 = makeAlbumValues({
+          isPublished: true,
+          sortOrder: 0,
+        });
+        const album2 = makeAlbumValues({
+          isPublished: true,
+          sortOrder: 1,
+        });
+        await insertAlbum(album1);
+        await insertAlbum(album2);
+
+        await repo.addToAlbum(photo.id, album1.id);
+        await repo.addToAlbum(photo.id, album2.id);
+
+        const results = await repo.findRandomFromPublishedAlbums(10, {
+          weighted: true,
+        });
+        expect(results).toHaveLength(1);
+        expect(results[0].id).toBe(photo.id);
+      });
+
+      it("uses uniform shuffle when options is undefined (backward compatibility)", async () => {
+        const album = makeAlbumValues({ isPublished: true });
+        await insertAlbum(album);
+
+        const photos = [
+          makePhoto({ status: "ready" }),
+          makePhoto({ status: "ready" }),
+          makePhoto({ status: "ready" }),
+        ];
+        for (const photo of photos) {
+          await repo.save(photo);
+          await repo.addToAlbum(photo.id, album.id);
+        }
+
+        const results = await repo.findRandomFromPublishedAlbums(3);
+        expect(results).toHaveLength(3);
+      });
+    });
   });
 
   // ---- Serialization edge cases ----

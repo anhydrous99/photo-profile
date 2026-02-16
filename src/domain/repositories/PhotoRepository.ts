@@ -29,7 +29,10 @@ export interface PhotoRepository {
   updatePhotoSortOrders(albumId: string, photoIds: string[]): Promise<void>;
 
   // Random photo retrieval
-  findRandomFromPublishedAlbums(limit: number): Promise<Photo[]>;
+  findRandomFromPublishedAlbums(
+    limit: number,
+    options?: { weighted?: boolean },
+  ): Promise<Photo[]>;
 
   // Slug-based lookup (first 8 chars of UUID)
   findBySlugPrefix(slug: string): Promise<Photo | null>;
