@@ -10,7 +10,12 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { createTables, deleteTables, TABLE_NAMES } from "../tables";
 import { docClient } from "../client";
-import { ScanCommand, DeleteCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  ScanCommand,
+  DeleteCommand,
+  PutCommand,
+  GetCommand,
+} from "@aws-sdk/lib-dynamodb";
 import type { Photo, ExifData } from "@/domain/entities/Photo";
 import {
   DynamoDBPhotoRepository,
@@ -484,6 +489,57 @@ describe("DynamoDBPhotoRepository", () => {
 
       const result = await repo.findBySlugPrefix("zzzzz");
       expect(result).toBeNull();
+    });
+
+    it("finds photo among many items", async () => {
+      const ids = [
+        "bbbbbbbb-0001-0000-0000-000000000000",
+        "cccccccc-0001-0000-0000-000000000000",
+        "dddddddd-0001-0000-0000-000000000000",
+        "eeeeeeee-0001-0000-0000-000000000000",
+        "ffffffff-0001-0000-0000-000000000000",
+        "11111111-0001-0000-0000-000000000000",
+        "22222222-0001-0000-0000-000000000000",
+        "33333333-0001-0000-0000-000000000000",
+        "44444444-0001-0000-0000-000000000000",
+        "55555555-0001-0000-0000-000000000000",
+        "aaaaaaaa-0001-0000-0000-000000000000",
+      ];
+
+      for (const id of ids) {
+        await repo.save(makePhoto({ id }));
+      }
+
+      const result = await repo.findBySlugPrefix("aaaaaaaa");
+      expect(result).not.toBeNull();
+      expect(result!.id.startsWith("aaaaaaaa")).toBe(true);
+    });
+
+    it("slug attribute is persisted on save", async () => {
+      const photo = makePhoto({ id: "12345678-abcd-ef01-2345-678901234567" });
+      await repo.save(photo);
+
+      const raw = await docClient.send(
+        new GetCommand({
+          TableName: TABLE_NAMES.PHOTOS,
+          Key: { id: photo.id },
+        }),
+      );
+
+      expect(raw.Item).toBeDefined();
+      expect(raw.Item?.slug).toBe("12345678");
+    });
+
+    it("returns null for non-matching 8-char slug", async () => {
+      const photo = makePhoto({ id: "aabbccdd-1234-5678-abcd-ef0123456789" });
+      await repo.save(photo);
+
+      const exact = await repo.findBySlugPrefix("aabbccdd");
+      expect(exact).not.toBeNull();
+      expect(exact!.id).toBe(photo.id);
+
+      const short = await repo.findBySlugPrefix("aabbcc");
+      expect(short).toBeNull();
     });
   });
 

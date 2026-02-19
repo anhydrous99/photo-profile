@@ -410,9 +410,10 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
 
   async findBySlugPrefix(slug: string): Promise<Photo | null> {
     const result = await docClient.send(
-      new ScanCommand({
+      new QueryCommand({
         TableName: TABLE_NAMES.PHOTOS,
-        FilterExpression: "begins_with(id, :slug)",
+        IndexName: "slug-index",
+        KeyConditionExpression: "slug = :slug",
         ExpressionAttributeValues: { ":slug": slug },
         Limit: 1,
       }),

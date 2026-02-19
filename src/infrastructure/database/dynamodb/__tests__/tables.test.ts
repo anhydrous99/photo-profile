@@ -25,7 +25,7 @@ describe("DynamoDB Tables", () => {
       expect(photosTable!.KeySchema).toEqual([
         { AttributeName: "id", KeyType: "HASH" },
       ]);
-      expect(photosTable!.GlobalSecondaryIndexes).toHaveLength(2);
+      expect(photosTable!.GlobalSecondaryIndexes).toHaveLength(3);
       expect(photosTable!.BillingModeSummary?.BillingMode).toBe(
         "PAY_PER_REQUEST",
       );
