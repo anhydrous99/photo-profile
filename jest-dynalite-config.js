@@ -9,6 +9,7 @@ module.exports = {
         { AttributeName: "status", AttributeType: "S" },
         { AttributeName: "createdAt", AttributeType: "N" },
         { AttributeName: "_type", AttributeType: "S" },
+        { AttributeName: "slug", AttributeType: "S" },
       ],
       BillingMode: "PAY_PER_REQUEST",
       GlobalSecondaryIndexes: [
@@ -26,6 +27,11 @@ module.exports = {
             { AttributeName: "_type", KeyType: "HASH" },
             { AttributeName: "createdAt", KeyType: "RANGE" },
           ],
+          Projection: { ProjectionType: "ALL" },
+        },
+        {
+          IndexName: "slug-index",
+          KeySchema: [{ AttributeName: "slug", KeyType: "HASH" }],
           Projection: { ProjectionType: "ALL" },
         },
       ],
