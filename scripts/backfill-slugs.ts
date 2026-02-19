@@ -81,4 +81,7 @@ async function backfillSlugs(): Promise<void> {
   }
 }
 
-await backfillSlugs();
+backfillSlugs().catch((err) => {
+  console.error("Backfill failed:", err);
+  process.exit(1);
+});
