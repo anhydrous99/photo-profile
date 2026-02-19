@@ -578,6 +578,7 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
       createdAt: photo.createdAt.getTime(),
       updatedAt: photo.updatedAt.getTime(),
       _type: "PHOTO",
+      slug: photo.id.slice(0, 8),
     };
   }
 }
