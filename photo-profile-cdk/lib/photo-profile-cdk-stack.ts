@@ -57,6 +57,11 @@ export class PhotoProfileCdkStack extends cdk.Stack {
       sortKey: { name: "createdAt", type: dynamodb.AttributeType.NUMBER },
       projectionType: dynamodb.ProjectionType.ALL,
     });
+    this.photosTable.addGlobalSecondaryIndex({
+      indexName: "slug-index",
+      partitionKey: { name: "slug", type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
 
     this.albumsTable = new dynamodb.Table(this, "AlbumsTable", {
       tableName: `${tablePrefix}Albums`,

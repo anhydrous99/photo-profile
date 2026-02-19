@@ -167,6 +167,7 @@ describe("PhotoProfileCdkStack", () => {
       GlobalSecondaryIndexes: Match.arrayWith([
         Match.objectLike({ IndexName: "status-createdAt-index" }),
         Match.objectLike({ IndexName: "createdAt-index" }),
+        Match.objectLike({ IndexName: "slug-index" }),
       ]),
     });
   });
