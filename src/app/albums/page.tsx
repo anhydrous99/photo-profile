@@ -1,10 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
-import {
-  getAlbumRepository,
-  getPhotoRepository,
-} from "@/infrastructure/database/dynamodb/repositories";
+import { getAlbumRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 import { SocialFooter } from "@/presentation/components/SocialFooter";
 import type { Album } from "@/domain/entities/Album";
@@ -35,7 +32,6 @@ function ImagePlaceholder() {
 async function getAlbumsWithCovers(): Promise<
   Array<{ album: Album; coverPhotoId: string | null }>
 > {
-  const photoRepo = getPhotoRepository();
   const albumRepo = getAlbumRepository();
 
   const albums = await albumRepo.findPublished();
@@ -43,23 +39,10 @@ async function getAlbumsWithCovers(): Promise<
   // Sort by sortOrder (admin's drag-drop order)
   albums.sort((a, b) => a.sortOrder - b.sortOrder);
 
-  // Resolve cover photos
-  const albumsWithCovers = await Promise.all(
-    albums.map(async (album) => {
-      let coverPhotoId = album.coverPhotoId;
-
-      // If no explicit cover, use first photo from album
-      if (!coverPhotoId) {
-        const photos = await photoRepo.findByAlbumId(album.id);
-        const readyPhoto = photos.find((p) => p.status === "ready");
-        coverPhotoId = readyPhoto?.id ?? null;
-      }
-
-      return { album, coverPhotoId };
-    }),
-  );
-
-  return albumsWithCovers;
+  return albums.map((album) => ({
+    album,
+    coverPhotoId: album.coverPhotoId,
+  }));
 }
 
 export default async function AlbumsPage() {

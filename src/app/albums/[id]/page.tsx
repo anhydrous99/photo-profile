@@ -41,24 +41,13 @@ export async function generateMetadata({
     },
   };
 
-  // Use cover photo or first photo as OG image
+  // Use cover photo as OG image (auto-set at write time)
   if (album.coverPhotoId) {
     const ogImageUrl = getImageUrl(album.coverPhotoId, "1200w.webp");
     metadata.openGraph!.images = [
       { url: ogImageUrl, width: 1200, type: "image/webp" },
     ];
     metadata.twitter!.images = [ogImageUrl];
-  } else {
-    const photoRepo = getPhotoRepository();
-    const photos = await photoRepo.findByAlbumId(id);
-    const firstReady = photos.find((p) => p.status === "ready");
-    if (firstReady) {
-      const ogImageUrl = getImageUrl(firstReady.id, "1200w.webp");
-      metadata.openGraph!.images = [
-        { url: ogImageUrl, width: 1200, type: "image/webp" },
-      ];
-      metadata.twitter!.images = [ogImageUrl];
-    }
   }
 
   return metadata;

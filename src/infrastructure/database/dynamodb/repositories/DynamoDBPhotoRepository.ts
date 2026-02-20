@@ -328,6 +328,7 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
 
       for (const albumId of albumIds) {
         await this.decrementAlbumPhotoCount(albumId);
+        await this.clearCoverPhotoIdIfMatch(albumId, id);
       }
     }
   }
@@ -377,6 +378,7 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
     );
 
     await this.decrementAlbumPhotoCount(albumId);
+    await this.clearCoverPhotoIdIfMatch(albumId, photoId);
   }
 
   async updatePhotoSortOrders(
@@ -499,7 +501,7 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
 
   private async incrementAlbumPhotoCount(
     albumId: string,
-    _photoId: string,
+    photoId: string,
   ): Promise<void> {
     try {
       await docClient.send(
@@ -517,6 +519,73 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
     } catch (error) {
       logger.debug("Album photo count increment failed (album may not exist)", {
         albumId,
+        error: serializeError(error),
+      });
+    }
+
+    await this.autoSetCoverPhotoId(albumId, photoId);
+  }
+
+  private async autoSetCoverPhotoId(
+    albumId: string,
+    photoId: string,
+  ): Promise<void> {
+    try {
+      await docClient.send(
+        new UpdateCommand({
+          TableName: TABLE_NAMES.ALBUMS,
+          Key: { id: albumId },
+          UpdateExpression: "SET coverPhotoId = :photoId",
+          ConditionExpression:
+            "attribute_not_exists(coverPhotoId) OR attribute_type(coverPhotoId, :nullType)",
+          ExpressionAttributeValues: {
+            ":photoId": photoId,
+            ":nullType": "NULL",
+          },
+        }),
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.name === "ConditionalCheckFailedException"
+      ) {
+        return; // Cover already set — nothing to do
+      }
+      logger.debug("Auto-set coverPhotoId failed", {
+        albumId,
+        photoId,
+        error: serializeError(error),
+      });
+    }
+  }
+
+  private async clearCoverPhotoIdIfMatch(
+    albumId: string,
+    photoId: string,
+  ): Promise<void> {
+    try {
+      await docClient.send(
+        new UpdateCommand({
+          TableName: TABLE_NAMES.ALBUMS,
+          Key: { id: albumId },
+          UpdateExpression: "SET coverPhotoId = :null",
+          ConditionExpression: "coverPhotoId = :photoId",
+          ExpressionAttributeValues: {
+            ":null": null,
+            ":photoId": photoId,
+          },
+        }),
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.name === "ConditionalCheckFailedException"
+      ) {
+        return; // Cover was a different photo — nothing to do
+      }
+      logger.debug("Clear coverPhotoId failed", {
+        albumId,
+        photoId,
         error: serializeError(error),
       });
     }

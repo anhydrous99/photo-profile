@@ -469,6 +469,162 @@ describe("DynamoDBPhotoRepository", () => {
       const albumIds = await repo.getAlbumIds(photo.id);
       expect(albumIds).toHaveLength(0);
     });
+
+    it("addToAlbum() auto-sets coverPhotoId when album has no cover", async () => {
+      const photo = makePhoto();
+      await repo.save(photo);
+      const album = makeAlbumValues();
+      await insertAlbum(album);
+
+      await repo.addToAlbum(photo.id, album.id);
+
+      const result = await docClient.send(
+        new GetCommand({
+          TableName: TABLE_NAMES.ALBUMS,
+          Key: { id: album.id },
+        }),
+      );
+      expect(result.Item?.coverPhotoId).toBe(photo.id);
+    });
+
+    it("addToAlbum() does not overwrite existing coverPhotoId", async () => {
+      const photo1 = makePhoto();
+      const photo2 = makePhoto();
+      await repo.save(photo1);
+      await repo.save(photo2);
+      const album = makeAlbumValues({ coverPhotoId: photo1.id });
+      await insertAlbum(album);
+
+      await repo.addToAlbum(photo2.id, album.id);
+
+      const result = await docClient.send(
+        new GetCommand({
+          TableName: TABLE_NAMES.ALBUMS,
+          Key: { id: album.id },
+        }),
+      );
+      expect(result.Item?.coverPhotoId).toBe(photo1.id);
+    });
+
+    it("removeFromAlbum() clears coverPhotoId when removed photo was the cover", async () => {
+      const photo = makePhoto();
+      await repo.save(photo);
+      const album = makeAlbumValues();
+      await insertAlbum(album);
+
+      await repo.addToAlbum(photo.id, album.id);
+
+      // Verify cover was auto-set
+      let result = await docClient.send(
+        new GetCommand({
+          TableName: TABLE_NAMES.ALBUMS,
+          Key: { id: album.id },
+        }),
+      );
+      expect(result.Item?.coverPhotoId).toBe(photo.id);
+
+      await repo.removeFromAlbum(photo.id, album.id);
+
+      result = await docClient.send(
+        new GetCommand({
+          TableName: TABLE_NAMES.ALBUMS,
+          Key: { id: album.id },
+        }),
+      );
+      expect(result.Item?.coverPhotoId).toBeNull();
+    });
+
+    it("removeFromAlbum() preserves coverPhotoId when removed photo was not the cover", async () => {
+      const photo1 = makePhoto();
+      const photo2 = makePhoto();
+      await repo.save(photo1);
+      await repo.save(photo2);
+      const album = makeAlbumValues();
+      await insertAlbum(album);
+
+      await repo.addToAlbum(photo1.id, album.id);
+      await repo.addToAlbum(photo2.id, album.id);
+
+      // Cover should be photo1 (first added)
+      let result = await docClient.send(
+        new GetCommand({
+          TableName: TABLE_NAMES.ALBUMS,
+          Key: { id: album.id },
+        }),
+      );
+      expect(result.Item?.coverPhotoId).toBe(photo1.id);
+
+      // Remove photo2 (not the cover)
+      await repo.removeFromAlbum(photo2.id, album.id);
+
+      result = await docClient.send(
+        new GetCommand({
+          TableName: TABLE_NAMES.ALBUMS,
+          Key: { id: album.id },
+        }),
+      );
+      expect(result.Item?.coverPhotoId).toBe(photo1.id);
+    });
+
+    it("delete() clears coverPhotoId on affected albums", async () => {
+      const photo = makePhoto();
+      await repo.save(photo);
+      const album = makeAlbumValues();
+      await insertAlbum(album);
+
+      await repo.addToAlbum(photo.id, album.id);
+
+      // Verify cover was auto-set
+      let result = await docClient.send(
+        new GetCommand({
+          TableName: TABLE_NAMES.ALBUMS,
+          Key: { id: album.id },
+        }),
+      );
+      expect(result.Item?.coverPhotoId).toBe(photo.id);
+
+      await repo.delete(photo.id);
+
+      result = await docClient.send(
+        new GetCommand({
+          TableName: TABLE_NAMES.ALBUMS,
+          Key: { id: album.id },
+        }),
+      );
+      expect(result.Item?.coverPhotoId).toBeNull();
+    });
+
+    it("delete() preserves coverPhotoId when deleted photo was not the cover", async () => {
+      const photo1 = makePhoto();
+      const photo2 = makePhoto();
+      await repo.save(photo1);
+      await repo.save(photo2);
+      const album = makeAlbumValues();
+      await insertAlbum(album);
+
+      await repo.addToAlbum(photo1.id, album.id);
+      await repo.addToAlbum(photo2.id, album.id);
+
+      // Cover should be photo1
+      let result = await docClient.send(
+        new GetCommand({
+          TableName: TABLE_NAMES.ALBUMS,
+          Key: { id: album.id },
+        }),
+      );
+      expect(result.Item?.coverPhotoId).toBe(photo1.id);
+
+      // Delete photo2 (not the cover)
+      await repo.delete(photo2.id);
+
+      result = await docClient.send(
+        new GetCommand({
+          TableName: TABLE_NAMES.ALBUMS,
+          Key: { id: album.id },
+        }),
+      );
+      expect(result.Item?.coverPhotoId).toBe(photo1.id);
+    });
   });
 
   // ---- findBySlugPrefix ----
