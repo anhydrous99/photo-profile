@@ -6,7 +6,7 @@ import { Header } from "@/presentation/components/Header";
 import { HomepageClient } from "@/presentation/components/HomepageClient";
 import { SocialFooter } from "@/presentation/components/SocialFooter";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 interface PageProps {
   params: Promise<{ slug: string }>;

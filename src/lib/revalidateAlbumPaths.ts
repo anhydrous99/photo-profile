@@ -8,6 +8,8 @@ export function revalidateAlbumPaths(albumId?: string): void {
   revalidatePath("/admin/albums");
   revalidatePath("/admin");
   revalidatePath("/albums");
+  revalidatePath("/");
+  revalidatePath("/photo", "layout");
   if (albumId) {
     revalidatePath(`/albums/${albumId}`);
   }

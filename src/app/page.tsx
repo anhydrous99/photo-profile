@@ -4,7 +4,7 @@ import { Header } from "@/presentation/components/Header";
 import { HomepageClient } from "@/presentation/components/HomepageClient";
 import { SocialFooter } from "@/presentation/components/SocialFooter";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: process.env.NEXT_PUBLIC_SITE_NAME || "Portfolio",
@@ -23,9 +23,12 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   const photoRepository = getPhotoRepository();
-  const photos = await photoRepository.findRandomFromPublishedAlbums(10, {
-    weighted: true,
-  });
+  const photos =
+    process.env.NEXT_PHASE === "phase-production-build"
+      ? []
+      : await photoRepository.findRandomFromPublishedAlbums(10, {
+          weighted: true,
+        });
 
   return (
     <>

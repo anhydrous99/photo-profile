@@ -8,7 +8,7 @@ import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 import { SocialFooter } from "@/presentation/components/SocialFooter";
 import type { Album } from "@/domain/entities/Album";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 // Placeholder icon for albums without photos
 function ImagePlaceholder() {
@@ -34,6 +34,10 @@ function ImagePlaceholder() {
 async function getAlbumsWithCovers(): Promise<
   Array<{ album: Album; coverPhotoId: string | null }>
 > {
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    return [];
+  }
+
   const photoRepo = getPhotoRepository();
   const albumRepo = getAlbumRepository();
 

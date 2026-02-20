@@ -5,6 +5,7 @@ import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
 import { serializeError } from "@/lib/serializeError";
+import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
 
 const photoRepository = getPhotoRepository();
 
@@ -52,6 +53,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     await photoRepository.updatePhotoSortOrders(albumId, result.data.photoIds);
+
+    revalidateAlbumPaths(albumId);
 
     return NextResponse.json({ success: true });
   } catch (error) {

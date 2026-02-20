@@ -6,6 +6,7 @@ import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
 import { serializeError } from "@/lib/serializeError";
+import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
 
 const photoRepository = getPhotoRepository();
 
@@ -66,6 +67,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     photo.updatedAt = new Date();
     await photoRepository.save(photo);
 
+    revalidateAlbumPaths();
+
     return NextResponse.json(photo);
   } catch (error) {
     logger.error("PATCH /api/admin/photos/[id] failed", {
@@ -118,6 +121,8 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
 
     // 5. Delete photo record from database
     await photoRepository.delete(id);
+
+    revalidateAlbumPaths();
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

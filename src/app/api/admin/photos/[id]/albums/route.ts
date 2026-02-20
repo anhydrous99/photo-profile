@@ -5,6 +5,7 @@ import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
 import { serializeError } from "@/lib/serializeError";
+import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
 
 const photoRepository = getPhotoRepository();
 
@@ -99,6 +100,8 @@ export async function POST(
 
     await photoRepository.addToAlbum(photoId, result.data.albumId);
 
+    revalidateAlbumPaths(result.data.albumId);
+
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
     logger.error("POST /api/admin/photos/[id]/albums failed", {
@@ -150,6 +153,8 @@ export async function DELETE(
     }
 
     await photoRepository.removeFromAlbum(photoId, result.data.albumId);
+
+    revalidateAlbumPaths(result.data.albumId);
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

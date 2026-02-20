@@ -4,6 +4,7 @@ import { getAlbumRepository } from "@/infrastructure/database/dynamodb/repositor
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
 import { serializeError } from "@/lib/serializeError";
+import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
 
 const albumRepository = getAlbumRepository();
 
@@ -37,6 +38,8 @@ export async function POST(request: NextRequest) {
     }
 
     await albumRepository.updateSortOrders(result.data.albumIds);
+
+    revalidateAlbumPaths();
 
     return NextResponse.json({ success: true });
   } catch (error) {
