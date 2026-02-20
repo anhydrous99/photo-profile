@@ -41,8 +41,13 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
 
   async findAll(): Promise<Photo[]> {
     const result = await docClient.send(
-      new ScanCommand({
+      new QueryCommand({
         TableName: TABLE_NAMES.PHOTOS,
+        IndexName: "createdAt-index",
+        KeyConditionExpression: "#type = :type",
+        ExpressionAttributeNames: { "#type": "_type" },
+        ExpressionAttributeValues: { ":type": "PHOTO" },
+        ScanIndexForward: false,
       }),
     );
     return (result.Items ?? []).map((item) => this.toDomain(item));
