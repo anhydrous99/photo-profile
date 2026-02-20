@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { getImageUrl } from "@/infrastructure/storage";
+import {
+  getCachedPublishedPhotoPool,
+  sampleUniform,
+} from "@/lib/cachedPhotoPool";
+import type { PhotoPoolEntry } from "@/lib/cachedPhotoPool";
 import { Header } from "@/presentation/components/Header";
 import { HomepageClient } from "@/presentation/components/HomepageClient";
 import { SocialFooter } from "@/presentation/components/SocialFooter";
@@ -71,15 +76,28 @@ export default async function PhotoDeepLinkPage({ params }: PageProps) {
     notFound();
   }
 
-  // Fetch homepage random photos
-  const randomPhotos = await photoRepo.findRandomFromPublishedAlbums(8);
+  // Fetch cached photo pool and sample uniformly
+  const pool = await getCachedPublishedPhotoPool();
+  const randomPhotos = sampleUniform(pool, 8);
 
   // Ensure the deep-linked photo is in the set
   const isInSet = randomPhotos.some((p) => p.id === photo.id);
-  let photos = randomPhotos;
+  let photos: PhotoPoolEntry[] = randomPhotos;
   if (!isInSet) {
+    // Synthesize a pool entry from the fetched photo
+    const entry: PhotoPoolEntry = {
+      id: photo.id,
+      title: photo.title,
+      description: photo.description,
+      originalFilename: photo.originalFilename,
+      blurDataUrl: photo.blurDataUrl,
+      exifData: photo.exifData,
+      width: photo.width,
+      height: photo.height,
+      weight: 1,
+    };
     // Replace last photo with the deep-linked photo so lightbox can open to it
-    photos = [...randomPhotos.slice(0, randomPhotos.length - 1), photo];
+    photos = [...randomPhotos.slice(0, randomPhotos.length - 1), entry];
   }
 
   return (

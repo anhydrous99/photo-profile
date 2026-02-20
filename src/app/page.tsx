@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
+import {
+  getCachedPublishedPhotoPool,
+  sampleWeighted,
+} from "@/lib/cachedPhotoPool";
 import { Header } from "@/presentation/components/Header";
 import { HomepageClient } from "@/presentation/components/HomepageClient";
 import { SocialFooter } from "@/presentation/components/SocialFooter";
@@ -25,10 +28,8 @@ export const metadata: Metadata = {
 export default async function Home() {
   await connection();
 
-  const photoRepository = getPhotoRepository();
-  const photos = await photoRepository.findRandomFromPublishedAlbums(10, {
-    weighted: true,
-  });
+  const pool = await getCachedPublishedPhotoPool();
+  const photos = sampleWeighted(pool, 10);
 
   return (
     <>

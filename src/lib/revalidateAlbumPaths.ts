@@ -1,4 +1,5 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PHOTO_POOL_CACHE_TAG } from "@/lib/constants";
 
 /**
  * Revalidate all album-related paths
@@ -13,4 +14,5 @@ export function revalidateAlbumPaths(albumId?: string): void {
   if (albumId) {
     revalidatePath(`/albums/${albumId}`);
   }
+  revalidateTag(PHOTO_POOL_CACHE_TAG, { expire: 300 });
 }

@@ -143,3 +143,13 @@ export const S3_GET_TIMEOUT_MS = 30_000;
  * 15 minutes for direct upload URLs
  */
 export const S3_PRESIGN_EXPIRY_SECONDS = 15 * 60;
+
+// ============================================================================
+// CACHING
+// ============================================================================
+
+/**
+ * Cache tag for the published photo pool used by unstable_cache.
+ * Revalidated when albums or album-photo membership change.
+ */
+export const PHOTO_POOL_CACHE_TAG = "published-photo-pool";

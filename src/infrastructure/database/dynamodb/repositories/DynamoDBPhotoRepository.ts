@@ -17,10 +17,12 @@ import type {
 } from "@/domain/repositories/PhotoRepository";
 import type { Photo, ExifData } from "@/domain/entities/Photo";
 import { PhotoRandomService } from "./PhotoRandomService";
+import type { PhotoPoolEntry } from "./PhotoRandomService";
 import { logger } from "@/infrastructure/logging/logger";
 import { serializeError } from "@/lib/serializeError";
 
 export { calculateAlbumWeight } from "./PhotoRandomService";
+export type { PhotoPoolEntry } from "./PhotoRandomService";
 
 export class DynamoDBPhotoRepository implements PhotoRepository {
   private randomService: PhotoRandomService;
@@ -406,6 +408,10 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
         }),
       );
     }
+  }
+
+  async getPublishedPhotoPool(): Promise<PhotoPoolEntry[]> {
+    return this.randomService.getPublishedPhotoPool();
   }
 
   async findRandomFromPublishedAlbums(
