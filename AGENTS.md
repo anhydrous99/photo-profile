@@ -155,7 +155,7 @@ These are the ONLY acceptable non-strict type patterns in the codebase:
 ## WATCH OUT
 
 - `tags` on Album is **comma-separated string**, not array or JSON
-- `export const dynamic = "force-dynamic"` on homepage — random photos require no caching
+- `export const revalidate = 300` on public pages (homepage, `/albums`, `/photo/[slug]`) — ISR with 5-minute TTL. Homepage random photos are cached per interval. Admin pages remain `force-dynamic`.
 - **Storage backend**: `STORAGE_BACKEND` env var switches between `filesystem` and `s3`; `getStorageAdapter()` is a singleton factory
 - **DynamoDB**: Local dev via `dynamodb-local` in docker-compose (port 8000). Tables auto-created on first run.
 - **Image API**: Falls back to largest available derivative if requested size doesn't exist
