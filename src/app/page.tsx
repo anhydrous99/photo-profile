@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { Header } from "@/presentation/components/Header";
 import { HomepageClient } from "@/presentation/components/HomepageClient";
@@ -22,13 +23,12 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
+  await connection();
+
   const photoRepository = getPhotoRepository();
-  const photos =
-    process.env.NEXT_PHASE === "phase-production-build"
-      ? []
-      : await photoRepository.findRandomFromPublishedAlbums(10, {
-          weighted: true,
-        });
+  const photos = await photoRepository.findRandomFromPublishedAlbums(10, {
+    weighted: true,
+  });
 
   return (
     <>
