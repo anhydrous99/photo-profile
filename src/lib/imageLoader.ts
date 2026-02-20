@@ -31,6 +31,21 @@ export function getClientImageUrl(photoId: string, filename: string): string {
   return `/api/images/${photoId}/${filename}`;
 }
 
+export function buildSrcSet(
+  photoId: string,
+  format: "webp" | "avif",
+  maxWidth?: number,
+): string {
+  let widths: number[] = maxWidth
+    ? THUMBNAIL_SIZES.filter((w) => w <= maxWidth)
+    : [...THUMBNAIL_SIZES];
+  if (widths.length === 0) widths = [THUMBNAIL_SIZES[0]];
+
+  return widths
+    .map((w) => `${getClientImageUrl(photoId, `${w}w.${format}`)} ${w}w`)
+    .join(", ");
+}
+
 export default function imageLoader({
   src,
   width,

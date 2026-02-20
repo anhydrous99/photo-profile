@@ -1,9 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
 import { getAlbumRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 import { SocialFooter } from "@/presentation/components/SocialFooter";
+import { getClientImageUrl } from "@/lib/imageLoader";
 import type { Album } from "@/domain/entities/Album";
 
 export const revalidate = 300;
@@ -74,13 +74,18 @@ export default async function AlbumsPage() {
               >
                 <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg">
                   {coverPhotoId ? (
-                    <Image
-                      src={`/api/images/${coverPhotoId}`}
-                      alt={album.title}
-                      fill
-                      sizes="80px"
-                      className="object-cover"
-                    />
+                    <picture>
+                      <source
+                        type="image/avif"
+                        srcSet={getClientImageUrl(coverPhotoId, "300w.avif")}
+                      />
+                      <img
+                        src={getClientImageUrl(coverPhotoId, "300w.webp")}
+                        alt={album.title}
+                        className="absolute inset-0 h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    </picture>
                   ) : (
                     <ImagePlaceholder />
                   )}

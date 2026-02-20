@@ -72,26 +72,33 @@ export function PhotoLightbox({
   const renderSlide = (props: RenderSlideProps) => {
     if (isImageSlide(props.slide)) {
       const slide = props.slide;
+      const webpSrcSet = slide.srcSet
+        ? slide.srcSet.map((s) => `${s.src} ${s.width}w`).join(", ")
+        : undefined;
+      const avifSrcSet = slide.srcSet
+        ? slide.srcSet
+            .map((s) => `${s.src.replace(/\.webp$/, ".avif")} ${s.width}w`)
+            .join(", ")
+        : undefined;
+
       return (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={slide.src}
-          alt={slide.alt || ""}
-          srcSet={
-            slide.srcSet
-              ? slide.srcSet.map((s) => `${s.src} ${s.width}w`).join(", ")
-              : undefined
-          }
-          className="yarl__slide_image"
-          onContextMenu={(e) => e.preventDefault()}
-          onDragStart={(e) => e.preventDefault()}
-          draggable={false}
-          style={{
-            userSelect: "none",
-            WebkitUserSelect: "none",
-            WebkitTouchCallout: "none",
-          }}
-        />
+        <picture>
+          {avifSrcSet && <source type="image/avif" srcSet={avifSrcSet} />}
+          <img
+            src={slide.src}
+            alt={slide.alt || ""}
+            srcSet={webpSrcSet}
+            className="yarl__slide_image"
+            onContextMenu={(e) => e.preventDefault()}
+            onDragStart={(e) => e.preventDefault()}
+            draggable={false}
+            style={{
+              userSelect: "none",
+              WebkitUserSelect: "none",
+              WebkitTouchCallout: "none",
+            }}
+          />
+        </picture>
       );
     }
     return undefined;

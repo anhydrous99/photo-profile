@@ -55,12 +55,17 @@ export function SortablePhotoCard({
       {/* Draggable photo area */}
       <div {...attributes} {...listeners} className="cursor-grab">
         <div className="aspect-square overflow-hidden rounded-lg border border-border">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={getClientImageUrl(photo.id, "300w.webp")}
-            alt={photo.title || photo.originalFilename}
-            className="h-full w-full object-cover"
-          />
+          <picture>
+            <source
+              type="image/avif"
+              srcSet={getClientImageUrl(photo.id, "300w.avif")}
+            />
+            <img
+              src={getClientImageUrl(photo.id, "300w.webp")}
+              alt={photo.title || photo.originalFilename}
+              className="h-full w-full object-cover"
+            />
+          </picture>
         </div>
       </div>
 

@@ -148,15 +148,18 @@ function PhotoCard({
 
       <div className="aspect-[4/3] overflow-hidden bg-surface-secondary">
         {photo.status === "ready" && photo.blurDataUrl ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+          <picture>
+            <source
+              type="image/avif"
+              srcSet={getClientImageUrl(photo.id, "300w.avif")}
+            />
             <img
               src={getClientImageUrl(photo.id, "300w.webp")}
               alt={photo.originalFilename}
               className="h-full w-full object-cover"
               loading="lazy"
             />
-          </>
+          </picture>
         ) : (
           <div className="flex h-full items-center justify-center">
             <span className="text-sm text-text-tertiary">

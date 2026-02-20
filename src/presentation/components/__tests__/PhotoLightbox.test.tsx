@@ -105,7 +105,7 @@ describe("PhotoLightbox", () => {
       expect(render.slide).toBeTypeOf("function");
     });
 
-    it("returns img element with protection attributes for image slides", () => {
+    it("returns picture element wrapping img with protection attributes for image slides", () => {
       mockIsImageSlide.mockReturnValue(true);
 
       const lightbox = getLightboxElement(defaultProps);
@@ -122,19 +122,29 @@ describe("PhotoLightbox", () => {
         ],
       };
 
-      const slideEl = renderSlide({ slide: testSlide }) as TestElement;
+      const pictureEl = renderSlide({ slide: testSlide }) as TestElement;
 
-      expect(slideEl).toBeDefined();
-      expect(slideEl.type).toBe("img");
-      expect(slideEl.props.draggable).toBe(false);
-      expect(slideEl.props.className).toBe("yarl__slide_image");
-      expect(slideEl.props.style).toEqual(
+      expect(pictureEl).toBeDefined();
+      expect(pictureEl.type).toBe("picture");
+
+      const children = [pictureEl.props.children]
+        .flat()
+        .filter(Boolean) as TestElement[];
+      const imgEl = children.find((c) => c.type === "img");
+      expect(imgEl).toBeDefined();
+      expect(imgEl!.props.draggable).toBe(false);
+      expect(imgEl!.props.className).toBe("yarl__slide_image");
+      expect(imgEl!.props.style).toEqual(
         expect.objectContaining({
           userSelect: "none",
           WebkitUserSelect: "none",
           WebkitTouchCallout: "none",
         }),
       );
+
+      const sourceEl = children.find((c) => c.type === "source");
+      expect(sourceEl).toBeDefined();
+      expect(sourceEl!.props.type).toBe("image/avif");
     });
 
     it("onContextMenu handler calls preventDefault", () => {
@@ -144,12 +154,17 @@ describe("PhotoLightbox", () => {
       const renderSlide = (
         lightbox.props.render as { slide: (p: unknown) => unknown }
       ).slide;
-      const slideEl = renderSlide({
+      const pictureEl = renderSlide({
         slide: { src: "test.jpg" },
       }) as TestElement;
 
+      const children = [pictureEl.props.children]
+        .flat()
+        .filter(Boolean) as TestElement[];
+      const imgEl = children.find((c) => c.type === "img")!;
+
       const mockEvent = { preventDefault: vi.fn() };
-      (slideEl.props.onContextMenu as (e: unknown) => void)(mockEvent);
+      (imgEl.props.onContextMenu as (e: unknown) => void)(mockEvent);
       expect(mockEvent.preventDefault).toHaveBeenCalledOnce();
     });
 
@@ -160,12 +175,17 @@ describe("PhotoLightbox", () => {
       const renderSlide = (
         lightbox.props.render as { slide: (p: unknown) => unknown }
       ).slide;
-      const slideEl = renderSlide({
+      const pictureEl = renderSlide({
         slide: { src: "test.jpg" },
       }) as TestElement;
 
+      const children = [pictureEl.props.children]
+        .flat()
+        .filter(Boolean) as TestElement[];
+      const imgEl = children.find((c) => c.type === "img")!;
+
       const mockEvent = { preventDefault: vi.fn() };
-      (slideEl.props.onDragStart as (e: unknown) => void)(mockEvent);
+      (imgEl.props.onDragStart as (e: unknown) => void)(mockEvent);
       expect(mockEvent.preventDefault).toHaveBeenCalledOnce();
     });
 

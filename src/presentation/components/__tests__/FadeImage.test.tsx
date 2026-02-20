@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockImage = vi.hoisted(() => vi.fn());
-
-vi.mock("next/image", () => ({
-  default: mockImage,
+vi.mock("@/lib/imageLoader", () => ({
+  getClientImageUrl: vi.fn(
+    (photoId: string, filename: string) => `/api/images/${photoId}/${filename}`,
+  ),
+  buildSrcSet: vi.fn(() => "/api/images/test/300w.webp 300w"),
 }));
 
 vi.mock("react", async (importOriginal) => {
@@ -77,14 +78,36 @@ describe("FadeImage", () => {
       );
     });
 
-    it("Image component has draggable={false} prop", () => {
+    it("img inside picture has draggable={false} prop", () => {
       const element = renderFadeImage(defaultProps);
       const children = getChildren(element);
 
-      const imageElement = children.find((c) => c.type === mockImage);
+      const pictureEl = children.find((c) => c.type === "picture");
+      expect(pictureEl).toBeDefined();
 
-      expect(imageElement).toBeDefined();
-      expect(imageElement!.props.draggable).toBe(false);
+      const pictureChildren = getChildren(pictureEl!);
+      const imgEl = pictureChildren.find((c) => c.type === "img");
+      expect(imgEl).toBeDefined();
+      expect(imgEl!.props.draggable).toBe(false);
+    });
+  });
+
+  describe("picture element", () => {
+    it("contains AVIF source and WebP img", () => {
+      const element = renderFadeImage(defaultProps);
+      const children = getChildren(element);
+
+      const pictureEl = children.find((c) => c.type === "picture");
+      expect(pictureEl).toBeDefined();
+
+      const pictureChildren = getChildren(pictureEl!);
+      const sourceEl = pictureChildren.find((c) => c.type === "source");
+      expect(sourceEl).toBeDefined();
+      expect(sourceEl!.props.type).toBe("image/avif");
+
+      const imgEl = pictureChildren.find((c) => c.type === "img");
+      expect(imgEl).toBeDefined();
+      expect(imgEl!.props.src as string).toContain(".webp");
     });
   });
 

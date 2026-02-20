@@ -196,12 +196,17 @@ export function AlbumDetailClient({
             {activePhoto ? (
               <div className="rounded-lg opacity-80 shadow-xl">
                 <div className="aspect-square overflow-hidden rounded-lg border border-border">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={getClientImageUrl(activePhoto.id, "300w.webp")}
-                    alt={activePhoto.title || activePhoto.originalFilename}
-                    className="h-full w-full object-cover"
-                  />
+                  <picture>
+                    <source
+                      type="image/avif"
+                      srcSet={getClientImageUrl(activePhoto.id, "300w.avif")}
+                    />
+                    <img
+                      src={getClientImageUrl(activePhoto.id, "300w.webp")}
+                      alt={activePhoto.title || activePhoto.originalFilename}
+                      className="h-full w-full object-cover"
+                    />
+                  </picture>
                 </div>
               </div>
             ) : null}
