@@ -1,12 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
-import { connection } from "next/server";
-import {
-  getCachedPublishedPhotoPool,
-  sampleWeighted,
-} from "@/lib/cachedPhotoPool";
 import { Header } from "@/presentation/components/Header";
-import { HomepageClient } from "@/presentation/components/HomepageClient";
 import { SocialFooter } from "@/presentation/components/SocialFooter";
+import { HomepagePhotos } from "./_components/HomepagePhotos";
+import { HomepagePhotosSkeleton } from "./_components/HomepagePhotosSkeleton";
 
 export const revalidate = 300;
 
@@ -25,34 +22,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function Home() {
-  await connection();
-
-  const pool = await getCachedPublishedPhotoPool();
-  const photos = sampleWeighted(pool, 10);
-
+export default function Home() {
   return (
     <>
       <Header />
       <main className="mx-auto max-w-6xl px-4 py-8">
-        {photos.length === 0 ? (
-          <div className="flex min-h-[60vh] items-center justify-center">
-            <p className="text-text-secondary">No photos available yet.</p>
-          </div>
-        ) : (
-          <HomepageClient
-            photos={photos.map((p) => ({
-              id: p.id,
-              title: p.title,
-              description: p.description,
-              originalFilename: p.originalFilename,
-              blurDataUrl: p.blurDataUrl,
-              exifData: p.exifData,
-              width: p.width,
-              height: p.height,
-            }))}
-          />
-        )}
+        <Suspense fallback={<HomepagePhotosSkeleton />}>
+          <HomepagePhotos />
+        </Suspense>
       </main>
       <SocialFooter />
     </>
