@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { getClientImageUrl, buildSrcSet } from "@/lib/imageLoader";
 import { THUMBNAIL_SIZES } from "@/lib/constants";
 
@@ -24,6 +24,15 @@ export function FadeImage({
   maxWidth,
 }: FadeImageProps) {
   const [loaded, setLoaded] = useState(false);
+
+  // Callback ref: React calls this when the <img> DOM node attaches.
+  // Catches images that loaded from browser cache before hydration
+  // could attach the onLoad handler (which would otherwise never fire).
+  const imgRef = useCallback((img: HTMLImageElement | null) => {
+    if (img && img.complete && img.naturalWidth > 0) {
+      setLoaded(true);
+    }
+  }, []);
 
   const fallbackWidth = maxWidth
     ? (THUMBNAIL_SIZES.filter((w) => w <= maxWidth).at(-1) ??
@@ -55,6 +64,7 @@ export function FadeImage({
           sizes={sizes}
         />
         <img
+          ref={imgRef}
           src={getClientImageUrl(photoId, `${fallbackWidth}w.webp`)}
           srcSet={buildSrcSet(photoId, "webp", maxWidth)}
           sizes={sizes}

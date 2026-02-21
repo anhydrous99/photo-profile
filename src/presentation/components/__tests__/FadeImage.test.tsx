@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const { mockSetLoaded, mockRefCallback } = vi.hoisted(() => ({
+  mockSetLoaded: vi.fn(),
+  mockRefCallback: { current: null as ((img: unknown) => void) | null },
+}));
+
 vi.mock("@/lib/imageLoader", () => ({
   getClientImageUrl: vi.fn(
     (photoId: string, filename: string) => `/api/images/${photoId}/${filename}`,
@@ -13,8 +18,12 @@ vi.mock("react", async (importOriginal) => {
     ...actual,
     useState: vi.fn((init: unknown) => [
       typeof init === "function" ? (init as () => unknown)() : init,
-      vi.fn(),
+      mockSetLoaded,
     ]),
+    useCallback: vi.fn((cb: (...args: unknown[]) => unknown) => {
+      mockRefCallback.current = cb as (img: unknown) => void;
+      return cb;
+    }),
     cache: vi.fn((fn: (...args: unknown[]) => unknown) => fn),
   };
 });
@@ -43,6 +52,7 @@ describe("FadeImage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRefCallback.current = null;
   });
 
   describe("image download protections", () => {
@@ -125,6 +135,32 @@ describe("FadeImage", () => {
       expect(blurImg!.props.onContextMenu).toBeUndefined();
       expect(blurImg!.props.onDragStart).toBeUndefined();
       expect(blurImg!.props.draggable).toBeUndefined();
+    });
+  });
+
+  describe("cached image hydration", () => {
+    it("calls setLoaded when image is already complete on mount", () => {
+      renderFadeImage(defaultProps);
+      mockRefCallback.current!({ complete: true, naturalWidth: 800 });
+      expect(mockSetLoaded).toHaveBeenCalledWith(true);
+    });
+
+    it("does not call setLoaded when called with null", () => {
+      renderFadeImage(defaultProps);
+      mockRefCallback.current!(null);
+      expect(mockSetLoaded).not.toHaveBeenCalled();
+    });
+
+    it("does not call setLoaded for broken images with naturalWidth 0", () => {
+      renderFadeImage(defaultProps);
+      mockRefCallback.current!({ complete: true, naturalWidth: 0 });
+      expect(mockSetLoaded).not.toHaveBeenCalled();
+    });
+
+    it("does not call setLoaded when image is still loading", () => {
+      renderFadeImage(defaultProps);
+      mockRefCallback.current!({ complete: false, naturalWidth: 0 });
+      expect(mockSetLoaded).not.toHaveBeenCalled();
     });
   });
 });
