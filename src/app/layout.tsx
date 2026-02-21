@@ -52,8 +52,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cloudfrontDomain = process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+
   return (
     <html lang="en">
+      <head>
+        {cloudfrontDomain && (
+          <>
+            <link rel="preconnect" href={`https://${cloudfrontDomain}`} />
+            <link rel="dns-prefetch" href={`https://${cloudfrontDomain}`} />
+          </>
+        )}
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
