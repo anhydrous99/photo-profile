@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { initializeApp } from "@/infrastructure/initialization";
-import { Analytics } from "@vercel/analytics";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Initialize app infrastructure on startup (skip during build — no DynamoDB available)
 if (process.env.NEXT_PHASE !== "phase-production-build") {
@@ -70,6 +71,7 @@ export default function RootLayout({
       >
         {children}
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
