@@ -13,6 +13,7 @@ export function revalidateAlbumPaths(albumId?: string): void {
   revalidatePath("/photo", "layout");
   if (albumId) {
     revalidatePath(`/albums/${albumId}`);
+    revalidatePath(`/albums/${albumId}/photo`, "page");
   }
   revalidateTag(PHOTO_POOL_CACHE_TAG, { expire: 300 });
 }

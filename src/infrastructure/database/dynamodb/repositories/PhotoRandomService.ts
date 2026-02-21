@@ -68,6 +68,42 @@ export function shuffleArray<T>(array: T[]): void {
 export class PhotoRandomService {
   constructor(private batchGetPhotos: (ids: string[]) => Promise<Photo[]>) {}
 
+  private async fetchAlbumPhotoMappings(
+    albumsWithRank: Array<{ id: string; rankIndex: number }>,
+  ): Promise<{
+    allPhotoIds: Set<string>;
+    photoToBestRank: Map<string, number>;
+  }> {
+    const results = await Promise.all(
+      albumsWithRank.map(({ id: albumId, rankIndex }) =>
+        docClient
+          .send(
+            new QueryCommand({
+              TableName: TABLE_NAMES.ALBUM_PHOTOS,
+              KeyConditionExpression: "albumId = :albumId",
+              ExpressionAttributeValues: { ":albumId": albumId },
+            }),
+          )
+          .then((res) => ({ rankIndex, items: res.Items ?? [] })),
+      ),
+    );
+
+    const allPhotoIds = new Set<string>();
+    const photoToBestRank = new Map<string, number>();
+    for (const { rankIndex, items } of results) {
+      for (const item of items) {
+        const photoId = item.photoId as string;
+        allPhotoIds.add(photoId);
+        const currentBest = photoToBestRank.get(photoId);
+        if (currentBest === undefined || rankIndex < currentBest) {
+          photoToBestRank.set(photoId, rankIndex);
+        }
+      }
+    }
+
+    return { allPhotoIds, photoToBestRank };
+  }
+
   async getPublishedPhotoPool(): Promise<PhotoPoolEntry[]> {
     const publishedAlbums = await docClient.send(
       new QueryCommand({
@@ -84,26 +120,8 @@ export class PhotoRandomService {
     }));
     if (albumsWithRank.length === 0) return [];
 
-    const allPhotoIds = new Set<string>();
-    const photoToBestRank = new Map<string, number>();
-    for (const { id: albumId, rankIndex } of albumsWithRank) {
-      const albumPhotos = await docClient.send(
-        new QueryCommand({
-          TableName: TABLE_NAMES.ALBUM_PHOTOS,
-          KeyConditionExpression: "albumId = :albumId",
-          ExpressionAttributeValues: { ":albumId": albumId },
-        }),
-      );
-
-      for (const item of albumPhotos.Items ?? []) {
-        const photoId = item.photoId as string;
-        allPhotoIds.add(photoId);
-        const currentBest = photoToBestRank.get(photoId);
-        if (currentBest === undefined || rankIndex < currentBest) {
-          photoToBestRank.set(photoId, rankIndex);
-        }
-      }
-    }
+    const { allPhotoIds, photoToBestRank } =
+      await this.fetchAlbumPhotoMappings(albumsWithRank);
 
     if (allPhotoIds.size === 0) return [];
 
@@ -146,26 +164,8 @@ export class PhotoRandomService {
     }));
     if (albumsWithRank.length === 0) return [];
 
-    const allPhotoIds = new Set<string>();
-    const photoToBestRank = new Map<string, number>();
-    for (const { id: albumId, rankIndex } of albumsWithRank) {
-      const albumPhotos = await docClient.send(
-        new QueryCommand({
-          TableName: TABLE_NAMES.ALBUM_PHOTOS,
-          KeyConditionExpression: "albumId = :albumId",
-          ExpressionAttributeValues: { ":albumId": albumId },
-        }),
-      );
-
-      for (const item of albumPhotos.Items ?? []) {
-        const photoId = item.photoId as string;
-        allPhotoIds.add(photoId);
-        const currentBest = photoToBestRank.get(photoId);
-        if (currentBest === undefined || rankIndex < currentBest) {
-          photoToBestRank.set(photoId, rankIndex);
-        }
-      }
-    }
+    const { allPhotoIds, photoToBestRank } =
+      await this.fetchAlbumPhotoMappings(albumsWithRank);
 
     if (allPhotoIds.size === 0) return [];
 

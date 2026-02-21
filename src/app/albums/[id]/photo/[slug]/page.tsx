@@ -1,12 +1,15 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { AlbumGalleryClient } from "@/presentation/components/AlbumGalleryClient";
 import {
   getAlbumRepository,
   getPhotoRepository,
 } from "@/infrastructure/database/dynamodb/repositories";
 import { getImageUrl } from "@/infrastructure/storage";
+
+export const revalidate = 300;
 
 interface PageProps {
   params: Promise<{ id: string; slug: string }>;
@@ -79,6 +82,7 @@ export async function generateMetadata({
 }
 
 export default async function AlbumPhotoPage({ params }: PageProps) {
+  await connection();
   const { id, slug } = await params;
 
   const album = await getAlbum(id);
