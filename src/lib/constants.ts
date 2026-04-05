@@ -158,14 +158,6 @@ export const ENQUEUE_TIMEOUT_MS = 10_000;
 // ============================================================================
 // ROUTE CONFIG
 // ============================================================================
-
-/**
- * Maximum duration for long-running route handlers (seconds).
- * Used by upload routes that may take time processing large files.
- */
-export const MAX_ROUTE_DURATION = 300;
-
-// ============================================================================
 // HTTP CACHING
 // ============================================================================
 

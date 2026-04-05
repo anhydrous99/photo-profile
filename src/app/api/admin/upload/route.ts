@@ -9,14 +9,13 @@ import {
   MAX_FILE_SIZE,
   MULTIPART_OVERHEAD,
   ENQUEUE_TIMEOUT_MS,
-  MAX_ROUTE_DURATION,
 } from "@/lib/constants";
 import { enqueueWithTimeout } from "@/lib/enqueueWithTimeout";
 import { serializeError } from "@/lib/serializeError";
 import { withAuth, errorResponse, successResponse } from "@/lib/apiHelpers";
 import { handleRoute } from "@/lib/routeHandler";
 
-export const maxDuration = MAX_ROUTE_DURATION;
+export const maxDuration = 300;
 
 const photoRepository = getPhotoRepository();
 
