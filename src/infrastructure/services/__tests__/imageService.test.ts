@@ -15,8 +15,8 @@ import {
   generateDerivatives,
   generateBlurPlaceholder,
   getImageMetadata,
-  THUMBNAIL_SIZES,
 } from "@/infrastructure/services/imageService";
+import { THUMBNAIL_SIZES } from "@/lib/constants";
 
 const fixturesDir = path.join(process.cwd(), "src/__tests__/fixtures");
 

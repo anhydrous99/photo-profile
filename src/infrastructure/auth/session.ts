@@ -1,7 +1,9 @@
 import "server-only";
 import { SignJWT, jwtVerify } from "jose";
+
 import { cookies } from "next/headers";
 import { env } from "@/infrastructure/config/env";
+import { SESSION_EXPIRY_MS } from "@/lib/constants";
 
 /**
  * Session payload stored in JWT
@@ -54,7 +56,7 @@ export async function decrypt(session: string): Promise<SessionPayload | null> {
 export async function createSession(): Promise<void> {
   // Generate unique session ID to prevent session fixation
   const sessionId = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
 
   const session = await encrypt({ isAdmin: true, sessionId, expiresAt });
   const cookieStore = await cookies();

@@ -1,10 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth";
+import { NextRequest } from "next/server";
 import { getAlbumRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
-import { logger } from "@/infrastructure/logging/logger";
-import { serializeError } from "@/lib/serializeError";
 import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
+import { withAuth, validateBody, successResponse } from "@/lib/apiHelpers";
+import { handleRoute } from "@/lib/routeHandler";
 
 const albumRepository = getAlbumRepository();
 
@@ -22,33 +21,17 @@ const reorderSchema = z.object({
  * Returns: { success: true }
  */
 export async function POST(request: NextRequest) {
-  try {
-    const authResult = await requireAuth();
-    if (authResult instanceof NextResponse) return authResult;
+  return handleRoute("POST /api/admin/albums/reorder", async () => {
+    return withAuth(async () => {
+      const body = await request.json();
+      const result = validateBody(reorderSchema, body);
+      if (result.error) return result.error;
 
-    const body = await request.json();
-    const result = reorderSchema.safeParse(body);
+      await albumRepository.updateSortOrders(result.data.albumIds);
 
-    if (!result.success) {
-      const flat = z.flattenError(result.error);
-      return NextResponse.json(
-        { error: "Validation failed", details: flat.fieldErrors },
-        { status: 400 },
-      );
-    }
+      revalidateAlbumPaths();
 
-    await albumRepository.updateSortOrders(result.data.albumIds);
-
-    revalidateAlbumPaths();
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    logger.error("POST /api/admin/albums/reorder failed", {
-      error: serializeError(error),
+      return successResponse({ success: true });
     });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
 }

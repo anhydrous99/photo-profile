@@ -1,17 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth";
+import { NextRequest } from "next/server";
 import { deletePhotoFiles } from "@/infrastructure/storage";
-import {
-  getAlbumRepository,
-  getPhotoRepository,
-} from "@/infrastructure/database/dynamodb/repositories";
+import { getAlbumRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
-import { logger } from "@/infrastructure/logging/logger";
-import { isValidUUID } from "@/infrastructure/validation";
 import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
-import { serializeError } from "@/lib/serializeError";
+import {
+  withAuth,
+  validateBody,
+  validateParamId,
+  errorResponse,
+  successResponse,
+  noContentResponse,
+} from "@/lib/apiHelpers";
+import { handleRoute } from "@/lib/routeHandler";
 
-const photoRepository = getPhotoRepository();
 const albumRepository = getAlbumRepository();
 
 const updateAlbumSchema = z.object({
@@ -33,74 +34,41 @@ interface RouteContext {
 /**
  * PATCH /api/admin/albums/[id]
  *
- * Updates an album's title, description, tags, or coverPhotoId.
+ * Updates an album's title, description, tags, coverPhotoId, or isPublished.
  *
- * Request body: { title?: string, description?: string | null, tags?: string | null, coverPhotoId?: string | null }
+ * Request body: partial album fields
  * Returns: Updated album object
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  try {
-    const authResult = await requireAuth();
-    if (authResult instanceof NextResponse) return authResult;
+  return handleRoute("PATCH /api/admin/albums/[id]", async () =>
+    withAuth(async () => {
+      const { id } = await context.params;
 
-    const { id } = await context.params;
+      const idError = validateParamId(id, "album");
+      if (idError) return idError;
 
-    // Validate album ID format
-    if (!isValidUUID(id)) {
-      return NextResponse.json(
-        { error: "Invalid album ID format" },
-        { status: 400 },
-      );
-    }
+      const album = await albumRepository.findById(id);
+      if (!album) return errorResponse("Album not found", 404);
 
-    // Fetch existing album
-    const album = await albumRepository.findById(id);
-    if (!album) {
-      return NextResponse.json({ error: "Album not found" }, { status: 404 });
-    }
+      const body = await request.json();
+      const result = validateBody(updateAlbumSchema, body);
+      if (result.error) return result.error;
 
-    const body = await request.json();
-    const result = updateAlbumSchema.safeParse(body);
+      if (result.data.title !== undefined) album.title = result.data.title;
+      if (result.data.description !== undefined)
+        album.description = result.data.description;
+      if (result.data.tags !== undefined) album.tags = result.data.tags;
+      if (result.data.coverPhotoId !== undefined)
+        album.coverPhotoId = result.data.coverPhotoId;
+      if (result.data.isPublished !== undefined)
+        album.isPublished = result.data.isPublished;
 
-    if (!result.success) {
-      const flat = z.flattenError(result.error);
-      return NextResponse.json(
-        { error: "Validation failed", details: flat.fieldErrors },
-        { status: 400 },
-      );
-    }
+      await albumRepository.save(album);
+      revalidateAlbumPaths(id);
 
-    // Update only provided fields
-    if (result.data.title !== undefined) {
-      album.title = result.data.title;
-    }
-    if (result.data.description !== undefined) {
-      album.description = result.data.description;
-    }
-    if (result.data.tags !== undefined) {
-      album.tags = result.data.tags;
-    }
-    if (result.data.coverPhotoId !== undefined) {
-      album.coverPhotoId = result.data.coverPhotoId;
-    }
-    if (result.data.isPublished !== undefined) {
-      album.isPublished = result.data.isPublished;
-    }
-
-    await albumRepository.save(album);
-
-    revalidateAlbumPaths(id);
-
-    return NextResponse.json(album);
-  } catch (error) {
-    logger.error("PATCH /api/admin/albums/[id] failed", {
-      error: serializeError(error),
-    });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+      return successResponse(album);
+    }),
+  );
 }
 
 /**
@@ -115,59 +83,37 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
  * Returns: 204 No Content on success
  */
 export async function DELETE(request: NextRequest, context: RouteContext) {
-  try {
-    const authResult = await requireAuth();
-    if (authResult instanceof NextResponse) return authResult;
+  return handleRoute("DELETE /api/admin/albums/[id]", async () =>
+    withAuth(async () => {
+      const { id: albumId } = await context.params;
 
-    const { id: albumId } = await context.params;
+      const idError = validateParamId(albumId, "album");
+      if (idError) return idError;
 
-    // Validate album ID format
-    if (!isValidUUID(albumId)) {
-      return NextResponse.json(
-        { error: "Invalid album ID format" },
-        { status: 400 },
-      );
-    }
+      const album = await albumRepository.findById(albumId);
+      if (!album) return errorResponse("Album not found", 404);
 
-    // Verify album exists
-    const album = await albumRepository.findById(albumId);
-    if (!album) {
-      return NextResponse.json({ error: "Album not found" }, { status: 404 });
-    }
-
-    // Parse request body for delete mode
-    let body: { deletePhotos?: boolean };
-    try {
-      body = await request.json();
-    } catch {
-      body = {};
-    }
-    const deletePhotos = body.deletePhotos === true;
-
-    // Delete album (and get photo IDs if deleting photos)
-    const { deletedPhotoIds } = await albumRepository.deleteWithPhotos(
-      albumId,
-      deletePhotos,
-    );
-
-    // Delete photo files and records if requested
-    if (deletePhotos) {
-      for (const photoId of deletedPhotoIds) {
-        await deletePhotoFiles(photoId);
-        await photoRepository.delete(photoId);
+      let body: { deletePhotos?: boolean };
+      try {
+        body = await request.json();
+      } catch {
+        body = {};
       }
-    }
+      const deletePhotos = body.deletePhotos === true;
 
-    revalidateAlbumPaths();
+      if (deletePhotos) {
+        const { deletedPhotoIds } =
+          await albumRepository.deleteAlbumAndPhotos(albumId);
+        for (const photoId of deletedPhotoIds) {
+          await deletePhotoFiles(photoId);
+        }
+      } else {
+        await albumRepository.deleteAlbumOnly(albumId);
+      }
 
-    return new NextResponse(null, { status: 204 });
-  } catch (error) {
-    logger.error("DELETE /api/admin/albums/[id] failed", {
-      error: serializeError(error),
-    });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+      revalidateAlbumPaths();
+
+      return noContentResponse();
+    }),
+  );
 }

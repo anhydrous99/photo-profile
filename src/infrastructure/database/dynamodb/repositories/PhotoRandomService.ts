@@ -104,7 +104,11 @@ export class PhotoRandomService {
     return { allPhotoIds, photoToBestRank };
   }
 
-  async getPublishedPhotoPool(): Promise<PhotoPoolEntry[]> {
+  private async fetchReadyPhotosFromPublishedAlbums(): Promise<{
+    readyPhotos: Photo[];
+    photoToBestRank: Map<string, number>;
+    albumsWithRank: Array<{ id: string; rankIndex: number }>;
+  } | null> {
     const publishedAlbums = await docClient.send(
       new QueryCommand({
         TableName: TABLE_NAMES.ALBUMS,
@@ -118,15 +122,24 @@ export class PhotoRandomService {
       id: item.id as string,
       rankIndex: index,
     }));
-    if (albumsWithRank.length === 0) return [];
+    if (albumsWithRank.length === 0) return null;
 
     const { allPhotoIds, photoToBestRank } =
       await this.fetchAlbumPhotoMappings(albumsWithRank);
 
-    if (allPhotoIds.size === 0) return [];
+    if (allPhotoIds.size === 0) return null;
 
     const photos = await this.batchGetPhotos([...allPhotoIds]);
     const readyPhotos = photos.filter((p) => p.status === "ready");
+
+    return { readyPhotos, photoToBestRank, albumsWithRank };
+  }
+
+  async getPublishedPhotoPool(): Promise<PhotoPoolEntry[]> {
+    const result = await this.fetchReadyPhotosFromPublishedAlbums();
+    if (!result) return [];
+
+    const { readyPhotos, photoToBestRank, albumsWithRank } = result;
 
     const maxRankIndex = Math.max(albumsWithRank.length - 1, 1);
     return readyPhotos.map((photo) => {
@@ -149,28 +162,10 @@ export class PhotoRandomService {
     limit: number,
     options?: { weighted?: boolean },
   ): Promise<Photo[]> {
-    const publishedAlbums = await docClient.send(
-      new QueryCommand({
-        TableName: TABLE_NAMES.ALBUMS,
-        IndexName: "isPublished-sortOrder-index",
-        KeyConditionExpression: "isPublished = :published",
-        ExpressionAttributeValues: { ":published": 1 },
-      }),
-    );
+    const result = await this.fetchReadyPhotosFromPublishedAlbums();
+    if (!result) return [];
 
-    const albumsWithRank = (publishedAlbums.Items ?? []).map((item, index) => ({
-      id: item.id as string,
-      rankIndex: index,
-    }));
-    if (albumsWithRank.length === 0) return [];
-
-    const { allPhotoIds, photoToBestRank } =
-      await this.fetchAlbumPhotoMappings(albumsWithRank);
-
-    if (allPhotoIds.size === 0) return [];
-
-    const photos = await this.batchGetPhotos([...allPhotoIds]);
-    const readyPhotos = photos.filter((p) => p.status === "ready");
+    const { readyPhotos, photoToBestRank, albumsWithRank } = result;
 
     if (options?.weighted && albumsWithRank.length > 1) {
       const maxRankIndex = albumsWithRank.length - 1;

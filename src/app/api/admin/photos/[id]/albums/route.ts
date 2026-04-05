@@ -1,11 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth";
+import { NextRequest } from "next/server";
 import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
-import { logger } from "@/infrastructure/logging/logger";
-import { isValidUUID } from "@/infrastructure/validation";
-import { serializeError } from "@/lib/serializeError";
 import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
+import {
+  withAuth,
+  validateBody,
+  validateParamId,
+  errorResponse,
+  successResponse,
+  noContentResponse,
+} from "@/lib/apiHelpers";
+import { handleRoute } from "@/lib/routeHandler";
 
 const photoRepository = getPhotoRepository();
 
@@ -22,36 +27,19 @@ interface RouteParams {
  *
  * Returns list of album IDs the photo belongs to.
  */
-export async function GET(
-  _request: NextRequest,
-  { params }: RouteParams,
-): Promise<NextResponse> {
-  try {
-    const authResult = await requireAuth();
-    if (authResult instanceof NextResponse) return authResult;
+export async function GET(_request: NextRequest, { params }: RouteParams) {
+  return handleRoute("GET /api/admin/photos/[id]/albums", async () => {
+    return withAuth(async () => {
+      const { id: photoId } = await params;
 
-    const { id: photoId } = await params;
+      const idError = validateParamId(photoId, "photo");
+      if (idError) return idError;
 
-    // Validate photo ID format
-    if (!isValidUUID(photoId)) {
-      return NextResponse.json(
-        { error: "Invalid photo ID format" },
-        { status: 400 },
-      );
-    }
+      const albumIds = await photoRepository.getAlbumIds(photoId);
 
-    const albumIds = await photoRepository.getAlbumIds(photoId);
-
-    return NextResponse.json({ albumIds });
-  } catch (error) {
-    logger.error("GET /api/admin/photos/[id]/albums failed", {
-      error: serializeError(error),
+      return successResponse({ albumIds });
     });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
 }
 
 /**
@@ -60,58 +48,30 @@ export async function GET(
  * Adds photo to an album.
  * Body: { albumId: string }
  */
-export async function POST(
-  request: NextRequest,
-  { params }: RouteParams,
-): Promise<NextResponse> {
-  try {
-    const authResult = await requireAuth();
-    if (authResult instanceof NextResponse) return authResult;
+export async function POST(request: NextRequest, { params }: RouteParams) {
+  return handleRoute("POST /api/admin/photos/[id]/albums", async () => {
+    return withAuth(async () => {
+      const { id: photoId } = await params;
 
-    const { id: photoId } = await params;
+      const idError = validateParamId(photoId, "photo");
+      if (idError) return idError;
 
-    // Validate photo ID format
-    if (!isValidUUID(photoId)) {
-      return NextResponse.json(
-        { error: "Invalid photo ID format" },
-        { status: 400 },
-      );
-    }
+      const photo = await photoRepository.findById(photoId);
+      if (!photo) {
+        return errorResponse("Photo not found", 404);
+      }
 
-    // Verify photo exists
-    const photo = await photoRepository.findById(photoId);
-    if (!photo) {
-      return NextResponse.json({ error: "Photo not found" }, { status: 404 });
-    }
+      const body = await request.json();
+      const result = validateBody(albumIdSchema, body);
+      if (result.error) return result.error;
 
-    // Parse and validate request body
-    const body = await request.json();
-    const result = albumIdSchema.safeParse(body);
+      await photoRepository.addToAlbum(photoId, result.data.albumId);
 
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          error: "Validation failed",
-          details: z.flattenError(result.error).fieldErrors,
-        },
-        { status: 400 },
-      );
-    }
+      revalidateAlbumPaths(result.data.albumId);
 
-    await photoRepository.addToAlbum(photoId, result.data.albumId);
-
-    revalidateAlbumPaths(result.data.albumId);
-
-    return NextResponse.json({ success: true }, { status: 201 });
-  } catch (error) {
-    logger.error("POST /api/admin/photos/[id]/albums failed", {
-      error: serializeError(error),
+      return successResponse({ success: true }, 201);
     });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
 }
 
 /**
@@ -120,50 +80,23 @@ export async function POST(
  * Removes photo from an album.
  * Body: { albumId: string }
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: RouteParams,
-): Promise<NextResponse> {
-  try {
-    const authResult = await requireAuth();
-    if (authResult instanceof NextResponse) return authResult;
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  return handleRoute("DELETE /api/admin/photos/[id]/albums", async () => {
+    return withAuth(async () => {
+      const { id: photoId } = await params;
 
-    const { id: photoId } = await params;
+      const idError = validateParamId(photoId, "photo");
+      if (idError) return idError;
 
-    // Validate photo ID format
-    if (!isValidUUID(photoId)) {
-      return NextResponse.json(
-        { error: "Invalid photo ID format" },
-        { status: 400 },
-      );
-    }
+      const body = await request.json();
+      const result = validateBody(albumIdSchema, body);
+      if (result.error) return result.error;
 
-    // Parse and validate request body
-    const body = await request.json();
-    const result = albumIdSchema.safeParse(body);
+      await photoRepository.removeFromAlbum(photoId, result.data.albumId);
 
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          error: "Validation failed",
-          details: z.flattenError(result.error).fieldErrors,
-        },
-        { status: 400 },
-      );
-    }
+      revalidateAlbumPaths(result.data.albumId);
 
-    await photoRepository.removeFromAlbum(photoId, result.data.albumId);
-
-    revalidateAlbumPaths(result.data.albumId);
-
-    return new NextResponse(null, { status: 204 });
-  } catch (error) {
-    logger.error("DELETE /api/admin/photos/[id]/albums failed", {
-      error: serializeError(error),
+      return noContentResponse();
     });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
 }

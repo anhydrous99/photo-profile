@@ -75,10 +75,6 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
     limit: number,
     cursor?: string,
   ): Promise<PaginatedResult<Photo>> {
-    const exclusiveStartKey = cursor
-      ? JSON.parse(Buffer.from(cursor, "base64").toString("utf-8"))
-      : undefined;
-
     const result = await docClient.send(
       new QueryCommand({
         TableName: TABLE_NAMES.PHOTOS,
@@ -88,31 +84,15 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
         ExpressionAttributeValues: { ":type": "PHOTO" },
         ScanIndexForward: false,
         Limit: limit + 1,
-        ExclusiveStartKey: exclusiveStartKey,
+        ExclusiveStartKey: this.decodeCursor(cursor),
       }),
     );
 
-    const items = result.Items ?? [];
-    const hasMore = items.length > limit;
-    const pageItems = hasMore ? items.slice(0, limit) : items;
-
-    let nextCursor: string | null = null;
-    if (hasMore && pageItems.length > 0) {
-      const lastItem = pageItems[pageItems.length - 1];
-      const lastEvaluatedKey = {
-        id: lastItem.id,
-        _type: "PHOTO",
-        createdAt: lastItem.createdAt,
-      };
-      nextCursor = Buffer.from(JSON.stringify(lastEvaluatedKey)).toString(
-        "base64",
-      );
-    }
-
-    return {
-      data: pageItems.map((item) => this.toDomain(item)),
-      nextCursor,
-    };
+    return this.buildPaginatedResult(result.Items ?? [], limit, (lastItem) => ({
+      id: lastItem.id,
+      _type: "PHOTO",
+      createdAt: lastItem.createdAt,
+    }));
   }
 
   private async findPaginatedByStatus(
@@ -120,10 +100,6 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
     cursor: string | undefined,
     status: Photo["status"],
   ): Promise<PaginatedResult<Photo>> {
-    const exclusiveStartKey = cursor
-      ? JSON.parse(Buffer.from(cursor, "base64").toString("utf-8"))
-      : undefined;
-
     const result = await docClient.send(
       new QueryCommand({
         TableName: TABLE_NAMES.PHOTOS,
@@ -133,31 +109,15 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
         ExpressionAttributeValues: { ":status": status },
         ScanIndexForward: false,
         Limit: limit + 1,
-        ExclusiveStartKey: exclusiveStartKey,
+        ExclusiveStartKey: this.decodeCursor(cursor),
       }),
     );
 
-    const items = result.Items ?? [];
-    const hasMore = items.length > limit;
-    const pageItems = hasMore ? items.slice(0, limit) : items;
-
-    let nextCursor: string | null = null;
-    if (hasMore && pageItems.length > 0) {
-      const lastItem = pageItems[pageItems.length - 1];
-      const lastEvaluatedKey = {
-        id: lastItem.id,
-        status: lastItem.status,
-        createdAt: lastItem.createdAt,
-      };
-      nextCursor = Buffer.from(JSON.stringify(lastEvaluatedKey)).toString(
-        "base64",
-      );
-    }
-
-    return {
-      data: pageItems.map((item) => this.toDomain(item)),
-      nextCursor,
-    };
+    return this.buildPaginatedResult(result.Items ?? [], limit, (lastItem) => ({
+      id: lastItem.id,
+      status: lastItem.status,
+      createdAt: lastItem.createdAt,
+    }));
   }
 
   private async findPaginatedWithAlbumFilter(
@@ -167,12 +127,9 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
 
     const assignedPhotoIds = await this.getAllAssignedPhotoIds();
 
-    const exclusiveStartKey = cursor
-      ? JSON.parse(Buffer.from(cursor, "base64").toString("utf-8"))
-      : undefined;
+    let lastKey = this.decodeCursor(cursor);
 
     const collected: Record<string, unknown>[] = [];
-    let lastKey = exclusiveStartKey;
     let exhausted = false;
 
     while (collected.length < limit + 1 && !exhausted) {
@@ -233,9 +190,7 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
       } else {
         lastEvaluatedKey._type = "PHOTO";
       }
-      nextCursor = Buffer.from(JSON.stringify(lastEvaluatedKey)).toString(
-        "base64",
-      );
+      nextCursor = this.encodeCursor(lastEvaluatedKey);
     }
 
     return {
@@ -621,6 +576,37 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
         error: serializeError(error),
       });
     }
+  }
+
+  private decodeCursor(
+    cursor: string | undefined,
+  ): Record<string, unknown> | undefined {
+    if (!cursor) return undefined;
+    return JSON.parse(Buffer.from(cursor, "base64").toString("utf-8"));
+  }
+
+  private encodeCursor(key: Record<string, unknown>): string {
+    return Buffer.from(JSON.stringify(key)).toString("base64");
+  }
+
+  private buildPaginatedResult(
+    items: Record<string, unknown>[],
+    limit: number,
+    cursorKeys: (lastItem: Record<string, unknown>) => Record<string, unknown>,
+  ): PaginatedResult<Photo> {
+    const hasMore = items.length > limit;
+    const pageItems = hasMore ? items.slice(0, limit) : items;
+
+    let nextCursor: string | null = null;
+    if (hasMore && pageItems.length > 0) {
+      const lastItem = pageItems[pageItems.length - 1];
+      nextCursor = this.encodeCursor(cursorKeys(lastItem));
+    }
+
+    return {
+      data: pageItems.map((item) => this.toDomain(item)),
+      nextCursor,
+    };
   }
 
   private toDomain(item: Record<string, unknown>): Photo {

@@ -145,6 +145,44 @@ export const S3_GET_TIMEOUT_MS = 30_000;
 export const S3_PRESIGN_EXPIRY_SECONDS = 15 * 60;
 
 // ============================================================================
+// JOB QUEUE
+// ============================================================================
+
+/**
+ * Timeout for enqueue operations (SQS/Redis) in milliseconds.
+ * Prevents hanging when queue services are unavailable.
+ * Used in upload, confirm, and reprocess routes.
+ */
+export const ENQUEUE_TIMEOUT_MS = 10_000;
+
+// ============================================================================
+// ROUTE CONFIG
+// ============================================================================
+
+/**
+ * Maximum duration for long-running route handlers (seconds).
+ * Used by upload routes that may take time processing large files.
+ */
+export const MAX_ROUTE_DURATION = 300;
+
+// ============================================================================
+// HTTP CACHING
+// ============================================================================
+
+/**
+ * Cache-Control header value for immutable processed image derivatives.
+ * Derivatives never change (new upload = new photoId), so 1 year is safe.
+ * Used in GET /api/images/[photoId]/[filename].
+ */
+export const CACHE_CONTROL_IMMUTABLE = "public, max-age=31536000, immutable";
+
+/**
+ * Number of hex characters to use from MD5 hash for ETag.
+ * 16 chars (64 bits) is sufficient for collision resistance.
+ */
+export const ETAG_HASH_LENGTH = 16;
+
+// ============================================================================
 // CACHING
 // ============================================================================
 

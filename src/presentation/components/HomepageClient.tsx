@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
-import type { ExifData } from "@/domain/entities/Photo";
+import type { PhotoData } from "@/domain/entities/Photo";
 import { FadeImage } from "./FadeImage";
 import { getSlug } from "@/lib/getSlug";
 
@@ -11,17 +11,6 @@ const PhotoLightbox = dynamic(
   () => import("./PhotoLightbox").then((mod) => mod.PhotoLightbox),
   { ssr: false },
 );
-
-export interface PhotoData {
-  id: string;
-  title: string | null;
-  description: string | null;
-  originalFilename: string;
-  blurDataUrl: string | null;
-  exifData?: ExifData | null;
-  width: number | null;
-  height: number | null;
-}
 
 interface HomepageClientProps {
   photos: PhotoData[];

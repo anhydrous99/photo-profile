@@ -112,20 +112,24 @@ export class DynamoDBAlbumRepository implements AlbumRepository {
     }
   }
 
-  async deleteWithPhotos(
+  async deleteAlbumOnly(albumId: string): Promise<void> {
+    await this.deleteAlbumPhotosEntries(albumId);
+    await docClient.send(
+      new DeleteCommand({
+        TableName: TABLE_NAMES.ALBUMS,
+        Key: { id: albumId },
+      }),
+    );
+  }
+
+  async deleteAlbumAndPhotos(
     albumId: string,
-    deletePhotos: boolean,
   ): Promise<{ deletedPhotoIds: string[] }> {
     const photoIds = await this.getAlbumPhotoIds(albumId);
-    const deletedPhotoIds: string[] = [];
+    const deletedPhotoIds: string[] = [...photoIds];
 
-    if (deletePhotos && photoIds.length > 0) {
-      deletedPhotoIds.push(...photoIds);
-      for (const photoId of photoIds) {
-        await this.photoRepo.delete(photoId);
-      }
-    } else if (photoIds.length > 0) {
-      await this.deleteAlbumPhotosEntries(albumId);
+    for (const photoId of photoIds) {
+      await this.photoRepo.delete(photoId);
     }
 
     await docClient.send(

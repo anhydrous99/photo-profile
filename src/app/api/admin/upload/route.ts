@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth";
+import { NextRequest } from "next/server";
 import { saveOriginalFile } from "@/infrastructure/storage";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
 import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
@@ -9,11 +8,15 @@ import {
   UPLOAD_MIME_TYPES,
   MAX_FILE_SIZE,
   MULTIPART_OVERHEAD,
+  ENQUEUE_TIMEOUT_MS,
+  MAX_ROUTE_DURATION,
 } from "@/lib/constants";
 import { enqueueWithTimeout } from "@/lib/enqueueWithTimeout";
 import { serializeError } from "@/lib/serializeError";
+import { withAuth, errorResponse, successResponse } from "@/lib/apiHelpers";
+import { handleRoute } from "@/lib/routeHandler";
 
-export const maxDuration = 300;
+export const maxDuration = MAX_ROUTE_DURATION;
 
 const photoRepository = getPhotoRepository();
 
@@ -31,96 +34,77 @@ const photoRepository = getPhotoRepository();
  * Returns: { photoId, status: "processing" }
  */
 export async function POST(request: NextRequest) {
-  try {
-    const authResult = await requireAuth();
-    if (authResult instanceof NextResponse) return authResult;
-
-    // 2. Early reject oversized uploads before reading into memory
-    const contentLength = parseInt(
-      request.headers.get("content-length") || "0",
-      10,
-    );
-    if (contentLength > MAX_FILE_SIZE + MULTIPART_OVERHEAD) {
-      return NextResponse.json(
-        { error: "File exceeds 100MB limit" },
-        { status: 413 },
+  return handleRoute("POST /api/admin/upload", async () => {
+    return withAuth(async () => {
+      // Early reject oversized uploads before reading into memory
+      const contentLength = parseInt(
+        request.headers.get("content-length") || "0",
+        10,
       );
-    }
+      if (contentLength > MAX_FILE_SIZE + MULTIPART_OVERHEAD) {
+        return errorResponse("File exceeds 100MB limit", 413);
+      }
 
-    // 3. Parse form data
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
+      // Parse form data
+      const formData = await request.formData();
+      const file = formData.get("file") as File | null;
 
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    }
+      if (!file) {
+        return errorResponse("No file provided", 400);
+      }
 
-    // Validate file size after parsing
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: "File exceeds 100MB limit" },
-        { status: 413 },
-      );
-    }
+      if (file.size > MAX_FILE_SIZE) {
+        return errorResponse("File exceeds 100MB limit", 413);
+      }
 
-    // Validate file type
-    if (
-      !UPLOAD_MIME_TYPES.includes(
-        file.type as (typeof UPLOAD_MIME_TYPES)[number],
-      )
-    ) {
-      return NextResponse.json(
-        {
-          error: `Invalid file type: ${file.type}. Allowed: JPEG, PNG, WebP, HEIC`,
-        },
-        { status: 400 },
-      );
-    }
+      if (
+        !UPLOAD_MIME_TYPES.includes(
+          file.type as (typeof UPLOAD_MIME_TYPES)[number],
+        )
+      ) {
+        return errorResponse(
+          `Invalid file type: ${file.type}. Allowed: JPEG, PNG, WebP, HEIC`,
+          400,
+        );
+      }
 
-    // 4. Generate photo ID
-    const photoId = crypto.randomUUID();
+      // Generate photo ID and save file
+      const photoId = crypto.randomUUID();
+      const filePath = await saveOriginalFile(photoId, file);
 
-    // 5. Save file to disk
-    const filePath = await saveOriginalFile(photoId, file);
+      // Create photo record
+      const now = new Date();
+      const photo: Photo = {
+        id: photoId,
+        title: null,
+        description: null,
+        originalFilename: file.name,
+        blurDataUrl: null,
+        exifData: null,
+        width: null,
+        height: null,
+        status: "processing",
+        createdAt: now,
+        updatedAt: now,
+      };
+      await photoRepository.save(photo);
 
-    // 6. Create photo record
-    const now = new Date();
-    const photo: Photo = {
-      id: photoId,
-      title: null,
-      description: null,
-      originalFilename: file.name,
-      blurDataUrl: null,
-      exifData: null,
-      width: null,
-      height: null,
-      status: "processing",
-      createdAt: now,
-      updatedAt: now,
-    };
-    await photoRepository.save(photo);
+      // Enqueue processing job (gracefully handle Redis unavailable)
+      try {
+        await enqueueWithTimeout(
+          enqueueImageProcessing(photoId, filePath),
+          ENQUEUE_TIMEOUT_MS,
+        );
+      } catch (enqueueError) {
+        logger.error(`Failed to enqueue processing for photo ${photoId}`, {
+          component: "upload",
+          photoId,
+          error: serializeError(enqueueError),
+        });
+        // Photo saved with "processing" status - will need manual requeue
+      }
 
-    // 7. Enqueue processing job (gracefully handle Redis unavailable)
-    try {
-      await enqueueWithTimeout(
-        enqueueImageProcessing(photoId, filePath), // filePath is S3 key or filesystem path
-        10000,
-      );
-    } catch {
-      // Photo saved with "processing" status - will need manual requeue when Redis is available
-    }
-
-    return NextResponse.json(
-      { photoId, status: "processing" },
-      { status: 201 },
-    );
-  } catch (error) {
-    logger.error("POST /api/admin/upload failed", {
-      error: serializeError(error),
+      return successResponse({ photoId, status: "processing" }, 201);
     });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
 }

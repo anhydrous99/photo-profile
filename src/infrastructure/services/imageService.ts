@@ -1,18 +1,13 @@
 import sharp from "sharp";
 import fs from "fs/promises";
 import path from "path";
-import { THUMBNAIL_SIZES } from "@/lib/constants";
-
-// Re-export for backward compatibility
-export { THUMBNAIL_SIZES };
-
-/**
- * Quality settings for output formats
- * - WebP 82 balances quality and file size for web delivery
- * - AVIF 80 (more efficient than JPEG, better compression)
- */
-const WEBP_QUALITY = 82;
-const AVIF_QUALITY = 80;
+import {
+  THUMBNAIL_SIZES,
+  WEBP_QUALITY,
+  AVIF_QUALITY,
+  WEBP_EFFORT,
+  AVIF_EFFORT,
+} from "@/lib/constants";
 
 /**
  * Get metadata from an image file
@@ -81,7 +76,7 @@ export async function generateDerivatives(
       .clone()
       .webp({
         quality: WEBP_QUALITY,
-        effort: 4, // Balance speed/compression (0-6, 4 is good middle ground)
+        effort: WEBP_EFFORT,
       })
       .toFile(webpPath);
     generatedPaths.push(webpPath);
@@ -92,7 +87,7 @@ export async function generateDerivatives(
       .clone()
       .avif({
         quality: AVIF_QUALITY,
-        effort: 4, // Balance speed/compression (0-9, 4 is good middle ground)
+        effort: AVIF_EFFORT,
       })
       .toFile(avifPath);
     generatedPaths.push(avifPath);

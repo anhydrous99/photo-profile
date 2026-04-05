@@ -8,20 +8,10 @@ import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
 import "yet-another-react-lightbox/styles.css";
 import "yet-another-react-lightbox/plugins/captions.css";
 import type { RenderSlideProps } from "yet-another-react-lightbox";
-import type { ExifData } from "@/domain/entities/Photo";
+import type { PhotoData } from "@/domain/entities/Photo";
 import { ExifPanel } from "./ExifPanel";
 import { getClientImageUrl } from "@/lib/imageLoader";
 import { THUMBNAIL_SIZES } from "@/lib/constants";
-
-export interface PhotoData {
-  id: string;
-  title: string | null;
-  description: string | null;
-  originalFilename: string;
-  exifData?: ExifData | null;
-  width: number | null;
-  height: number | null;
-}
 
 interface PhotoLightboxProps {
   photos: PhotoData[];

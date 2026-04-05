@@ -8,8 +8,6 @@ export interface AlbumRepository {
   delete(id: string): Promise<void>;
   getPhotoCounts(): Promise<Map<string, number>>;
   updateSortOrders(albumIds: string[]): Promise<void>;
-  deleteWithPhotos(
-    albumId: string,
-    deletePhotos: boolean,
-  ): Promise<{ deletedPhotoIds: string[] }>;
+  deleteAlbumOnly(albumId: string): Promise<void>;
+  deleteAlbumAndPhotos(albumId: string): Promise<{ deletedPhotoIds: string[] }>;
 }

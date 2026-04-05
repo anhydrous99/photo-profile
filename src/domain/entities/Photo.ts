@@ -25,3 +25,18 @@ export interface Photo {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * Serializable photo data for client components.
+ * A subset of Photo without Date objects (which don't serialize to JSON).
+ */
+export interface PhotoData {
+  id: string;
+  title: string | null;
+  description: string | null;
+  originalFilename: string;
+  blurDataUrl: string | null;
+  exifData?: ExifData | null;
+  width: number | null;
+  height: number | null;
+}

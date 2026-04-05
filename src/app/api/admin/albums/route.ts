@@ -1,10 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth";
+import { NextRequest } from "next/server";
 import { getAlbumRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
-import { logger } from "@/infrastructure/logging/logger";
 import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
-import { serializeError } from "@/lib/serializeError";
+import { withAuth, validateBody, successResponse } from "@/lib/apiHelpers";
+import { handleRoute } from "@/lib/routeHandler";
 
 const albumRepository = getAlbumRepository();
 
@@ -20,31 +19,21 @@ const createAlbumSchema = z.object({
  * Returns all albums sorted by sortOrder, including photo counts.
  */
 export async function GET() {
-  try {
-    const authResult = await requireAuth();
-    if (authResult instanceof NextResponse) return authResult;
+  return handleRoute("GET /api/admin/albums", async () => {
+    return withAuth(async () => {
+      const albums = await albumRepository.findAll();
+      const photoCounts = await albumRepository.getPhotoCounts();
 
-    const albums = await albumRepository.findAll();
-    const photoCounts = await albumRepository.getPhotoCounts();
+      const albumsWithCounts = albums
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((album) => ({
+          ...album,
+          photoCount: photoCounts.get(album.id) ?? 0,
+        }));
 
-    // Sort by sortOrder and merge photo counts
-    const albumsWithCounts = albums
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((album) => ({
-        ...album,
-        photoCount: photoCounts.get(album.id) ?? 0,
-      }));
-
-    return NextResponse.json(albumsWithCounts);
-  } catch (error) {
-    logger.error("GET /api/admin/albums failed", {
-      error: serializeError(error),
+      return successResponse(albumsWithCounts);
     });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
 }
 
 /**
@@ -56,48 +45,32 @@ export async function GET() {
  * Returns: Created album with 201 status
  */
 export async function POST(request: NextRequest) {
-  try {
-    const authResult = await requireAuth();
-    if (authResult instanceof NextResponse) return authResult;
+  return handleRoute("POST /api/admin/albums", async () => {
+    return withAuth(async () => {
+      const body = await request.json();
+      const result = validateBody(createAlbumSchema, body);
+      if (result.error) return result.error;
 
-    const body = await request.json();
-    const result = createAlbumSchema.safeParse(body);
+      // Get max sortOrder to append at end
+      const albums = await albumRepository.findAll();
+      const maxSortOrder = Math.max(0, ...albums.map((a) => a.sortOrder));
 
-    if (!result.success) {
-      const flat = z.flattenError(result.error);
-      return NextResponse.json(
-        { error: "Validation failed", details: flat.fieldErrors },
-        { status: 400 },
-      );
-    }
+      const album = {
+        id: crypto.randomUUID(),
+        title: result.data.title,
+        description: result.data.description ?? null,
+        tags: result.data.tags ?? null,
+        coverPhotoId: null,
+        sortOrder: maxSortOrder + 1,
+        isPublished: false,
+        createdAt: new Date(),
+      };
 
-    // Get max sortOrder to append at end
-    const albums = await albumRepository.findAll();
-    const maxSortOrder = Math.max(0, ...albums.map((a) => a.sortOrder));
+      await albumRepository.save(album);
 
-    const album = {
-      id: crypto.randomUUID(),
-      title: result.data.title,
-      description: result.data.description ?? null,
-      tags: result.data.tags ?? null,
-      coverPhotoId: null,
-      sortOrder: maxSortOrder + 1,
-      isPublished: false,
-      createdAt: new Date(),
-    };
+      revalidateAlbumPaths();
 
-    await albumRepository.save(album);
-
-    revalidateAlbumPaths();
-
-    return NextResponse.json(album, { status: 201 });
-  } catch (error) {
-    logger.error("POST /api/admin/albums failed", {
-      error: serializeError(error),
+      return successResponse(album, 201);
     });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
 }

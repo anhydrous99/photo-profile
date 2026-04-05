@@ -1,4 +1,5 @@
 import path from "path";
+
 import fs from "fs/promises";
 import sharp from "sharp";
 import { logger } from "@/infrastructure/logging/logger";
@@ -34,8 +35,13 @@ export async function processImageJob(data: {
     const derivatives = await generateDerivatives(tempOriginalPath, tempDir);
 
     const rotatedMeta = await sharp(tempOriginalPath).rotate().metadata();
-    const width = rotatedMeta.width!;
-    const height = rotatedMeta.height!;
+    if (!rotatedMeta.width || !rotatedMeta.height) {
+      throw new Error(
+        `Could not determine image dimensions for photo ${photoId}`,
+      );
+    }
+    const width = rotatedMeta.width;
+    const height = rotatedMeta.height;
 
     const exifData = await extractExifData(tempOriginalPath);
 

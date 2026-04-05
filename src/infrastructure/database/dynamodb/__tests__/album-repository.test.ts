@@ -390,10 +390,10 @@ describe("DynamoDBAlbumRepository", () => {
     });
   });
 
-  // ---- deleteWithPhotos ----
+  // ---- deleteAlbumOnly / deleteAlbumAndPhotos ----
 
-  describe("deleteWithPhotos", () => {
-    it("deleteWithPhotos(id, false) deletes album and AlbumPhotos entries, returns empty deletedPhotoIds", async () => {
+  describe("deleteAlbumOnly", () => {
+    it("deletes album and AlbumPhotos entries, preserves photos", async () => {
       const album = makeAlbum();
       await repo.save(album);
 
@@ -401,8 +401,7 @@ describe("DynamoDBAlbumRepository", () => {
       await insertPhoto(photo);
       await insertAlbumPhoto(album.id, photo.id, 0);
 
-      const result = await repo.deleteWithPhotos(album.id, false);
-      expect(result.deletedPhotoIds).toHaveLength(0);
+      await repo.deleteAlbumOnly(album.id);
 
       // Album should be deleted
       expect(await repo.findById(album.id)).toBeNull();
@@ -427,7 +426,32 @@ describe("DynamoDBAlbumRepository", () => {
       expect(photoResult.Item).toBeDefined();
     });
 
-    it("deleteWithPhotos(id, true) deletes album, AlbumPhotos, and photos via PhotoRepository", async () => {
+    it("preserves all photos when album has multiple", async () => {
+      const album = makeAlbum();
+      await repo.save(album);
+
+      const photos: Photo[] = [];
+      for (let i = 0; i < 5; i++) {
+        const p = makePhoto();
+        await insertPhoto(p);
+        await insertAlbumPhoto(album.id, p.id, i);
+        photos.push(p);
+      }
+
+      await repo.deleteAlbumOnly(album.id);
+
+      // All photos should still exist
+      for (const p of photos) {
+        const r = await docClient.send(
+          new GetCommand({ TableName: TABLE_NAMES.PHOTOS, Key: { id: p.id } }),
+        );
+        expect(r.Item).toBeDefined();
+      }
+    });
+  });
+
+  describe("deleteAlbumAndPhotos", () => {
+    it("deletes album, AlbumPhotos, and photos via PhotoRepository", async () => {
       const album = makeAlbum();
       await repo.save(album);
 
@@ -438,7 +462,7 @@ describe("DynamoDBAlbumRepository", () => {
       await insertAlbumPhoto(album.id, p1.id, 0);
       await insertAlbumPhoto(album.id, p2.id, 1);
 
-      const result = await repo.deleteWithPhotos(album.id, true);
+      const result = await repo.deleteAlbumAndPhotos(album.id);
 
       // Should return the photo IDs
       expect(result.deletedPhotoIds).toHaveLength(2);
@@ -470,37 +494,13 @@ describe("DynamoDBAlbumRepository", () => {
       expect(photo2Result.Item).toBeUndefined();
     });
 
-    it("deleteWithPhotos() for empty album returns empty array", async () => {
+    it("returns empty array for empty album", async () => {
       const album = makeAlbum();
       await repo.save(album);
 
-      const result = await repo.deleteWithPhotos(album.id, true);
+      const result = await repo.deleteAlbumAndPhotos(album.id);
       expect(result.deletedPhotoIds).toHaveLength(0);
       expect(await repo.findById(album.id)).toBeNull();
-    });
-
-    it("deleteWithPhotos(id, false) with multiple photos preserves all photos", async () => {
-      const album = makeAlbum();
-      await repo.save(album);
-
-      const photos: Photo[] = [];
-      for (let i = 0; i < 5; i++) {
-        const p = makePhoto();
-        await insertPhoto(p);
-        await insertAlbumPhoto(album.id, p.id, i);
-        photos.push(p);
-      }
-
-      const result = await repo.deleteWithPhotos(album.id, false);
-      expect(result.deletedPhotoIds).toHaveLength(0);
-
-      // All photos should still exist
-      for (const p of photos) {
-        const r = await docClient.send(
-          new GetCommand({ TableName: TABLE_NAMES.PHOTOS, Key: { id: p.id } }),
-        );
-        expect(r.Item).toBeDefined();
-      }
     });
   });
 

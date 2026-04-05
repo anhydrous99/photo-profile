@@ -1,12 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth";
+import { NextRequest } from "next/server";
 import { deletePhotoFiles } from "@/infrastructure/storage";
 import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { z } from "zod";
-import { logger } from "@/infrastructure/logging/logger";
-import { isValidUUID } from "@/infrastructure/validation";
-import { serializeError } from "@/lib/serializeError";
 import { revalidateAlbumPaths } from "@/lib/revalidateAlbumPaths";
+import {
+  withAuth,
+  validateBody,
+  validateParamId,
+  errorResponse,
+  successResponse,
+  noContentResponse,
+} from "@/lib/apiHelpers";
+import { handleRoute } from "@/lib/routeHandler";
 
 const photoRepository = getPhotoRepository();
 
@@ -27,58 +32,31 @@ interface RouteContext {
  * Returns: Updated photo object
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  try {
-    const authResult = await requireAuth();
-    if (authResult instanceof NextResponse) return authResult;
+  return handleRoute("PATCH /api/admin/photos/[id]", async () => {
+    return withAuth(async () => {
+      const { id } = await context.params;
 
-    // 2. Get photo ID from route params
-    const { id } = await context.params;
+      const idError = validateParamId(id, "photo");
+      if (idError) return idError;
 
-    // 2.1 Validate photo ID format
-    if (!isValidUUID(id)) {
-      return NextResponse.json(
-        { error: "Invalid photo ID format" },
-        { status: 400 },
-      );
-    }
+      const photo = await photoRepository.findById(id);
+      if (!photo) {
+        return errorResponse("Photo not found", 404);
+      }
 
-    // 3. Fetch existing photo
-    const photo = await photoRepository.findById(id);
-    if (!photo) {
-      return NextResponse.json({ error: "Photo not found" }, { status: 404 });
-    }
+      const body = await request.json();
+      const result = validateBody(updatePhotoSchema, body);
+      if (result.error) return result.error;
 
-    // 4. Parse and validate request body
-    const body = await request.json();
-    const result = updatePhotoSchema.safeParse(body);
+      photo.description = result.data.description;
+      photo.updatedAt = new Date();
+      await photoRepository.save(photo);
 
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          error: "Validation failed",
-          details: z.flattenError(result.error).fieldErrors,
-        },
-        { status: 400 },
-      );
-    }
+      revalidateAlbumPaths();
 
-    // 5. Update photo
-    photo.description = result.data.description;
-    photo.updatedAt = new Date();
-    await photoRepository.save(photo);
-
-    revalidateAlbumPaths();
-
-    return NextResponse.json(photo);
-  } catch (error) {
-    logger.error("PATCH /api/admin/photos/[id] failed", {
-      error: serializeError(error),
+      return successResponse(photo);
     });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
 }
 
 /**
@@ -95,43 +73,24 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
  * Returns: 204 No Content on success
  */
 export async function DELETE(_request: NextRequest, context: RouteContext) {
-  try {
-    const authResult = await requireAuth();
-    if (authResult instanceof NextResponse) return authResult;
+  return handleRoute("DELETE /api/admin/photos/[id]", async () => {
+    return withAuth(async () => {
+      const { id } = await context.params;
 
-    // 2. Get photo ID from route params
-    const { id } = await context.params;
+      const idError = validateParamId(id, "photo");
+      if (idError) return idError;
 
-    // 2.1 Validate photo ID format
-    if (!isValidUUID(id)) {
-      return NextResponse.json(
-        { error: "Invalid photo ID format" },
-        { status: 400 },
-      );
-    }
+      const photo = await photoRepository.findById(id);
+      if (!photo) {
+        return errorResponse("Photo not found", 404);
+      }
 
-    // 3. Fetch existing photo
-    const photo = await photoRepository.findById(id);
-    if (!photo) {
-      return NextResponse.json({ error: "Photo not found" }, { status: 404 });
-    }
+      await deletePhotoFiles(id);
+      await photoRepository.delete(id);
 
-    // 4. Delete all files from storage (before DB delete)
-    await deletePhotoFiles(id);
+      revalidateAlbumPaths();
 
-    // 5. Delete photo record from database
-    await photoRepository.delete(id);
-
-    revalidateAlbumPaths();
-
-    return new NextResponse(null, { status: 204 });
-  } catch (error) {
-    logger.error("DELETE /api/admin/photos/[id] failed", {
-      error: serializeError(error),
+      return noContentResponse();
     });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
 }

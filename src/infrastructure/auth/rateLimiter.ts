@@ -2,6 +2,10 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { env } from "@/infrastructure/config/env";
 import { logger } from "@/infrastructure/logging/logger";
+import {
+  RATE_LIMIT_REQUESTS,
+  RATE_LIMIT_WINDOW_SECONDS,
+} from "@/lib/constants";
 
 let _ratelimit: Ratelimit | undefined;
 
@@ -13,7 +17,10 @@ function getRatelimit(): Ratelimit {
     });
     _ratelimit = new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(5, "900 s"), // 5 requests per 15 minutes
+      limiter: Ratelimit.slidingWindow(
+        RATE_LIMIT_REQUESTS,
+        `${RATE_LIMIT_WINDOW_SECONDS} s`,
+      ),
     });
   }
   return _ratelimit;

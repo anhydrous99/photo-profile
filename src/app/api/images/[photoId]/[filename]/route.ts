@@ -3,7 +3,11 @@ import { createHash } from "crypto";
 import { getStorageAdapter } from "@/infrastructure/storage";
 import { logger } from "@/infrastructure/logging/logger";
 import { isValidUUID } from "@/infrastructure/validation";
-import { SERVE_MIME_TYPES } from "@/lib/constants";
+import {
+  SERVE_MIME_TYPES,
+  CACHE_CONTROL_IMMUTABLE,
+  ETAG_HASH_LENGTH,
+} from "@/lib/constants";
 import { serializeError } from "@/lib/serializeError";
 
 function getExtension(filename: string): string {
@@ -62,7 +66,10 @@ async function findLargestDerivative(
 }
 
 function generateContentETag(buffer: Buffer): string {
-  const hash = createHash("md5").update(buffer).digest("hex").slice(0, 16);
+  const hash = createHash("md5")
+    .update(buffer)
+    .digest("hex")
+    .slice(0, ETAG_HASH_LENGTH);
   return `"${hash}"`;
 }
 
@@ -88,7 +95,7 @@ async function serveImage(
     headers: {
       "Content-Type": mimeType,
       "Content-Length": fileBuffer.length.toString(),
-      "Cache-Control": "public, max-age=31536000, immutable",
+      "Cache-Control": CACHE_CONTROL_IMMUTABLE,
       ETag: etag,
     },
   });
@@ -126,8 +133,13 @@ export async function GET(
         if (fallbackKey) {
           try {
             return await serveImage(request, fallbackKey, mimeType);
-          } catch {
-            /* empty — fall through to 404 */
+          } catch (fallbackError) {
+            logger.debug("Fallback derivative also not found", {
+              photoId,
+              filename,
+              fallbackKey,
+              error: serializeError(fallbackError),
+            });
           }
         }
         return new NextResponse("Image not found", { status: 404 });
