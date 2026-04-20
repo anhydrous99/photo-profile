@@ -223,7 +223,7 @@ describe("PhotoProfileCdkStack", () => {
 
   test("creates Vercel IAM user", () => {
     template.hasResourceProperties("AWS::IAM::User", {
-      UserName: "TestStack-vercel-app",
+      UserName: "TestStack-vercel-app-v2",
     });
   });
 
