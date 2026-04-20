@@ -255,11 +255,11 @@ export class PhotoProfileCdkStack extends cdk.Stack {
     );
 
     // Vercel IAM user for app deployment
-    const vercelUser = new iam.User(this, "VercelAppUser", {
-      userName: `${id}-vercel-app`,
+    const vercelUser = new iam.User(this, "VercelAppUserV2", {
+      userName: `${id}-vercel-app-v2`,
     });
 
-    const vercelAccessKey = new iam.AccessKey(this, "VercelAppAccessKey", {
+    const vercelAccessKey = new iam.AccessKey(this, "VercelAppAccessKeyV2", {
       user: vercelUser,
     });
 

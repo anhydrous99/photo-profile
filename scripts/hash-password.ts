@@ -14,6 +14,10 @@ if (!password) {
   process.exit(1);
 }
 
-const hash = await bcrypt.hash(password, 10);
-console.log("\nAdd to .env:");
-console.log(`ADMIN_PASSWORD_HASH=${hash}`);
+async function main() {
+  const hash = await bcrypt.hash(password, 10);
+  console.log("\nAdd to .env:");
+  console.log(`ADMIN_PASSWORD_HASH=${hash}`);
+}
+
+main();
