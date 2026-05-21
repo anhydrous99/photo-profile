@@ -40,6 +40,17 @@ const mockLogger = vi.hoisted(() => ({
   error: vi.fn(),
 }));
 
+const EXPECTED_DERIVATIVE_FILES = [
+  "300w.webp",
+  "300w.avif",
+  "600w.webp",
+  "600w.avif",
+  "1200w.webp",
+  "1200w.avif",
+  "2400w.webp",
+  "2400w.avif",
+] as const;
+
 vi.mock("@/infrastructure/storage", () => ({
   getStorageAdapter: vi.fn(() => mockAdapter),
 }));
@@ -79,22 +90,22 @@ function setupDefaultMocks() {
   mockFs.writeFile.mockResolvedValue(undefined);
   mockFs.rm.mockResolvedValue(undefined);
   mockFs.readFile.mockResolvedValue(Buffer.from("derivative-data"));
-  mockFs.readdir.mockResolvedValue([
-    { name: "300w.webp", isFile: () => true, isDirectory: () => false },
-    { name: "300w.avif", isFile: () => true, isDirectory: () => false },
-    { name: "600w.webp", isFile: () => true, isDirectory: () => false },
-    { name: "600w.avif", isFile: () => true, isDirectory: () => false },
-  ]);
+  mockFs.readdir.mockResolvedValue(
+    EXPECTED_DERIVATIVE_FILES.map((name) => ({
+      name,
+      isFile: () => true,
+      isDirectory: () => false,
+    })),
+  );
 
   mockSharpInstance.rotate.mockReturnValue(mockSharpInstance);
   mockSharpInstance.metadata.mockResolvedValue({ width: 4000, height: 3000 });
 
-  mockGenerateDerivatives.mockResolvedValue([
-    "/tmp/photo-worker-photo-123-ts/300w.webp",
-    "/tmp/photo-worker-photo-123-ts/300w.avif",
-    "/tmp/photo-worker-photo-123-ts/600w.webp",
-    "/tmp/photo-worker-photo-123-ts/600w.avif",
-  ]);
+  mockGenerateDerivatives.mockResolvedValue(
+    EXPECTED_DERIVATIVE_FILES.map(
+      (name) => `/tmp/photo-worker-photo-123-ts/${name}`,
+    ),
+  );
   mockGenerateBlurPlaceholder.mockResolvedValue(
     "data:image/webp;base64,abc123",
   );
@@ -138,6 +149,27 @@ describe("processImageJob", () => {
       expect(result).toBeDefined();
       expect(result.photoId).toBe("photo-123");
       expect(result.derivatives).toEqual(expect.any(Array));
+    });
+
+    it("uploads the full frozen derivative key layout with matching content types", async () => {
+      const { processImageJob } = await import("../imageProcessingJob");
+
+      await processImageJob({
+        photoId: "photo-123",
+        originalKey: "originals/photo-123/original.jpg",
+      });
+
+      expect(mockAdapter.saveFile).toHaveBeenCalledTimes(8);
+      for (const filename of EXPECTED_DERIVATIVE_FILES) {
+        const contentType = filename.endsWith(".webp")
+          ? "image/webp"
+          : "image/avif";
+        expect(mockAdapter.saveFile).toHaveBeenCalledWith(
+          `processed/photo-123/${filename}`,
+          expect.any(Buffer),
+          contentType,
+        );
+      }
     });
   });
 

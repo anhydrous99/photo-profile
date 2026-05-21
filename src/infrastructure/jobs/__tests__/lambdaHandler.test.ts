@@ -75,6 +75,25 @@ function createSQSRecord(
   };
 }
 
+function createRawSQSRecord(body: string, messageId = "msg-raw"): SQSRecord {
+  return {
+    messageId,
+    receiptHandle: "receipt-handle",
+    body,
+    attributes: {
+      ApproximateReceiveCount: "1",
+      SentTimestamp: "1234567890",
+      SenderId: "sender-id",
+      ApproximateFirstReceiveTimestamp: "1234567890",
+    },
+    messageAttributes: {},
+    md5OfBody: "md5",
+    eventSource: "aws:sqs",
+    eventSourceARN: "arn:aws:sqs:us-east-1:123456789:image-processing",
+    awsRegion: "us-east-1",
+  };
+}
+
 function createSQSEvent(records: SQSRecord[]): SQSEvent {
   return { Records: records };
 }
@@ -258,6 +277,54 @@ describe("Lambda SQS handler", () => {
     expect(mockLogger.error).toHaveBeenCalledWith(
       "Lambda image processing failed",
       expect.objectContaining({ messageId: "msg-fail" }),
+    );
+  });
+
+  it("skips schema-invalid SQS messages without retrying or updating DynamoDB", async () => {
+    const { handler } = await import("../lambdaHandler");
+    const record = createRawSQSRecord(
+      JSON.stringify({
+        photoId: TEST_PHOTO_IDS["photo-abc"],
+        sourceKey: "originals/photo-abc/original.jpg",
+      }),
+      "msg-schema-invalid",
+    );
+
+    const result = await handler(
+      createSQSEvent([record]),
+      createLambdaContext(),
+    );
+
+    expect(result.batchItemFailures).toEqual([]);
+    expect(mockProcessImageJob).not.toHaveBeenCalled();
+    expect(mockPhotoRepository.findById).not.toHaveBeenCalled();
+    expect(mockPhotoRepository.save).not.toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "Invalid SQS message body",
+      expect.objectContaining({
+        messageId: "msg-schema-invalid",
+        body: record.body,
+      }),
+    );
+  });
+
+  it("returns a batch item failure for malformed JSON messages", async () => {
+    const { handler } = await import("../lambdaHandler");
+    const record = createRawSQSRecord("{not-json", "msg-malformed-json");
+
+    const result = await handler(
+      createSQSEvent([record]),
+      createLambdaContext(),
+    );
+
+    expect(result.batchItemFailures).toEqual([
+      { itemIdentifier: "msg-malformed-json" },
+    ]);
+    expect(mockProcessImageJob).not.toHaveBeenCalled();
+    expect(mockPhotoRepository.save).not.toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "Lambda image processing failed",
+      expect.objectContaining({ messageId: "msg-malformed-json" }),
     );
   });
 
