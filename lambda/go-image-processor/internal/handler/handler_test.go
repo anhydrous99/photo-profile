@@ -22,8 +22,28 @@ func TestHandleAcceptsValidSQSRecord(t *testing.T) {
 	}
 }
 
-func TestHandleReportsMalformedRecordFailure(t *testing.T) {
+func TestHandleSkipsSchemaInvalidSQSRecordWithoutBatchFailure(t *testing.T) {
 	event := events.SQSEvent{Records: []events.SQSMessage{{MessageId: "msg-1", Body: `{"photoId":"photo-1"}`}}}
+	called := false
+	processor := func(context.Context, jobs.ImageJobData, events.SQSMessage) error {
+		called = true
+		return nil
+	}
+
+	response, err := HandleWithProcessor(context.Background(), event, processor)
+	if err != nil {
+		t.Fatalf("expected no handler error: %v", err)
+	}
+	if len(response.BatchItemFailures) != 0 {
+		t.Fatalf("expected schema-invalid message to be skipped without failure: %#v", response.BatchItemFailures)
+	}
+	if called {
+		t.Fatal("expected schema-invalid message not to reach processor")
+	}
+}
+
+func TestHandleReportsMalformedJSONRecordFailure(t *testing.T) {
+	event := events.SQSEvent{Records: []events.SQSMessage{{MessageId: "msg-1", Body: `{"photoId":"photo-1"`}}}
 
 	response, err := Handle(context.Background(), event)
 	if err != nil {

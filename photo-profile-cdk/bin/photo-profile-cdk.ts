@@ -7,8 +7,12 @@ const app = new cdk.App();
 const s3BucketName =
   app.node.tryGetContext("s3BucketName") ?? "photo-profile-bucket";
 const dynamodbTablePrefix = app.node.tryGetContext("dynamodbTablePrefix") ?? "";
+const imageWorkerRuntime =
+  app.node.tryGetContext("IMAGE_WORKER_RUNTIME") ??
+  process.env.IMAGE_WORKER_RUNTIME;
 
 new PhotoProfileCdkStack(app, "PhotoProfileCdkStack", {
   s3BucketName,
   dynamodbTablePrefix,
+  imageWorkerRuntime,
 });

@@ -10,6 +10,8 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
+export type ImageWorkerRuntime = "node" | "go";
+
 export interface PhotoProfileStackProps extends cdk.StackProps {
   /**
    * S3 bucket name for photo storage.
@@ -21,6 +23,22 @@ export interface PhotoProfileStackProps extends cdk.StackProps {
    * @default ""
    */
   readonly dynamodbTablePrefix?: string;
+
+  readonly imageWorkerRuntime?: string;
+}
+
+function validateImageWorkerRuntime(
+  runtime: string | undefined,
+): ImageWorkerRuntime {
+  const selectedRuntime = runtime ?? "node";
+
+  if (selectedRuntime === "node" || selectedRuntime === "go") {
+    return selectedRuntime;
+  }
+
+  throw new Error(
+    `Invalid IMAGE_WORKER_RUNTIME "${selectedRuntime}". Supported values: node, go.`,
+  );
 }
 
 export class PhotoProfileCdkStack extends cdk.Stack {
@@ -36,6 +54,9 @@ export class PhotoProfileCdkStack extends cdk.Stack {
     super(scope, id, props);
 
     const tablePrefix = props.dynamodbTablePrefix ?? "";
+    const imageWorkerRuntime = validateImageWorkerRuntime(
+      props.imageWorkerRuntime,
+    );
 
     // DynamoDB Tables
     this.photosTable = new dynamodb.Table(this, "PhotosTable", {
@@ -179,27 +200,46 @@ export class PhotoProfileCdkStack extends cdk.Stack {
       },
     );
 
+    const imageProcessorEnvironment = {
+      AWS_S3_BUCKET: props.s3BucketName,
+      AWS_CLOUDFRONT_DOMAIN: this.distribution.distributionDomainName,
+      DYNAMODB_TABLE_PREFIX: tablePrefix,
+      STORAGE_BACKEND: "s3",
+      STORAGE_PATH: "",
+      NODE_ENV: "production",
+      LOG_LEVEL: "info",
+      AUTH_SECRET: "dummy-not-used-by-lambda-at-all!",
+      ADMIN_PASSWORD_HASH: "dummy-not-used-by-lambda",
+      IMAGE_WORKER_RUNTIME: imageWorkerRuntime,
+    };
+
+    const workerRuntimeConfig =
+      imageWorkerRuntime === "node"
+        ? {
+            runtime: lambda.Runtime.NODEJS_22_X,
+            handler: "src/infrastructure/jobs/lambdaHandler.handler",
+            code: lambda.Code.fromAsset("../lambda-package"),
+            description:
+              "Processes uploaded photos with Node/Sharp: generates derivatives, extracts EXIF data",
+          }
+        : {
+            runtime: lambda.Runtime.PROVIDED_AL2023,
+            handler: "bootstrap",
+            code: lambda.Code.fromAsset("../lambda/go-image-processor"),
+            description:
+              "Placeholder Go image worker selection; Task 11 wires production Go artifact packaging",
+          };
+
     this.imageProcessor = new lambda.Function(this, "ImageProcessor", {
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: workerRuntimeConfig.runtime,
       architecture: lambda.Architecture.ARM_64,
-      handler: "src/infrastructure/jobs/lambdaHandler.handler",
-      code: lambda.Code.fromAsset("../lambda-package"),
+      handler: workerRuntimeConfig.handler,
+      code: workerRuntimeConfig.code,
       timeout: cdk.Duration.minutes(3),
       memorySize: 2048,
       ephemeralStorageSize: cdk.Size.mebibytes(1024),
-      environment: {
-        AWS_S3_BUCKET: props.s3BucketName,
-        AWS_CLOUDFRONT_DOMAIN: this.distribution.distributionDomainName,
-        DYNAMODB_TABLE_PREFIX: tablePrefix,
-        STORAGE_BACKEND: "s3",
-        STORAGE_PATH: "",
-        NODE_ENV: "production",
-        LOG_LEVEL: "info",
-        AUTH_SECRET: "dummy-not-used-by-lambda-at-all!",
-        ADMIN_PASSWORD_HASH: "dummy-not-used-by-lambda",
-      },
-      description:
-        "Processes uploaded photos: generates derivatives, extracts EXIF data",
+      environment: imageProcessorEnvironment,
+      description: workerRuntimeConfig.description,
       logGroup: imageProcessorLogGroup,
     });
 

@@ -2,11 +2,12 @@ import * as cdk from "aws-cdk-lib/core";
 import { Template, Match } from "aws-cdk-lib/assertions";
 import { PhotoProfileCdkStack } from "../lib/photo-profile-cdk-stack";
 
-function createTestStack(): Template {
+function createTestStack(imageWorkerRuntime?: string): Template {
   const app = new cdk.App();
   const stack = new PhotoProfileCdkStack(app, "TestStack", {
     s3BucketName: "test-photo-bucket",
     dynamodbTablePrefix: "test_",
+    imageWorkerRuntime,
   });
   return Template.fromStack(stack);
 }
@@ -40,7 +41,7 @@ describe("PhotoProfileCdkStack", () => {
     });
   });
 
-  test("creates Lambda function with correct configuration", () => {
+  test("defaults to Node Lambda function with correct configuration", () => {
     template.hasResourceProperties("AWS::Lambda::Function", {
       Runtime: "nodejs22.x",
       Timeout: 180,
@@ -48,6 +49,97 @@ describe("PhotoProfileCdkStack", () => {
       Handler: "src/infrastructure/jobs/lambdaHandler.handler",
       Architectures: ["arm64"],
     });
+  });
+
+  test("explicit node worker runtime selects Node Lambda path", () => {
+    const nodeTemplate = createTestStack("node");
+
+    nodeTemplate.resourceCountIs("AWS::Lambda::Function", 1);
+    nodeTemplate.hasResourceProperties("AWS::Lambda::Function", {
+      Runtime: "nodejs22.x",
+      Timeout: 180,
+      MemorySize: 2048,
+      Handler: "src/infrastructure/jobs/lambdaHandler.handler",
+      Architectures: ["arm64"],
+      EphemeralStorage: {
+        Size: 1024,
+      },
+      Environment: {
+        Variables: Match.objectLike({
+          IMAGE_WORKER_RUNTIME: "node",
+        }),
+      },
+    });
+  });
+
+  test("explicit go worker runtime selects documented Go placeholder with operational invariants", () => {
+    const goTemplate = createTestStack("go");
+
+    goTemplate.resourceCountIs("AWS::Lambda::Function", 1);
+    goTemplate.hasResourceProperties("AWS::Lambda::Function", {
+      Runtime: "provided.al2023",
+      Timeout: 180,
+      MemorySize: 2048,
+      Handler: "bootstrap",
+      Architectures: ["arm64"],
+      EphemeralStorage: {
+        Size: 1024,
+      },
+      Description:
+        "Placeholder Go image worker selection; Task 11 wires production Go artifact packaging",
+      Environment: {
+        Variables: Match.objectLike({
+          AWS_S3_BUCKET: "test-photo-bucket",
+          DYNAMODB_TABLE_PREFIX: "test_",
+          STORAGE_BACKEND: "s3",
+          LOG_LEVEL: "info",
+          IMAGE_WORKER_RUNTIME: "go",
+        }),
+      },
+    });
+    goTemplate.hasResourceProperties("AWS::Lambda::EventSourceMapping", {
+      BatchSize: 1,
+    });
+    goTemplate.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: [
+              "s3:GetObject",
+              "s3:PutObject",
+              "s3:DeleteObject",
+              "s3:HeadObject",
+            ],
+            Effect: "Allow",
+            Resource: "arn:aws:s3:::test-photo-bucket/*",
+          }),
+          Match.objectLike({
+            Action: "s3:ListBucket",
+            Effect: "Allow",
+            Resource: "arn:aws:s3:::test-photo-bucket",
+          }),
+          Match.objectLike({
+            Action: [
+              "dynamodb:GetItem",
+              "dynamodb:PutItem",
+              "dynamodb:UpdateItem",
+              "dynamodb:DeleteItem",
+              "dynamodb:Query",
+              "dynamodb:Scan",
+              "dynamodb:BatchGetItem",
+              "dynamodb:BatchWriteItem",
+            ],
+            Effect: "Allow",
+          }),
+        ]),
+      },
+    });
+  });
+
+  test("invalid worker runtime fails fast with supported IMAGE_WORKER_RUNTIME values", () => {
+    expect(() => createTestStack("python")).toThrow(
+      /IMAGE_WORKER_RUNTIME.*node.*go/,
+    );
   });
 
   test("Lambda has correct ephemeral storage", () => {
@@ -70,6 +162,7 @@ describe("PhotoProfileCdkStack", () => {
           LOG_LEVEL: "info",
           AUTH_SECRET: "dummy-not-used-by-lambda-at-all!",
           ADMIN_PASSWORD_HASH: "dummy-not-used-by-lambda",
+          IMAGE_WORKER_RUNTIME: "node",
         }),
       },
     });

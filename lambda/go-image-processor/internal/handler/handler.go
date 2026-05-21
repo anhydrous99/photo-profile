@@ -26,7 +26,9 @@ func HandleWithProcessor(ctx context.Context, event events.SQSEvent, processor P
 	for _, record := range event.Records {
 		job, err := jobs.ParseImageJobData(record.Body)
 		if err != nil {
-			failures = append(failures, events.SQSBatchItemFailure{ItemIdentifier: record.MessageId})
+			if jobs.IsMalformedJSON(err) {
+				failures = append(failures, events.SQSBatchItemFailure{ItemIdentifier: record.MessageId})
+			}
 			continue
 		}
 		if err := processor(ctx, job, record); err != nil {
