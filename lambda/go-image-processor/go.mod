@@ -1,6 +1,6 @@
 module github.com/arxherre/photo-profile/lambda/go-image-processor
 
-go 1.22
+go 1.25.0
 
 require github.com/aws/aws-lambda-go v1.54.0
 
@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.43.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.79.1
 	github.com/aws/smithy-go v1.22.2
+	github.com/davidbyttow/govips/v2 v2.18.0
 )
 
 require (
@@ -22,4 +23,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.15 // indirect
+	golang.org/x/image v0.38.0 // indirect
+	golang.org/x/net v0.52.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 )
