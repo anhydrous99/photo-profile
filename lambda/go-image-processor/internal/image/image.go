@@ -36,6 +36,11 @@ type Derivative struct {
 	Bytes       []byte
 }
 
+type Dimensions struct {
+	Width  int
+	Height int
+}
+
 type Transformer struct{}
 
 type CapabilityReport struct {
@@ -179,6 +184,22 @@ func (Transformer) GenerateBlurPlaceholder(inputPath string) (string, error) {
 		return "", fmt.Errorf("export blur webp: %w", err)
 	}
 	return "data:image/webp;base64," + base64.StdEncoding.EncodeToString(buf), nil
+}
+
+func (Transformer) Dimensions(inputPath string) (Dimensions, error) {
+	img, err := vips.NewImageFromFile(inputPath)
+	if err != nil {
+		return Dimensions{}, fmt.Errorf("load image dimensions: %w", err)
+	}
+	defer img.Close()
+
+	if err := img.AutoRotate(); err != nil {
+		return Dimensions{}, fmt.Errorf("autorotate image dimensions: %w", err)
+	}
+	if img.Width() <= 0 || img.Height() <= 0 {
+		return Dimensions{}, fmt.Errorf("invalid image dimensions: %dx%d", img.Width(), img.Height())
+	}
+	return Dimensions{Width: img.Width(), Height: img.Height()}, nil
 }
 
 func readMetadata(inputPath string) (*vips.ImageMetadata, error) {
