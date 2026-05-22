@@ -25,6 +25,18 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: lambda/go-image-processor/go.mod
+          cache-dependency-path: lambda/go-image-processor/go.sum
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Install dependencies
         run: npm ci
 
@@ -53,12 +65,22 @@ jobs:
       - name: Build Lambda package
         run: npm run build:lambda
 
+      - name: Run Go tests
+        run: npm run test:go
+
+      - name: Build Go Lambda container
+        run: npm run build:lambda:go
+
       - name: Install CDK dependencies
         run: npm ci
         working-directory: photo-profile-cdk
 
       - name: Run CDK tests
         run: npm test
+        working-directory: photo-profile-cdk
+
+      - name: Synthesize CDK template
+        run: npx cdk synth
         working-directory: photo-profile-cdk
 
       - name: Upload coverage reports
