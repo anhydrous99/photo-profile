@@ -129,3 +129,30 @@ func TestDynamoUpdateFailureIncludesPhotoAndTableContext(t *testing.T) {
 		t.Fatalf("missing error context: %v", err)
 	}
 }
+
+func TestDynamoMarkErrorSetsOnlyStatusAndUpdatedAt(t *testing.T) {
+	client := &recordingDynamoDBClient{}
+	updater := NewPhotoUpdater("prod_Photos", client)
+
+	err := updater.MarkError(context.Background(), "photo-1", 1710000000000)
+	if err != nil {
+		t.Fatalf("mark error failed: %v", err)
+	}
+
+	input := client.updateInput
+	if input == nil {
+		t.Fatal("expected UpdateItem input")
+	}
+	if expression := *input.UpdateExpression; expression != "SET #status = :status, updatedAt = :updatedAt" {
+		t.Fatalf("unexpected update expression: %s", expression)
+	}
+	if status := input.ExpressionAttributeValues[":status"].(*types.AttributeValueMemberS).Value; status != "error" {
+		t.Fatalf("unexpected status: %s", status)
+	}
+	if updatedAt := input.ExpressionAttributeValues[":updatedAt"].(*types.AttributeValueMemberN).Value; updatedAt != "1710000000000" {
+		t.Fatalf("unexpected updatedAt: %s", updatedAt)
+	}
+	if _, ok := input.ExpressionAttributeValues[":blurDataUrl"]; ok {
+		t.Fatalf("error update should not write ready fields: %#v", input.ExpressionAttributeValues)
+	}
+}

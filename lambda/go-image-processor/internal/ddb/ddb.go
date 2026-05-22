@@ -63,6 +63,29 @@ func (updater PhotoUpdater) MarkProcessed(ctx context.Context, result jobs.Image
 	return nil
 }
 
+func (updater PhotoUpdater) MarkError(ctx context.Context, photoID string, updatedAtMillis int64) error {
+	status := string(PhotoStatusError)
+	input := &dynamodb.UpdateItemInput{
+		TableName: aws.String(updater.tableName),
+		Key: map[string]types.AttributeValue{
+			"id": &types.AttributeValueMemberS{Value: photoID},
+		},
+		UpdateExpression: aws.String("SET #status = :status, updatedAt = :updatedAt"),
+		ExpressionAttributeNames: map[string]string{
+			"#status": "status",
+		},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":status":    &types.AttributeValueMemberS{Value: status},
+			":updatedAt": &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", updatedAtMillis)},
+		},
+	}
+
+	if _, err := updater.client.UpdateItem(ctx, input); err != nil {
+		return fmt.Errorf("mark photo %s error in DynamoDB table %s: %w", photoID, updater.tableName, err)
+	}
+	return nil
+}
+
 func exifAttributeValue(exif *jobs.ExifData) types.AttributeValue {
 	if exif == nil {
 		return &types.AttributeValueMemberNULL{Value: true}
