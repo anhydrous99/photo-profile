@@ -9,6 +9,7 @@ import (
 
 	"github.com/arxherre/photo-profile/lambda/go-image-processor/internal/jobs"
 	"github.com/arxherre/photo-profile/lambda/go-image-processor/internal/logging"
+	"github.com/arxherre/photo-profile/lambda/go-image-processor/internal/processor"
 )
 
 type ProcessedRecord struct {
@@ -32,7 +33,13 @@ func New(processor Processor, logger logging.Logger) Handler {
 }
 
 func Handle(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
-	return New(acceptJob, logging.New(os.Stdout)).Handle(ctx, event)
+	imageProcessor, err := processor.NewFromEnvironment(ctx)
+	if err != nil {
+		return events.SQSEventResponse{}, err
+	}
+	return New(func(ctx context.Context, job jobs.ImageJobData, _ events.SQSMessage) error {
+		return imageProcessor.Process(ctx, job)
+	}, logging.New(os.Stdout)).Handle(ctx, event)
 }
 
 func HandleWithProcessor(ctx context.Context, event events.SQSEvent, processor Processor) (events.SQSEventResponse, error) {
@@ -63,7 +70,9 @@ func (handler Handler) Handle(ctx context.Context, event events.SQSEvent) (event
 		handler.logInfo("Lambda image processing record started", fields)
 
 		if err := handler.processor(ctx, job, record); err != nil {
-			failures = append(failures, events.SQSBatchItemFailure{ItemIdentifier: record.MessageId})
+			if isRetryable(err) {
+				failures = append(failures, events.SQSBatchItemFailure{ItemIdentifier: record.MessageId})
+			}
 			failureFields := recordFields(record, job, startedAt, "process_sqs_record")
 			failureFields["error"] = err
 			handler.logError("Lambda image processing failed", failureFields)
@@ -106,4 +115,16 @@ func elapsedMillis(startedAt time.Time) int64 {
 
 func acceptJob(context.Context, jobs.ImageJobData, events.SQSMessage) error {
 	return nil
+}
+
+type retryableError interface {
+	Retryable() bool
+}
+
+func isRetryable(err error) bool {
+	classified, ok := err.(retryableError)
+	if !ok {
+		return true
+	}
+	return classified.Retryable()
 }

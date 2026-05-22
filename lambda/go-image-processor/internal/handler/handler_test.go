@@ -16,7 +16,7 @@ import (
 func TestHandlerAcceptsValidSQSRecord(t *testing.T) {
 	event := events.SQSEvent{Records: []events.SQSMessage{message("msg-1", `{"photoId":"photo-1","originalKey":"originals/photo-1.jpg"}`)}}
 
-	response, err := Handle(context.Background(), event)
+	response, err := HandleWithProcessor(context.Background(), event, nil)
 	if err != nil {
 		t.Fatalf("expected no handler error: %v", err)
 	}
@@ -77,6 +77,26 @@ func TestHandlerReportsProcessorFailure(t *testing.T) {
 	}
 	assertFailures(t, response, "msg-1")
 }
+
+func TestHandlerSkipsNonRetryableProcessorFailure(t *testing.T) {
+	event := events.SQSEvent{Records: []events.SQSMessage{message("msg-1", `{"photoId":"photo-1","originalKey":"originals/photo-1.jpg"}`)}}
+	processor := func(context.Context, jobs.ImageJobData, events.SQSMessage) error {
+		return nonRetryableTestError{}
+	}
+
+	response, err := HandleWithProcessor(context.Background(), event, processor)
+	if err != nil {
+		t.Fatalf("expected no handler error: %v", err)
+	}
+	if len(response.BatchItemFailures) != 0 {
+		t.Fatalf("expected terminal processor failure to skip retry: %#v", response.BatchItemFailures)
+	}
+}
+
+type nonRetryableTestError struct{}
+
+func (nonRetryableTestError) Error() string   { return "terminal" }
+func (nonRetryableTestError) Retryable() bool { return false }
 
 func TestHandlerProcessesMultiRecordBatchWithSchemaInvalidRecord(t *testing.T) {
 	event := events.SQSEvent{Records: []events.SQSMessage{
