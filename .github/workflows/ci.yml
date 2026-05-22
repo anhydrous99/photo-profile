@@ -68,7 +68,7 @@ jobs:
       - name: Install libvips for Go tests
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvips-dev libheif-plugin-aomenc
+          sudo apt-get install -y libvips-dev libheif-plugin-aomenc libheif-plugin-x265
 
       - name: Run Go tests
         run: npm run test:go
