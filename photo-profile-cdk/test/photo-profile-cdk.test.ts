@@ -48,6 +48,12 @@ describe("PhotoProfileCdkStack", () => {
       MemorySize: 2048,
       Handler: "src/infrastructure/jobs/lambdaHandler.handler",
       Architectures: ["arm64"],
+      PackageType: Match.absent(),
+      Environment: {
+        Variables: Match.objectLike({
+          IMAGE_WORKER_RUNTIME: "node",
+        }),
+      },
     });
   });
 
@@ -72,21 +78,25 @@ describe("PhotoProfileCdkStack", () => {
     });
   });
 
-  test("explicit go worker runtime selects documented Go placeholder with operational invariants", () => {
+  test("explicit go worker runtime selects Go container image with operational invariants", () => {
     const goTemplate = createTestStack("go");
 
     goTemplate.resourceCountIs("AWS::Lambda::Function", 1);
     goTemplate.hasResourceProperties("AWS::Lambda::Function", {
-      Runtime: "provided.al2023",
+      PackageType: "Image",
+      Runtime: Match.absent(),
+      Handler: Match.absent(),
       Timeout: 180,
       MemorySize: 2048,
-      Handler: "bootstrap",
       Architectures: ["arm64"],
       EphemeralStorage: {
         Size: 1024,
       },
+      Code: {
+        ImageUri: Match.anyValue(),
+      },
       Description:
-        "Placeholder Go image worker selection; Task 11 wires production Go artifact packaging",
+        "Processes uploaded photos with Go/libvips: generates derivatives, extracts EXIF data",
       Environment: {
         Variables: Match.objectLike({
           AWS_S3_BUCKET: "test-photo-bucket",

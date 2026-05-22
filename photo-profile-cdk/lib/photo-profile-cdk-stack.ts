@@ -1,5 +1,6 @@
 import * as cdk from "aws-cdk-lib/core";
 import { Construct } from "constructs";
+import * as path from "path";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as iam from "aws-cdk-lib/aws-iam";
@@ -8,6 +9,7 @@ import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as logs from "aws-cdk-lib/aws-logs";
+import * as ecrAssets from "aws-cdk-lib/aws-ecr-assets";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
 export type ImageWorkerRuntime = "node" | "go";
@@ -44,7 +46,7 @@ function validateImageWorkerRuntime(
 export class PhotoProfileCdkStack extends cdk.Stack {
   public readonly queue: sqs.Queue;
   public readonly deadLetterQueue: sqs.Queue;
-  public readonly imageProcessor: lambda.Function;
+  public readonly imageProcessor: lambda.Function | lambda.DockerImageFunction;
   public readonly photosTable: dynamodb.Table;
   public readonly albumsTable: dynamodb.Table;
   public readonly albumPhotosTable: dynamodb.Table;
@@ -213,35 +215,37 @@ export class PhotoProfileCdkStack extends cdk.Stack {
       IMAGE_WORKER_RUNTIME: imageWorkerRuntime,
     };
 
-    const workerRuntimeConfig =
+    this.imageProcessor =
       imageWorkerRuntime === "node"
-        ? {
+        ? new lambda.Function(this, "ImageProcessor", {
             runtime: lambda.Runtime.NODEJS_22_X,
+            architecture: lambda.Architecture.ARM_64,
             handler: "src/infrastructure/jobs/lambdaHandler.handler",
             code: lambda.Code.fromAsset("../lambda-package"),
+            timeout: cdk.Duration.minutes(3),
+            memorySize: 2048,
+            ephemeralStorageSize: cdk.Size.mebibytes(1024),
+            environment: imageProcessorEnvironment,
             description:
               "Processes uploaded photos with Node/Sharp: generates derivatives, extracts EXIF data",
-          }
-        : {
-            runtime: lambda.Runtime.PROVIDED_AL2023,
-            handler: "bootstrap",
-            code: lambda.Code.fromAsset("../lambda/go-image-processor"),
+            logGroup: imageProcessorLogGroup,
+          })
+        : new lambda.DockerImageFunction(this, "ImageProcessor", {
+            code: lambda.DockerImageCode.fromImageAsset(
+              path.join(__dirname, "../../lambda/go-image-processor"),
+              {
+                platform: ecrAssets.Platform.LINUX_ARM64,
+              },
+            ),
+            architecture: lambda.Architecture.ARM_64,
+            timeout: cdk.Duration.minutes(3),
+            memorySize: 2048,
+            ephemeralStorageSize: cdk.Size.mebibytes(1024),
+            environment: imageProcessorEnvironment,
             description:
-              "Placeholder Go image worker selection; Task 11 wires production Go artifact packaging",
-          };
-
-    this.imageProcessor = new lambda.Function(this, "ImageProcessor", {
-      runtime: workerRuntimeConfig.runtime,
-      architecture: lambda.Architecture.ARM_64,
-      handler: workerRuntimeConfig.handler,
-      code: workerRuntimeConfig.code,
-      timeout: cdk.Duration.minutes(3),
-      memorySize: 2048,
-      ephemeralStorageSize: cdk.Size.mebibytes(1024),
-      environment: imageProcessorEnvironment,
-      description: workerRuntimeConfig.description,
-      logGroup: imageProcessorLogGroup,
-    });
+              "Processes uploaded photos with Go/libvips: generates derivatives, extracts EXIF data",
+            logGroup: imageProcessorLogGroup,
+          });
 
     this.imageProcessor.addEventSource(
       new SqsEventSource(this.queue, {
