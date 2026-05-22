@@ -65,6 +65,11 @@ jobs:
       - name: Build Lambda package
         run: npm run build:lambda
 
+      - name: Install libvips for Go tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvips-dev
+
       - name: Run Go tests
         run: npm run test:go
 
