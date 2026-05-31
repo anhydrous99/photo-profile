@@ -109,6 +109,9 @@ describe("PhotoProfileCdkStack", () => {
     });
     goTemplate.hasResourceProperties("AWS::Lambda::EventSourceMapping", {
       BatchSize: 1,
+      ScalingConfig: {
+        MaximumConcurrency: 2,
+      },
     });
     goTemplate.hasResourceProperties("AWS::IAM::Policy", {
       PolicyDocument: {
@@ -230,9 +233,12 @@ describe("PhotoProfileCdkStack", () => {
     });
   });
 
-  test("Lambda has SQS event source mapping with batch size 1", () => {
+  test("Lambda has SQS event source mapping with batch size 1 and concurrency cap", () => {
     template.hasResourceProperties("AWS::Lambda::EventSourceMapping", {
       BatchSize: 1,
+      ScalingConfig: {
+        MaximumConcurrency: 2,
+      },
     });
   });
 

@@ -250,6 +250,7 @@ export class PhotoProfileCdkStack extends cdk.Stack {
     this.imageProcessor.addEventSource(
       new SqsEventSource(this.queue, {
         batchSize: 1,
+        maxConcurrency: 2,
       }),
     );
 
