@@ -42,6 +42,7 @@ export default async function AlbumDetailPage({ params }: PageProps) {
           title: p.title,
           originalFilename: p.originalFilename,
           blurDataUrl: p.blurDataUrl,
+          width: p.width,
         }))}
       />
     </div>

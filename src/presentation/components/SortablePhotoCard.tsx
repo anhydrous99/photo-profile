@@ -2,7 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { getClientImageUrl } from "@/lib/imageLoader";
+import { FadeImage } from "@/presentation/components/FadeImage";
 
 interface SortablePhotoCardProps {
   photo: {
@@ -10,6 +10,7 @@ interface SortablePhotoCardProps {
     title: string | null;
     originalFilename: string;
     blurDataUrl: string | null;
+    width: number | null;
   };
   isCover: boolean;
   onSetCover: (photoId: string) => void;
@@ -54,18 +55,14 @@ export function SortablePhotoCard({
 
       {/* Draggable photo area */}
       <div {...attributes} {...listeners} className="cursor-grab">
-        <div className="aspect-square overflow-hidden rounded-lg border border-border">
-          <picture>
-            <source
-              type="image/avif"
-              srcSet={getClientImageUrl(photo.id, "300w.avif")}
-            />
-            <img
-              src={getClientImageUrl(photo.id, "300w.webp")}
-              alt={photo.title || photo.originalFilename}
-              className="h-full w-full object-cover"
-            />
-          </picture>
+        <div className="relative aspect-square overflow-hidden rounded-lg border border-border">
+          <FadeImage
+            photoId={photo.id}
+            alt={photo.title || photo.originalFilename}
+            blurDataUrl={photo.blurDataUrl}
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            maxWidth={photo.width ?? undefined}
+          />
         </div>
       </div>
 

@@ -20,13 +20,14 @@ import {
 } from "@dnd-kit/sortable";
 import type { Album } from "@/domain/entities";
 import { SortablePhotoCard } from "@/presentation/components";
-import { getClientImageUrl } from "@/lib/imageLoader";
+import { FadeImage } from "@/presentation/components/FadeImage";
 
 interface AlbumPhoto {
   id: string;
   title: string | null;
   originalFilename: string;
   blurDataUrl: string | null;
+  width: number | null;
 }
 
 interface AlbumDetailClientProps {
@@ -194,19 +195,15 @@ export function AlbumDetailClient({
           {/* Drag overlay */}
           <DragOverlay>
             {activePhoto ? (
-              <div className="rounded-lg opacity-80 shadow-xl">
-                <div className="aspect-square overflow-hidden rounded-lg border border-border">
-                  <picture>
-                    <source
-                      type="image/avif"
-                      srcSet={getClientImageUrl(activePhoto.id, "300w.avif")}
-                    />
-                    <img
-                      src={getClientImageUrl(activePhoto.id, "300w.webp")}
-                      alt={activePhoto.title || activePhoto.originalFilename}
-                      className="h-full w-full object-cover"
-                    />
-                  </picture>
+              <div className="w-40 rounded-lg opacity-80 shadow-xl sm:w-48">
+                <div className="relative aspect-square overflow-hidden rounded-lg border border-border">
+                  <FadeImage
+                    photoId={activePhoto.id}
+                    alt={activePhoto.title || activePhoto.originalFilename}
+                    blurDataUrl={activePhoto.blurDataUrl}
+                    sizes="25vw"
+                    maxWidth={activePhoto.width ?? undefined}
+                  />
                 </div>
               </div>
             ) : null}

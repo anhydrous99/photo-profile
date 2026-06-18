@@ -1,6 +1,6 @@
 import type { Photo } from "@/domain/entities";
 import Link from "next/link";
-import { getClientImageUrl } from "@/lib/imageLoader";
+import { FadeImage } from "@/presentation/components/FadeImage";
 import { StatusBadge } from "@/presentation/components/StatusBadge";
 import { formatDateShort } from "@/lib/formatDate";
 
@@ -146,20 +146,15 @@ function PhotoCard({
         </div>
       )}
 
-      <div className="aspect-[4/3] overflow-hidden bg-surface-secondary">
-        {photo.status === "ready" && photo.blurDataUrl ? (
-          <picture>
-            <source
-              type="image/avif"
-              srcSet={getClientImageUrl(photo.id, "300w.avif")}
-            />
-            <img
-              src={getClientImageUrl(photo.id, "300w.webp")}
-              alt={photo.originalFilename}
-              className="h-full w-full object-cover"
-              loading="lazy"
-            />
-          </picture>
+      <div className="relative aspect-[4/3] overflow-hidden bg-surface-secondary">
+        {photo.status === "ready" ? (
+          <FadeImage
+            photoId={photo.id}
+            alt={photo.originalFilename}
+            blurDataUrl={photo.blurDataUrl}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            maxWidth={photo.width ?? undefined}
+          />
         ) : (
           <div className="flex h-full items-center justify-center">
             <span className="text-sm text-text-tertiary">

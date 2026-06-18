@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Photo, Album } from "@/domain/entities";
 import { StatusBadge } from "@/presentation/components/StatusBadge";
+import { FadeImage } from "@/presentation/components/FadeImage";
 import { formatDateFull } from "@/lib/formatDate";
 
 interface PhotoDetailProps {
@@ -89,11 +90,22 @@ export function PhotoDetail({ photo }: PhotoDetailProps) {
 
   return (
     <div className="space-y-6">
-      {/* Photo Preview Placeholder */}
-      <div className="flex h-64 items-center justify-center rounded-lg bg-surface-secondary">
-        <span className="text-text-tertiary">
-          {photo.status === "processing" ? "Processing..." : "No preview"}
-        </span>
+      {/* Photo Preview */}
+      <div className="relative flex h-64 items-center justify-center overflow-hidden rounded-lg bg-surface-secondary">
+        {photo.status === "ready" ? (
+          <FadeImage
+            photoId={photo.id}
+            alt={photo.title || photo.originalFilename}
+            blurDataUrl={photo.blurDataUrl}
+            sizes="(max-width: 1024px) 100vw, 66vw"
+            maxWidth={photo.width ?? undefined}
+            objectFit="contain"
+          />
+        ) : (
+          <span className="text-text-tertiary">
+            {photo.status === "processing" ? "Processing..." : "No preview"}
+          </span>
+        )}
       </div>
 
       {/* Photo Info */}

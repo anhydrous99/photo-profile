@@ -12,6 +12,7 @@ interface FadeImageProps {
   preload?: boolean;
   className?: string;
   maxWidth?: number;
+  objectFit?: "cover" | "contain";
 }
 
 export function FadeImage({
@@ -22,6 +23,7 @@ export function FadeImage({
   preload,
   className,
   maxWidth,
+  objectFit = "cover",
 }: FadeImageProps) {
   const [loaded, setLoaded] = useState(false);
 
@@ -38,6 +40,8 @@ export function FadeImage({
     ? (THUMBNAIL_SIZES.filter((w) => w <= maxWidth).at(-1) ??
       THUMBNAIL_SIZES[0])
     : THUMBNAIL_SIZES[THUMBNAIL_SIZES.length - 1];
+  const objectFitClass =
+    objectFit === "contain" ? "object-contain" : "object-cover";
 
   return (
     <div
@@ -72,7 +76,7 @@ export function FadeImage({
           loading={preload ? "eager" : "lazy"}
           fetchPriority={preload ? "high" : undefined}
           draggable={false}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+          className={`absolute inset-0 h-full w-full ${objectFitClass} transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
           onLoad={() => setLoaded(true)}
         />
       </picture>
