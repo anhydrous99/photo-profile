@@ -4,9 +4,9 @@ End-to-end video support: browser → S3 multipart upload → AWS Elemental
 MediaConvert (adaptive HLS + poster frame) → EventBridge completion handler →
 HLS playback (hls.js / native Safari).
 
-Video is **opt-in and S3-only**. It is gated behind `VIDEO_ENABLED` (server) and
-`NEXT_PUBLIC_VIDEO_ENABLED` (client). When disabled, the app behaves exactly as
-the image-only build.
+Video is **enabled by default for S3-backed deployments** and remains S3-only.
+Set `VIDEO_ENABLED=false` (server) and `NEXT_PUBLIC_VIDEO_ENABLED=false`
+(client) to opt out. Filesystem/local storage stays image-only by default.
 
 ## Architecture
 
@@ -32,15 +32,16 @@ video thumbnails unchanged.
 
 ### 1. Provision infrastructure (CDK)
 
-Deploy with the video flag so the MediaConvert role, completion Lambda,
-EventBridge rule, and IAM grants are created:
+Deploy normally so the MediaConvert role, completion Lambda, EventBridge rule,
+and IAM grants are created by default:
 
 ```bash
 cd photo-profile-cdk
-npx cdk deploy -c VIDEO_ENABLED=true -c s3BucketName=<bucket> -c dynamodbTablePrefix=<prefix>
+npx cdk deploy -c s3BucketName=<bucket> -c dynamodbTablePrefix=<prefix>
 ```
 
 Record the stack output `MediaConvertRoleArn`.
+To deploy image-only infrastructure, pass `-c VIDEO_ENABLED=false`.
 
 The CDK CloudFront distribution uses the managed
 `CORS_ALLOW_ALL_ORIGINS` response headers policy so hls.js can fetch HLS
@@ -78,23 +79,25 @@ aws s3api put-bucket-cors --bucket <bucket> --cors-configuration file://cors.jso
 
 Server (Vercel):
 
-| Name                        | Value                                               |
-| --------------------------- | --------------------------------------------------- |
-| `VIDEO_ENABLED`             | `true`                                              |
-| `STORAGE_BACKEND`           | `s3` (required when video is enabled)               |
-| `AWS_MEDIACONVERT_ROLE_ARN` | CDK output `MediaConvertRoleArn`                    |
-| `AWS_CLOUDFRONT_DOMAIN`     | CDK output `CloudFrontDomain`                       |
-| `AWS_MEDIACONVERT_ENDPOINT` | Optional; omit to use the default regional endpoint |
+| Name                        | Value                                                |
+| --------------------------- | ---------------------------------------------------- |
+| `VIDEO_ENABLED`             | Optional; omit or set `true`. Set `false` to opt out |
+| `STORAGE_BACKEND`           | `s3` (required when video is enabled)                |
+| `AWS_MEDIACONVERT_ROLE_ARN` | CDK output `MediaConvertRoleArn`                     |
+| `AWS_CLOUDFRONT_DOMAIN`     | CDK output `CloudFrontDomain`                        |
+| `AWS_MEDIACONVERT_ENDPOINT` | Optional; omit to use the default regional endpoint  |
 
 Client (Vercel, inlined at build time):
 
-| Name                            | Value                                  |
-| ------------------------------- | -------------------------------------- |
-| `NEXT_PUBLIC_VIDEO_ENABLED`     | `true`                                 |
-| `NEXT_PUBLIC_CLOUDFRONT_DOMAIN` | Same domain as `AWS_CLOUDFRONT_DOMAIN` |
+| Name                            | Value                                                |
+| ------------------------------- | ---------------------------------------------------- |
+| `NEXT_PUBLIC_STORAGE_BACKEND`   | `s3`                                                 |
+| `NEXT_PUBLIC_VIDEO_ENABLED`     | Optional; omit or set `true`. Set `false` to opt out |
+| `NEXT_PUBLIC_CLOUDFRONT_DOMAIN` | Same domain as `AWS_CLOUDFRONT_DOMAIN`               |
 
-`env.ts` fails fast at startup if `VIDEO_ENABLED=true` without `STORAGE_BACKEND=s3`,
-`AWS_MEDIACONVERT_ROLE_ARN`, and `AWS_CLOUDFRONT_DOMAIN`.
+`env.ts` fails fast at startup when video is enabled without
+`STORAGE_BACKEND=s3`, `AWS_MEDIACONVERT_ROLE_ARN`, and
+`AWS_CLOUDFRONT_DOMAIN`.
 
 ## Limits and Settings
 

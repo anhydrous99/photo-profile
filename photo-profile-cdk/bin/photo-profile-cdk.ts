@@ -12,7 +12,9 @@ const imageWorkerRuntime =
   process.env.IMAGE_WORKER_RUNTIME;
 const videoEnabledValue =
   app.node.tryGetContext("VIDEO_ENABLED") ?? process.env.VIDEO_ENABLED;
-const videoEnabled = videoEnabledValue === "true" || videoEnabledValue === "1";
+const videoEnabledString = videoEnabledValue?.toString().trim().toLowerCase();
+const videoEnabled =
+  videoEnabledString !== "false" && videoEnabledString !== "0";
 
 new PhotoProfileCdkStack(app, "PhotoProfileCdkStack", {
   s3BucketName,

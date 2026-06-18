@@ -153,14 +153,14 @@ describe("getUploadAdapter", () => {
     });
   });
 
-  describe("when NEXT_PUBLIC_VIDEO_ENABLED is 'true'", () => {
+  describe("when video is enabled by default for S3", () => {
     const origVideo = process.env.NEXT_PUBLIC_VIDEO_ENABLED;
     const origBackend = process.env.NEXT_PUBLIC_STORAGE_BACKEND;
 
     beforeEach(() => {
-      process.env.NEXT_PUBLIC_VIDEO_ENABLED = "true";
+      delete process.env.NEXT_PUBLIC_VIDEO_ENABLED;
       process.env.NEXT_PUBLIC_STORAGE_BACKEND = "s3";
-      // uploadAdapter reads NEXT_PUBLIC_VIDEO_ENABLED at module load.
+      // uploadAdapter resolves video support at module load.
       vi.resetModules();
     });
 
@@ -209,6 +209,23 @@ describe("getUploadAdapter", () => {
       const { getUploadAdapter } = await import("../uploadAdapter");
       const adapter = getUploadAdapter();
       const file = new File(["x"], "pic.jpg", { type: "image/jpeg" });
+
+      await adapter(file, mockProgressCallback).promise;
+
+      expect(mockUploadFileViaPresign).toHaveBeenCalledOnce();
+      expect(mockUploadVideoMultipart).not.toHaveBeenCalled();
+    });
+
+    it("routes video files to the image path when videos are explicitly disabled", async () => {
+      process.env.NEXT_PUBLIC_VIDEO_ENABLED = "false";
+      vi.resetModules();
+      mockUploadFileViaPresign.mockResolvedValue({
+        photoId: "i",
+        status: "processing",
+      });
+      const { getUploadAdapter } = await import("../uploadAdapter");
+      const adapter = getUploadAdapter();
+      const file = new File(["x"], "clip.mov", { type: "video/quicktime" });
 
       await adapter(file, mockProgressCallback).promise;
 

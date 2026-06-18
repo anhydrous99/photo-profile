@@ -2,12 +2,18 @@ import * as cdk from "aws-cdk-lib/core";
 import { Template, Match } from "aws-cdk-lib/assertions";
 import { PhotoProfileCdkStack } from "../lib/photo-profile-cdk-stack";
 
-function createTestStack(imageWorkerRuntime?: string): Template {
+function createTestStack(
+  options: {
+    imageWorkerRuntime?: string;
+    videoEnabled?: boolean;
+  } = {},
+): Template {
   const app = new cdk.App();
   const stack = new PhotoProfileCdkStack(app, "TestStack", {
     s3BucketName: "test-photo-bucket",
     dynamodbTablePrefix: "test_",
-    imageWorkerRuntime,
+    imageWorkerRuntime: options.imageWorkerRuntime,
+    videoEnabled: options.videoEnabled,
   });
   return Template.fromStack(stack);
 }
@@ -26,7 +32,7 @@ describe("PhotoProfileCdkStack", () => {
   let template: Template;
 
   beforeAll(() => {
-    template = createTestStack();
+    template = createTestStack({ videoEnabled: false });
   });
 
   test("creates SQS queue with correct visibility timeout", () => {
@@ -68,7 +74,10 @@ describe("PhotoProfileCdkStack", () => {
   });
 
   test("explicit node worker runtime selects Node Lambda path", () => {
-    const nodeTemplate = createTestStack("node");
+    const nodeTemplate = createTestStack({
+      imageWorkerRuntime: "node",
+      videoEnabled: false,
+    });
 
     nodeTemplate.resourceCountIs("AWS::Lambda::Function", 1);
     nodeTemplate.hasResourceProperties("AWS::Lambda::Function", {
@@ -89,7 +98,10 @@ describe("PhotoProfileCdkStack", () => {
   });
 
   test("explicit go worker runtime selects Go container image with operational invariants", () => {
-    const goTemplate = createTestStack("go");
+    const goTemplate = createTestStack({
+      imageWorkerRuntime: "go",
+      videoEnabled: false,
+    });
 
     goTemplate.resourceCountIs("AWS::Lambda::Function", 1);
     goTemplate.hasResourceProperties("AWS::Lambda::Function", {
@@ -160,9 +172,9 @@ describe("PhotoProfileCdkStack", () => {
   });
 
   test("invalid worker runtime fails fast with supported IMAGE_WORKER_RUNTIME values", () => {
-    expect(() => createTestStack("python")).toThrow(
-      /IMAGE_WORKER_RUNTIME.*node.*go/,
-    );
+    expect(() =>
+      createTestStack({ imageWorkerRuntime: "python", videoEnabled: false }),
+    ).toThrow(/IMAGE_WORKER_RUNTIME.*node.*go/);
   });
 
   test("Lambda has correct ephemeral storage", () => {
@@ -507,6 +519,17 @@ describe("PhotoProfileCdkStack", () => {
   test("does not create video resources when video is disabled", () => {
     template.resourceCountIs("AWS::Events::Rule", 0);
     template.resourceCountIs("AWS::Lambda::Function", 1);
+  });
+});
+
+describe("PhotoProfileCdkStack (default video enabled)", () => {
+  test("creates video infrastructure by default", () => {
+    const template = createTestStack();
+
+    template.resourceCountIs("AWS::Events::Rule", 1);
+    template.resourceCountIs("AWS::Lambda::Function", 2);
+    template.hasOutput("MediaConvertRoleArn", {});
+    template.hasOutput("VideoCompleteLambdaArn", {});
   });
 });
 

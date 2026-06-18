@@ -33,7 +33,7 @@ export interface PhotoProfileStackProps extends cdk.StackProps {
   /**
    * Provision video transcoding infrastructure (MediaConvert role, completion
    * Lambda, EventBridge rule, and Vercel IAM grants).
-   * @default false
+   * @default true
    */
   readonly videoEnabled?: boolean;
 }
@@ -70,7 +70,7 @@ export class PhotoProfileCdkStack extends cdk.Stack {
     const imageWorkerRuntime = validateImageWorkerRuntime(
       props.imageWorkerRuntime,
     );
-    const videoEnabled = props.videoEnabled ?? false;
+    const videoEnabled = props.videoEnabled ?? true;
 
     // DynamoDB Tables
     this.photosTable = new dynamodb.Table(this, "PhotosTable", {

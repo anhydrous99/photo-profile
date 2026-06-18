@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const mockUseDropzone = vi.hoisted(() => vi.fn());
 
@@ -15,9 +15,10 @@ vi.mock("react-dropzone", () => ({
   useDropzone: mockUseDropzone,
 }));
 
-import { DropZone } from "../DropZone";
-
 describe("DropZone", () => {
+  const originalStorageBackend = process.env.NEXT_PUBLIC_STORAGE_BACKEND;
+  const originalVideoEnabled = process.env.NEXT_PUBLIC_VIDEO_ENABLED;
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseDropzone.mockReturnValue({
@@ -25,12 +26,53 @@ describe("DropZone", () => {
       getInputProps: vi.fn(() => ({})),
       isDragActive: false,
     });
+    process.env.NEXT_PUBLIC_STORAGE_BACKEND = "s3";
+    delete process.env.NEXT_PUBLIC_VIDEO_ENABLED;
+    vi.resetModules();
   });
 
-  it("uses the 2GB video size limit for .mov files with empty MIME type", () => {
-    DropZone({ onFilesAccepted: vi.fn() });
+  afterEach(() => {
+    if (originalStorageBackend === undefined) {
+      delete process.env.NEXT_PUBLIC_STORAGE_BACKEND;
+    } else {
+      process.env.NEXT_PUBLIC_STORAGE_BACKEND = originalStorageBackend;
+    }
+    if (originalVideoEnabled === undefined) {
+      delete process.env.NEXT_PUBLIC_VIDEO_ENABLED;
+    } else {
+      process.env.NEXT_PUBLIC_VIDEO_ENABLED = originalVideoEnabled;
+    }
+  });
 
-    const validator = mockUseDropzone.mock.calls[0][0].validator as (
+  async function renderDropZone() {
+    const { DropZone } = await import("../DropZone");
+    DropZone({ onFilesAccepted: vi.fn() });
+    return mockUseDropzone.mock.calls[0][0];
+  }
+
+  it("accepts videos by default for S3 uploads", async () => {
+    const options = await renderDropZone();
+
+    expect(options.accept).toMatchObject({
+      "video/mp4": [".mp4"],
+      "video/quicktime": [".mov"],
+      "video/webm": [".webm"],
+    });
+  });
+
+  it("omits videos when explicitly disabled", async () => {
+    process.env.NEXT_PUBLIC_VIDEO_ENABLED = "false";
+    vi.resetModules();
+
+    const options = await renderDropZone();
+
+    expect(options.accept).not.toHaveProperty("video/quicktime");
+  });
+
+  it("uses the 2GB video size limit for .mov files with empty MIME type", async () => {
+    const options = await renderDropZone();
+
+    const validator = options.validator as (
       file: File,
     ) => { code: string; message: string } | null;
 

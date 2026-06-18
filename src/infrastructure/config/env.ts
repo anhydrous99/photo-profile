@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { logger } from "@/infrastructure/logging/logger";
+import { resolveVideoEnabled } from "@/lib/videoFeature";
 
 const envSchema = z
   .object({
@@ -23,13 +24,10 @@ const envSchema = z
     // Optional account-specific MediaConvert endpoint. When omitted the SDK's
     // default regional endpoint is used.
     AWS_MEDIACONVERT_ENDPOINT: z.string().url().optional(),
-    // Feature gate for video upload/processing/playback. Disabled by default.
+    // Feature gate for video upload/processing/playback. Defaults on for S3.
     // Client-side companion: NEXT_PUBLIC_VIDEO_ENABLED (inlined at build time)
     // gates the upload UI. Video requires STORAGE_BACKEND=s3 + CloudFront.
-    VIDEO_ENABLED: z
-      .string()
-      .optional()
-      .transform((val) => val === "true" || val === "1"),
+    VIDEO_ENABLED: z.string().optional(),
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
     SQS_QUEUE_URL: z.string().url().optional(),
@@ -93,12 +91,17 @@ const envSchema = z
     }
 
     // Video is an S3-only feature that relies on MediaConvert + CloudFront.
-    if (data.VIDEO_ENABLED) {
+    if (
+      resolveVideoEnabled({
+        value: data.VIDEO_ENABLED,
+        storageBackend: data.STORAGE_BACKEND,
+      })
+    ) {
       if (data.STORAGE_BACKEND !== "s3") {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["STORAGE_BACKEND"],
-          message: "STORAGE_BACKEND must be s3 when VIDEO_ENABLED is true",
+          message: "STORAGE_BACKEND must be s3 when video is enabled",
         });
       }
       if (!data.AWS_MEDIACONVERT_ROLE_ARN) {
@@ -106,15 +109,14 @@ const envSchema = z
           code: z.ZodIssueCode.custom,
           path: ["AWS_MEDIACONVERT_ROLE_ARN"],
           message:
-            "AWS_MEDIACONVERT_ROLE_ARN is required when VIDEO_ENABLED is true",
+            "AWS_MEDIACONVERT_ROLE_ARN is required when video is enabled",
         });
       }
       if (!data.AWS_CLOUDFRONT_DOMAIN) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["AWS_CLOUDFRONT_DOMAIN"],
-          message:
-            "AWS_CLOUDFRONT_DOMAIN is required when VIDEO_ENABLED is true",
+          message: "AWS_CLOUDFRONT_DOMAIN is required when video is enabled",
         });
       }
     }
@@ -139,7 +141,14 @@ const envSchema = z
           "UPSTASH_REDIS_REST_URL is required when UPSTASH_REDIS_REST_TOKEN is set",
       });
     }
-  });
+  })
+  .transform((data) => ({
+    ...data,
+    VIDEO_ENABLED: resolveVideoEnabled({
+      value: data.VIDEO_ENABLED,
+      storageBackend: data.STORAGE_BACKEND,
+    }),
+  }));
 
 const parsed = envSchema.safeParse(process.env);
 

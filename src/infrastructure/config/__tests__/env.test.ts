@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { z } from "zod";
+import { resolveVideoEnabled } from "@/lib/videoFeature";
 
 // We'll test the schema directly without importing the module
 // to avoid the fail-fast behavior during test setup
@@ -19,10 +20,7 @@ const createEnvSchema = () =>
       AWS_SECRET_ACCESS_KEY: z.string().optional(),
       AWS_MEDIACONVERT_ROLE_ARN: z.string().optional(),
       AWS_MEDIACONVERT_ENDPOINT: z.string().url().optional(),
-      VIDEO_ENABLED: z
-        .string()
-        .optional()
-        .transform((val) => val === "true" || val === "1"),
+      VIDEO_ENABLED: z.string().optional(),
       SQS_QUEUE_URL: z.string().url().optional(),
       UPSTASH_REDIS_REST_URL: z.string().url().optional(),
       UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
@@ -83,12 +81,17 @@ const createEnvSchema = () =>
         }
       }
 
-      if (data.VIDEO_ENABLED) {
+      if (
+        resolveVideoEnabled({
+          value: data.VIDEO_ENABLED,
+          storageBackend: data.STORAGE_BACKEND,
+        })
+      ) {
         if (data.STORAGE_BACKEND !== "s3") {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["STORAGE_BACKEND"],
-            message: "STORAGE_BACKEND must be s3 when VIDEO_ENABLED is true",
+            message: "STORAGE_BACKEND must be s3 when video is enabled",
           });
         }
         if (!data.AWS_MEDIACONVERT_ROLE_ARN) {
@@ -96,15 +99,14 @@ const createEnvSchema = () =>
             code: z.ZodIssueCode.custom,
             path: ["AWS_MEDIACONVERT_ROLE_ARN"],
             message:
-              "AWS_MEDIACONVERT_ROLE_ARN is required when VIDEO_ENABLED is true",
+              "AWS_MEDIACONVERT_ROLE_ARN is required when video is enabled",
           });
         }
         if (!data.AWS_CLOUDFRONT_DOMAIN) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["AWS_CLOUDFRONT_DOMAIN"],
-            message:
-              "AWS_CLOUDFRONT_DOMAIN is required when VIDEO_ENABLED is true",
+            message: "AWS_CLOUDFRONT_DOMAIN is required when video is enabled",
           });
         }
       }
@@ -129,7 +131,14 @@ const createEnvSchema = () =>
             "UPSTASH_REDIS_REST_URL is required when UPSTASH_REDIS_REST_TOKEN is set",
         });
       }
-    });
+    })
+    .transform((data) => ({
+      ...data,
+      VIDEO_ENABLED: resolveVideoEnabled({
+        value: data.VIDEO_ENABLED,
+        storageBackend: data.STORAGE_BACKEND,
+      }),
+    }));
 
 describe("Environment Configuration", () => {
   const baseValidEnv = {
@@ -158,6 +167,7 @@ describe("Environment Configuration", () => {
         AWS_REGION: "us-east-1",
         AWS_S3_BUCKET: "my-bucket",
         AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
+        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
       });
       expect(result.success).toBe(true);
       if (result.success) {
@@ -241,6 +251,7 @@ describe("Environment Configuration", () => {
         AWS_REGION: "us-east-1",
         AWS_S3_BUCKET: "my-bucket",
         AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
+        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
         AWS_ACCESS_KEY_ID: "AKIAIOSFODNN7EXAMPLE",
         AWS_SECRET_ACCESS_KEY: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
       });
@@ -285,6 +296,7 @@ describe("Environment Configuration", () => {
         AWS_REGION: "us-east-1",
         AWS_S3_BUCKET: "my-bucket",
         AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
+        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
       });
       expect(result.success).toBe(true);
     });
@@ -385,9 +397,30 @@ describe("Environment Configuration", () => {
       AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
     };
 
-    it("defaults VIDEO_ENABLED to false when unset", () => {
+    it("defaults VIDEO_ENABLED to false for filesystem when unset", () => {
       const schema = createEnvSchema();
       const result = schema.safeParse(baseValidEnv);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.VIDEO_ENABLED).toBe(false);
+      }
+    });
+
+    it("defaults VIDEO_ENABLED to true for S3 when unset", () => {
+      const schema = createEnvSchema();
+      const result = schema.safeParse({
+        ...s3Env,
+        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.VIDEO_ENABLED).toBe(true);
+      }
+    });
+
+    it("allows explicitly disabling video for S3 without MediaConvert config", () => {
+      const schema = createEnvSchema();
+      const result = schema.safeParse({ ...s3Env, VIDEO_ENABLED: "false" });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.VIDEO_ENABLED).toBe(false);
@@ -456,6 +489,7 @@ describe("Environment Configuration", () => {
         AWS_REGION: "us-east-1",
         AWS_S3_BUCKET: "my-bucket",
         AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
+        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
         SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
         // STORAGE_PATH intentionally omitted
       });

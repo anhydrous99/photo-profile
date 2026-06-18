@@ -5,8 +5,12 @@ import {
   type UploadController,
 } from "@/presentation/lib";
 import { VIDEO_EXTENSION_MIME, VIDEO_UPLOAD_MIME_TYPES } from "@/lib/constants";
+import { resolveVideoEnabled } from "@/lib/videoFeature";
 
-const videoEnabled = process.env.NEXT_PUBLIC_VIDEO_ENABLED === "true";
+const videoEnabled = resolveVideoEnabled({
+  value: process.env.NEXT_PUBLIC_VIDEO_ENABLED,
+  storageBackend: process.env.NEXT_PUBLIC_STORAGE_BACKEND,
+});
 
 function isVideoFile(file: File): boolean {
   if ((VIDEO_UPLOAD_MIME_TYPES as readonly string[]).includes(file.type)) {
