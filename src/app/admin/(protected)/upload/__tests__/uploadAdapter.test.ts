@@ -2,14 +2,17 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockUploadFile, mockUploadFileViaPresign } = vi.hoisted(() => ({
-  mockUploadFile: vi.fn(),
-  mockUploadFileViaPresign: vi.fn(),
-}));
+const { mockUploadFile, mockUploadFileViaPresign, mockUploadVideoMultipart } =
+  vi.hoisted(() => ({
+    mockUploadFile: vi.fn(),
+    mockUploadFileViaPresign: vi.fn(),
+    mockUploadVideoMultipart: vi.fn(),
+  }));
 
 vi.mock("@/presentation/lib", () => ({
   uploadFile: mockUploadFile,
   uploadFileViaPresign: mockUploadFileViaPresign,
+  uploadVideoMultipart: mockUploadVideoMultipart,
 }));
 
 import { getUploadAdapter } from "../uploadAdapter";
@@ -147,6 +150,70 @@ describe("getUploadAdapter", () => {
       const controller = adapter(testFile, mockProgressCallback);
 
       expect(controller).toBe(mockController);
+    });
+  });
+
+  describe("when NEXT_PUBLIC_VIDEO_ENABLED is 'true'", () => {
+    const origVideo = process.env.NEXT_PUBLIC_VIDEO_ENABLED;
+    const origBackend = process.env.NEXT_PUBLIC_STORAGE_BACKEND;
+
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_VIDEO_ENABLED = "true";
+      process.env.NEXT_PUBLIC_STORAGE_BACKEND = "s3";
+      // uploadAdapter reads NEXT_PUBLIC_VIDEO_ENABLED at module load.
+      vi.resetModules();
+    });
+
+    afterEach(() => {
+      if (origVideo === undefined) delete process.env.NEXT_PUBLIC_VIDEO_ENABLED;
+      else process.env.NEXT_PUBLIC_VIDEO_ENABLED = origVideo;
+      if (origBackend === undefined)
+        delete process.env.NEXT_PUBLIC_STORAGE_BACKEND;
+      else process.env.NEXT_PUBLIC_STORAGE_BACKEND = origBackend;
+    });
+
+    it("routes mp4 files (by MIME) to the multipart uploader", async () => {
+      mockUploadVideoMultipart.mockResolvedValue({
+        photoId: "v",
+        status: "processing",
+      });
+      const { getUploadAdapter } = await import("../uploadAdapter");
+      const adapter = getUploadAdapter();
+      const file = new File(["x"], "clip.mp4", { type: "video/mp4" });
+
+      await adapter(file, mockProgressCallback).promise;
+
+      expect(mockUploadVideoMultipart).toHaveBeenCalledOnce();
+      expect(mockUploadFileViaPresign).not.toHaveBeenCalled();
+    });
+
+    it("routes .mov files with empty MIME (by extension) to the multipart uploader", async () => {
+      mockUploadVideoMultipart.mockResolvedValue({
+        photoId: "v",
+        status: "processing",
+      });
+      const { getUploadAdapter } = await import("../uploadAdapter");
+      const adapter = getUploadAdapter();
+      const file = new File(["x"], "clip.mov", { type: "" });
+
+      await adapter(file, mockProgressCallback).promise;
+
+      expect(mockUploadVideoMultipart).toHaveBeenCalledOnce();
+    });
+
+    it("still routes image files to the image path", async () => {
+      mockUploadFileViaPresign.mockResolvedValue({
+        photoId: "i",
+        status: "processing",
+      });
+      const { getUploadAdapter } = await import("../uploadAdapter");
+      const adapter = getUploadAdapter();
+      const file = new File(["x"], "pic.jpg", { type: "image/jpeg" });
+
+      await adapter(file, mockProgressCallback).promise;
+
+      expect(mockUploadFileViaPresign).toHaveBeenCalledOnce();
+      expect(mockUploadVideoMultipart).not.toHaveBeenCalled();
     });
   });
 

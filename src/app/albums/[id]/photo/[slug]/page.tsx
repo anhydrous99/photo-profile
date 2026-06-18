@@ -117,6 +117,8 @@ export default async function AlbumPhotoPage({ params }: PageProps) {
         exifData: p.exifData,
         width: p.width,
         height: p.height,
+        mediaType: p.mediaType,
+        durationMs: p.durationMs,
       }))}
       initialPhotoSlug={slug}
     />

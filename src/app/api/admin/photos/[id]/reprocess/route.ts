@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { findOriginalFile } from "@/infrastructure/storage";
 import { enqueueImageProcessing } from "@/infrastructure/jobs";
+import { submitVideoTranscode } from "@/infrastructure/jobs/mediaConvert";
 import { getPhotoRepository } from "@/infrastructure/database/dynamodb/repositories";
 import { logger } from "@/infrastructure/logging/logger";
 import { enqueueWithTimeout } from "@/lib/enqueueWithTimeout";
@@ -61,11 +62,14 @@ export async function POST(_request: NextRequest, context: RouteContext) {
       photo.updatedAt = new Date();
       await photoRepository.save(photo);
 
+      // Videos are re-submitted to MediaConvert; images are re-enqueued to SQS.
+      const reprocess =
+        photo.mediaType === "video"
+          ? submitVideoTranscode({ photoId: id, originalKey: originalPath })
+          : enqueueImageProcessing(id, originalPath);
+
       try {
-        await enqueueWithTimeout(
-          enqueueImageProcessing(id, originalPath),
-          ENQUEUE_TIMEOUT_MS,
-        );
+        await enqueueWithTimeout(reprocess, ENQUEUE_TIMEOUT_MS);
       } catch (enqueueError) {
         logger.error(`Failed to enqueue reprocess for photo ${id}`, {
           component: "reprocess",

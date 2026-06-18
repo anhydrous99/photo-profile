@@ -1,4 +1,4 @@
-import { THUMBNAIL_SIZES } from "@/lib/constants";
+import { HLS_MASTER_PLAYLIST, THUMBNAIL_SIZES } from "@/lib/constants";
 
 const cloudfrontDomain = process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
 
@@ -29,6 +29,20 @@ export function getClientImageUrl(photoId: string, filename: string): string {
     return `https://${cloudfrontDomain}/processed/${photoId}/${filename}`;
   }
   return `/api/images/${photoId}/${filename}`;
+}
+
+/**
+ * URL of a video's HLS master playlist.
+ *
+ * Video is served exclusively via CloudFront (S3-only feature). When CloudFront
+ * is not configured, video playback is unavailable and this returns null so
+ * callers can fall back to the poster image.
+ */
+export function getVideoManifestUrl(photoId: string): string | null {
+  if (!cloudfrontDomain) {
+    return null;
+  }
+  return `https://${cloudfrontDomain}/processed/${photoId}/${HLS_MASTER_PLAYLIST}`;
 }
 
 export function buildSrcSet(

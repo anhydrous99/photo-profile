@@ -12,6 +12,16 @@ function createTestStack(imageWorkerRuntime?: string): Template {
   return Template.fromStack(stack);
 }
 
+function createVideoStack(): Template {
+  const app = new cdk.App();
+  const stack = new PhotoProfileCdkStack(app, "TestStack", {
+    s3BucketName: "test-photo-bucket",
+    dynamodbTablePrefix: "test_",
+    videoEnabled: true,
+  });
+  return Template.fromStack(stack);
+}
+
 describe("PhotoProfileCdkStack", () => {
   let template: Template;
 
@@ -479,8 +489,106 @@ describe("PhotoProfileCdkStack", () => {
     });
   });
 
+  test("CloudFront distribution sends CORS headers for cross-origin media playback", () => {
+    template.hasResourceProperties("AWS::CloudFront::Distribution", {
+      DistributionConfig: Match.objectLike({
+        DefaultCacheBehavior: Match.objectLike({
+          ResponseHeadersPolicyId: Match.anyValue(),
+        }),
+      }),
+    });
+  });
+
   test("outputs CloudFront domain", () => {
     template.hasOutput("CloudFrontDomain", {});
     template.hasOutput("CloudFrontDistributionId", {});
+  });
+
+  test("does not create video resources when video is disabled", () => {
+    template.resourceCountIs("AWS::Events::Rule", 0);
+    template.resourceCountIs("AWS::Lambda::Function", 1);
+  });
+});
+
+describe("PhotoProfileCdkStack (video enabled)", () => {
+  let template: Template;
+
+  beforeAll(() => {
+    template = createVideoStack();
+  });
+
+  test("creates the video completion Lambda alongside the image processor", () => {
+    template.resourceCountIs("AWS::Lambda::Function", 2);
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Runtime: "nodejs22.x",
+      Architectures: ["arm64"],
+      Handler: "src/infrastructure/jobs/videoCompleteHandler.handler",
+      MemorySize: 1536,
+      Timeout: 120,
+    });
+  });
+
+  test("creates a MediaConvert service role", () => {
+    template.hasResourceProperties("AWS::IAM::Role", {
+      AssumeRolePolicyDocument: Match.objectLike({
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Effect: "Allow",
+            Principal: { Service: "mediaconvert.amazonaws.com" },
+            Action: "sts:AssumeRole",
+          }),
+        ]),
+      }),
+    });
+  });
+
+  test("creates EventBridge rule for MediaConvert job state change", () => {
+    template.hasResourceProperties("AWS::Events::Rule", {
+      EventPattern: {
+        source: ["aws.mediaconvert"],
+        "detail-type": ["MediaConvert Job State Change"],
+        detail: { status: ["COMPLETE", "ERROR"] },
+      },
+    });
+  });
+
+  test("Vercel user has MediaConvert and PassRole permissions", () => {
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: [
+              "mediaconvert:CreateJob",
+              "mediaconvert:GetJob",
+              "mediaconvert:DescribeEndpoints",
+            ],
+            Effect: "Allow",
+          }),
+          Match.objectLike({
+            Action: "iam:PassRole",
+            Effect: "Allow",
+          }),
+        ]),
+      },
+    });
+  });
+
+  test("Vercel user has S3 multipart abort permissions", () => {
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: ["s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+            Effect: "Allow",
+            Resource: "arn:aws:s3:::test-photo-bucket/*",
+          }),
+        ]),
+      },
+    });
+  });
+
+  test("outputs MediaConvert role ARN and video Lambda ARN", () => {
+    template.hasOutput("MediaConvertRoleArn", {});
+    template.hasOutput("VideoCompleteLambdaArn", {});
   });
 });

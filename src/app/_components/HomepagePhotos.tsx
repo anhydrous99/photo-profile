@@ -30,6 +30,8 @@ export async function HomepagePhotos() {
         exifData: p.exifData,
         width: p.width,
         height: p.height,
+        mediaType: p.mediaType,
+        durationMs: p.durationMs,
       }))}
     />
   );

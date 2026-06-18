@@ -31,6 +31,8 @@ export async function AlbumPhotos({ album }: AlbumPhotosProps) {
         exifData: p.exifData,
         width: p.width,
         height: p.height,
+        mediaType: p.mediaType,
+        durationMs: p.durationMs,
       }))}
     />
   );

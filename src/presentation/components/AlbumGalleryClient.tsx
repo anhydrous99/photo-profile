@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import type { PhotoData } from "@/domain/entities/Photo";
 import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 import { FadeImage } from "./FadeImage";
+import { VideoOverlay } from "./VideoOverlay";
 import { getSlug } from "@/lib/getSlug";
 
 // Dynamic import - lightbox bundle only loads when user clicks
@@ -111,6 +112,9 @@ export function AlbumGalleryClient({
                   maxWidth={photo.width ?? undefined}
                 />
               </div>
+              {photo.mediaType === "video" && (
+                <VideoOverlay durationMs={photo.durationMs} />
+              )}
             </button>
           ))}
         </div>

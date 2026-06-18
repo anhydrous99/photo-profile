@@ -10,9 +10,13 @@ const dynamodbTablePrefix = app.node.tryGetContext("dynamodbTablePrefix") ?? "";
 const imageWorkerRuntime =
   app.node.tryGetContext("IMAGE_WORKER_RUNTIME") ??
   process.env.IMAGE_WORKER_RUNTIME;
+const videoEnabledValue =
+  app.node.tryGetContext("VIDEO_ENABLED") ?? process.env.VIDEO_ENABLED;
+const videoEnabled = videoEnabledValue === "true" || videoEnabledValue === "1";
 
 new PhotoProfileCdkStack(app, "PhotoProfileCdkStack", {
   s3BucketName,
   dynamodbTablePrefix,
   imageWorkerRuntime,
+  videoEnabled,
 });

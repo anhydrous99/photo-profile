@@ -1,7 +1,23 @@
 "use client";
 
 import { useCallback } from "react";
-import { useDropzone, FileRejection } from "react-dropzone";
+import { useDropzone, FileRejection, type Accept } from "react-dropzone";
+import {
+  MAX_FILE_SIZE,
+  MAX_VIDEO_FILE_SIZE,
+  VIDEO_EXTENSION_MIME,
+  VIDEO_UPLOAD_MIME_TYPES,
+} from "@/lib/constants";
+
+const videoEnabled = process.env.NEXT_PUBLIC_VIDEO_ENABLED === "true";
+
+function isVideoFile(file: File): boolean {
+  if ((VIDEO_UPLOAD_MIME_TYPES as readonly string[]).includes(file.type)) {
+    return true;
+  }
+  const ext = file.name.toLowerCase().split(".").pop() ?? "";
+  return ext in VIDEO_EXTENSION_MIME;
+}
 
 interface DropZoneProps {
   onFilesAccepted: (files: File[]) => void;
@@ -24,7 +40,7 @@ interface DropZoneProps {
 export function DropZone({
   onFilesAccepted,
   onFilesRejected,
-  maxSize = 100 * 1024 * 1024,
+  maxSize,
   disabled = false,
 }: DropZoneProps) {
   const onDrop = useCallback(
@@ -39,15 +55,40 @@ export function DropZone({
     [onFilesAccepted, onFilesRejected],
   );
 
+  // Per-type size limits: images 100MB, videos 2GB. react-dropzone's global
+  // maxSize is set to the largest allowed value so the validator can enforce
+  // the precise per-type limit.
+  const fileValidator = useCallback((file: File) => {
+    const video = isVideoFile(file);
+    const limit = video ? MAX_VIDEO_FILE_SIZE : MAX_FILE_SIZE;
+    if (file.size > limit) {
+      return {
+        code: "file-too-large",
+        message: video ? "exceeds 2GB limit" : "exceeds 100MB limit",
+      };
+    }
+    return null;
+  }, []);
+
+  const accept: Accept = {
+    "image/jpeg": [".jpg", ".jpeg"],
+    "image/png": [".png"],
+    "image/webp": [".webp"],
+    "image/heic": [".heic"],
+    ...(videoEnabled
+      ? {
+          "video/mp4": [".mp4"],
+          "video/quicktime": [".mov"],
+          "video/webm": [".webm"],
+        }
+      : {}),
+  };
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      "image/jpeg": [".jpg", ".jpeg"],
-      "image/png": [".png"],
-      "image/webp": [".webp"],
-      "image/heic": [".heic"],
-    },
-    maxSize,
+    accept,
+    maxSize: maxSize ?? (videoEnabled ? MAX_VIDEO_FILE_SIZE : MAX_FILE_SIZE),
+    validator: fileValidator,
     disabled,
   });
 
@@ -68,17 +109,19 @@ export function DropZone({
     >
       <input {...getInputProps()} />
       {isDragActive ? (
-        <p className="text-xl text-accent">Drop photos here...</p>
+        <p className="text-xl text-accent">Drop files here...</p>
       ) : (
         <>
           <p className="text-xl text-text-secondary">
-            Drag and drop photos here
+            Drag and drop {videoEnabled ? "photos or videos" : "photos"} here
           </p>
           <p className="mt-2 text-sm text-text-tertiary">
             or click to select files
           </p>
           <p className="mt-4 text-xs text-text-tertiary">
-            JPEG, PNG, WebP, HEIC up to 100MB each
+            {videoEnabled
+              ? "JPEG, PNG, WebP, HEIC up to 100MB; MP4, MOV, WebM up to 2GB"
+              : "JPEG, PNG, WebP, HEIC up to 100MB each"}
           </p>
         </>
       )}

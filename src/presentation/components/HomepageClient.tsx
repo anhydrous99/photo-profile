@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import type { PhotoData } from "@/domain/entities/Photo";
 import { FadeImage } from "./FadeImage";
+import { VideoOverlay } from "./VideoOverlay";
 import { getSlug } from "@/lib/getSlug";
 
 // Dynamic import - lightbox bundle only loads when user clicks
@@ -83,6 +84,9 @@ export function HomepageClient({
             preload
             maxWidth={heroPhoto.width ?? undefined}
           />
+          {heroPhoto.mediaType === "video" && (
+            <VideoOverlay durationMs={heroPhoto.durationMs} />
+          )}
         </button>
       </section>
 
@@ -104,6 +108,9 @@ export function HomepageClient({
                 sizes="(max-width: 768px) 50vw, 33vw"
                 maxWidth={photo.width ?? undefined}
               />
+              {photo.mediaType === "video" && (
+                <VideoOverlay durationMs={photo.durationMs} />
+              )}
             </button>
           ))}
         </section>

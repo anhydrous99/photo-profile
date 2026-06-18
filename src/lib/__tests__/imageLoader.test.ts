@@ -133,6 +133,24 @@ describe("imageLoader", () => {
     });
   });
 
+  describe("getVideoManifestUrl", () => {
+    it("returns null without CloudFront domain (video disabled locally)", async () => {
+      delete process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+      const { getVideoManifestUrl } = await import("../imageLoader");
+
+      expect(getVideoManifestUrl("photo-1")).toBeNull();
+    });
+
+    it("returns the HLS master playlist URL with CloudFront domain", async () => {
+      process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN = "cdn.example.com";
+      const { getVideoManifestUrl } = await import("../imageLoader");
+
+      expect(getVideoManifestUrl("abc-123")).toBe(
+        "https://cdn.example.com/processed/abc-123/hls/master.m3u8",
+      );
+    });
+  });
+
   describe("maxWidth parameter (derivative capping)", () => {
     describe("without CloudFront (local dev)", () => {
       it("caps derivative width to maxWidth when specified", async () => {

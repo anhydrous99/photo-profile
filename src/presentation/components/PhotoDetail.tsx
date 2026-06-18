@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import type { Photo, Album } from "@/domain/entities";
 import { StatusBadge } from "@/presentation/components/StatusBadge";
 import { FadeImage } from "@/presentation/components/FadeImage";
+import { VideoPlayer } from "@/presentation/components/VideoPlayer";
 import { formatDateFull } from "@/lib/formatDate";
+import { formatDuration } from "@/lib/formatDuration";
+import { getClientImageUrl, getVideoManifestUrl } from "@/lib/imageLoader";
 
 interface PhotoDetailProps {
   photo: Photo;
@@ -88,19 +91,29 @@ export function PhotoDetail({ photo }: PhotoDetailProps) {
     }
   };
 
+  const videoManifestUrl =
+    photo.mediaType === "video" ? getVideoManifestUrl(photo.id) : null;
+
   return (
     <div className="space-y-6">
       {/* Photo Preview */}
       <div className="relative flex h-64 items-center justify-center overflow-hidden rounded-lg bg-surface-secondary">
         {photo.status === "ready" ? (
-          <FadeImage
-            photoId={photo.id}
-            alt={photo.title || photo.originalFilename}
-            blurDataUrl={photo.blurDataUrl}
-            sizes="(max-width: 1024px) 100vw, 66vw"
-            maxWidth={photo.width ?? undefined}
-            objectFit="contain"
-          />
+          photo.mediaType === "video" && videoManifestUrl ? (
+            <VideoPlayer
+              src={videoManifestUrl}
+              poster={getClientImageUrl(photo.id, "1200w.webp")}
+            />
+          ) : (
+            <FadeImage
+              photoId={photo.id}
+              alt={photo.title || photo.originalFilename}
+              blurDataUrl={photo.blurDataUrl}
+              sizes="(max-width: 1024px) 100vw, 66vw"
+              maxWidth={photo.width ?? undefined}
+              objectFit="contain"
+            />
+          )
         ) : (
           <span className="text-text-tertiary">
             {photo.status === "processing" ? "Processing..." : "No preview"}
@@ -133,6 +146,20 @@ export function PhotoDetail({ photo }: PhotoDetailProps) {
               {formatDateFull(photo.updatedAt)}
             </span>
           </div>
+          <div>
+            <span className="text-text-secondary">Type:</span>
+            <span className="ml-2 capitalize text-text-primary">
+              {photo.mediaType}
+            </span>
+          </div>
+          {photo.mediaType === "video" && photo.durationMs != null && (
+            <div>
+              <span className="text-text-secondary">Duration:</span>
+              <span className="ml-2 text-text-primary">
+                {formatDuration(photo.durationMs)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

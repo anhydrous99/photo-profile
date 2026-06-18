@@ -3,6 +3,13 @@ import { getStorageAdapter, getImageUrl } from "./factory";
 
 export { getStorageAdapter, getImageUrl } from "./factory";
 export { presignS3Upload } from "./presignS3Upload";
+export {
+  createMultipartUpload,
+  presignUploadParts,
+  completeMultipartUpload,
+  abortMultipartUpload,
+} from "./presignS3MultipartUpload";
+export type { PresignedPart, CompletedPart } from "./presignS3MultipartUpload";
 export type { StorageAdapter } from "./types";
 
 export async function saveOriginalFile(

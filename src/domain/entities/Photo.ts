@@ -12,6 +12,13 @@ export interface ExifData {
   flash: string | null; // "Fired", "Did not fire", etc.
 }
 
+/**
+ * Discriminates the kind of media a record represents.
+ * Legacy records (created before video support) have no stored value and are
+ * treated as "image" when read back from the database.
+ */
+export type MediaType = "image" | "video";
+
 export interface Photo {
   id: string;
   title: string | null;
@@ -22,6 +29,10 @@ export interface Photo {
   width: number | null;
   height: number | null;
   status: "processing" | "ready" | "error";
+  /** "image" (default) or "video". Videos are transcoded to HLS + a poster. */
+  mediaType: MediaType;
+  /** Video duration in milliseconds; null for images. */
+  durationMs: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,4 +50,6 @@ export interface PhotoData {
   exifData?: ExifData | null;
   width: number | null;
   height: number | null;
+  mediaType: MediaType;
+  durationMs?: number | null;
 }

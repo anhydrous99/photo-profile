@@ -15,3 +15,5 @@ export { SortablePhotoCard } from "./SortablePhotoCard";
 export { Pagination } from "./Pagination";
 export { SocialFooter } from "./SocialFooter";
 export { ErrorBoundaryContent } from "./ErrorBoundaryContent";
+export { VideoPlayer } from "./VideoPlayer";
+export { VideoOverlay } from "./VideoOverlay";

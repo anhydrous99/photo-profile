@@ -2,7 +2,7 @@ import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "../client";
 import { TABLE_NAMES } from "../tables";
 import type { Photo } from "@/domain/entities/Photo";
-import type { ExifData } from "@/domain/entities/Photo";
+import type { ExifData, MediaType } from "@/domain/entities/Photo";
 
 export interface PhotoPoolEntry {
   id: string;
@@ -13,6 +13,8 @@ export interface PhotoPoolEntry {
   exifData: ExifData | null;
   width: number | null;
   height: number | null;
+  mediaType: MediaType;
+  durationMs: number | null;
   weight: number;
 }
 
@@ -153,6 +155,8 @@ export class PhotoRandomService {
         exifData: photo.exifData,
         width: photo.width,
         height: photo.height,
+        mediaType: photo.mediaType,
+        durationMs: photo.durationMs,
         weight: calculateAlbumWeight(rank, maxRankIndex),
       };
     });

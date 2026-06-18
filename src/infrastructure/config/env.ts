@@ -16,6 +16,20 @@ const envSchema = z
     AWS_CLOUDFRONT_DOMAIN: z.string().optional(),
     AWS_ACCESS_KEY_ID: z.string().optional(),
     AWS_SECRET_ACCESS_KEY: z.string().optional(),
+    // Video transcoding (AWS Elemental MediaConvert). Required only when
+    // VIDEO_ENABLED is true. The role is assumed by MediaConvert to read the
+    // original from S3 and write HLS/poster outputs back to S3.
+    AWS_MEDIACONVERT_ROLE_ARN: z.string().optional(),
+    // Optional account-specific MediaConvert endpoint. When omitted the SDK's
+    // default regional endpoint is used.
+    AWS_MEDIACONVERT_ENDPOINT: z.string().url().optional(),
+    // Feature gate for video upload/processing/playback. Disabled by default.
+    // Client-side companion: NEXT_PUBLIC_VIDEO_ENABLED (inlined at build time)
+    // gates the upload UI. Video requires STORAGE_BACKEND=s3 + CloudFront.
+    VIDEO_ENABLED: z
+      .string()
+      .optional()
+      .transform((val) => val === "true" || val === "1"),
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
     SQS_QUEUE_URL: z.string().url().optional(),
@@ -74,6 +88,33 @@ const envSchema = z
           path: ["STORAGE_PATH"],
           message:
             "STORAGE_PATH is required when STORAGE_BACKEND is filesystem",
+        });
+      }
+    }
+
+    // Video is an S3-only feature that relies on MediaConvert + CloudFront.
+    if (data.VIDEO_ENABLED) {
+      if (data.STORAGE_BACKEND !== "s3") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["STORAGE_BACKEND"],
+          message: "STORAGE_BACKEND must be s3 when VIDEO_ENABLED is true",
+        });
+      }
+      if (!data.AWS_MEDIACONVERT_ROLE_ARN) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["AWS_MEDIACONVERT_ROLE_ARN"],
+          message:
+            "AWS_MEDIACONVERT_ROLE_ARN is required when VIDEO_ENABLED is true",
+        });
+      }
+      if (!data.AWS_CLOUDFRONT_DOMAIN) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["AWS_CLOUDFRONT_DOMAIN"],
+          message:
+            "AWS_CLOUDFRONT_DOMAIN is required when VIDEO_ENABLED is true",
         });
       }
     }

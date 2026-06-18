@@ -17,6 +17,12 @@ const createEnvSchema = () =>
       AWS_CLOUDFRONT_DOMAIN: z.string().optional(),
       AWS_ACCESS_KEY_ID: z.string().optional(),
       AWS_SECRET_ACCESS_KEY: z.string().optional(),
+      AWS_MEDIACONVERT_ROLE_ARN: z.string().optional(),
+      AWS_MEDIACONVERT_ENDPOINT: z.string().url().optional(),
+      VIDEO_ENABLED: z
+        .string()
+        .optional()
+        .transform((val) => val === "true" || val === "1"),
       SQS_QUEUE_URL: z.string().url().optional(),
       UPSTASH_REDIS_REST_URL: z.string().url().optional(),
       UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
@@ -73,6 +79,32 @@ const createEnvSchema = () =>
             path: ["STORAGE_PATH"],
             message:
               "STORAGE_PATH is required when STORAGE_BACKEND is filesystem",
+          });
+        }
+      }
+
+      if (data.VIDEO_ENABLED) {
+        if (data.STORAGE_BACKEND !== "s3") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["STORAGE_BACKEND"],
+            message: "STORAGE_BACKEND must be s3 when VIDEO_ENABLED is true",
+          });
+        }
+        if (!data.AWS_MEDIACONVERT_ROLE_ARN) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["AWS_MEDIACONVERT_ROLE_ARN"],
+            message:
+              "AWS_MEDIACONVERT_ROLE_ARN is required when VIDEO_ENABLED is true",
+          });
+        }
+        if (!data.AWS_CLOUDFRONT_DOMAIN) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["AWS_CLOUDFRONT_DOMAIN"],
+            message:
+              "AWS_CLOUDFRONT_DOMAIN is required when VIDEO_ENABLED is true",
           });
         }
       }
@@ -341,6 +373,74 @@ describe("Environment Configuration", () => {
         const errors = z.flattenError(result.error);
         expect(errors.fieldErrors.UPSTASH_REDIS_REST_URL).toBeDefined();
       }
+    });
+  });
+
+  describe("Conditional validation: video transcoding", () => {
+    const s3Env = {
+      ...baseValidEnv,
+      STORAGE_BACKEND: "s3" as const,
+      AWS_REGION: "us-east-1",
+      AWS_S3_BUCKET: "my-bucket",
+      AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
+    };
+
+    it("defaults VIDEO_ENABLED to false when unset", () => {
+      const schema = createEnvSchema();
+      const result = schema.safeParse(baseValidEnv);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.VIDEO_ENABLED).toBe(false);
+      }
+    });
+
+    it("coerces VIDEO_ENABLED='true' to boolean true", () => {
+      const schema = createEnvSchema();
+      const result = schema.safeParse({
+        ...s3Env,
+        VIDEO_ENABLED: "true",
+        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.VIDEO_ENABLED).toBe(true);
+      }
+    });
+
+    it("requires AWS_MEDIACONVERT_ROLE_ARN when VIDEO_ENABLED is true", () => {
+      const schema = createEnvSchema();
+      const result = schema.safeParse({ ...s3Env, VIDEO_ENABLED: "true" });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const errors = z.flattenError(result.error);
+        expect(errors.fieldErrors.AWS_MEDIACONVERT_ROLE_ARN).toBeDefined();
+      }
+    });
+
+    it("requires s3 backend when VIDEO_ENABLED is true", () => {
+      const schema = createEnvSchema();
+      const result = schema.safeParse({
+        ...baseValidEnv,
+        STORAGE_BACKEND: "filesystem",
+        VIDEO_ENABLED: "true",
+        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
+        AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const errors = z.flattenError(result.error);
+        expect(errors.fieldErrors.STORAGE_BACKEND).toBeDefined();
+      }
+    });
+
+    it("passes when video is fully configured", () => {
+      const schema = createEnvSchema();
+      const result = schema.safeParse({
+        ...s3Env,
+        VIDEO_ENABLED: "true",
+        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
+      });
+      expect(result.success).toBe(true);
     });
   });
 

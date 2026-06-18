@@ -1,6 +1,7 @@
 import type { Photo } from "@/domain/entities";
 import Link from "next/link";
 import { FadeImage } from "@/presentation/components/FadeImage";
+import { VideoOverlay } from "@/presentation/components/VideoOverlay";
 import { StatusBadge } from "@/presentation/components/StatusBadge";
 import { formatDateShort } from "@/lib/formatDate";
 
@@ -148,13 +149,18 @@ function PhotoCard({
 
       <div className="relative aspect-[4/3] overflow-hidden bg-surface-secondary">
         {photo.status === "ready" ? (
-          <FadeImage
-            photoId={photo.id}
-            alt={photo.originalFilename}
-            blurDataUrl={photo.blurDataUrl}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            maxWidth={photo.width ?? undefined}
-          />
+          <>
+            <FadeImage
+              photoId={photo.id}
+              alt={photo.originalFilename}
+              blurDataUrl={photo.blurDataUrl}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              maxWidth={photo.width ?? undefined}
+            />
+            {photo.mediaType === "video" && (
+              <VideoOverlay durationMs={photo.durationMs} />
+            )}
+          </>
         ) : (
           <div className="flex h-full items-center justify-center">
             <span className="text-sm text-text-tertiary">

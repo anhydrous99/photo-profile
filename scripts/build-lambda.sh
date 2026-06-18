@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Lambda packaging script
-# Bundles lambdaHandler.ts with esbuild and installs Sharp for ARM64 Linux.
+# Bundles the SQS image handler and the EventBridge video-completion handler
+# with esbuild and installs Sharp for ARM64 Linux.
 # Output: lambda-package/ ready for CDK lambda.Code.fromAsset()
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,6 +11,8 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 LAMBDA_DIR="${PROJECT_ROOT}/lambda-package"
 HANDLER_ENTRY="src/infrastructure/jobs/lambdaHandler.ts"
 HANDLER_OUT="src/infrastructure/jobs/lambdaHandler.js"
+VIDEO_HANDLER_ENTRY="src/infrastructure/jobs/videoCompleteHandler.ts"
+VIDEO_HANDLER_OUT="src/infrastructure/jobs/videoCompleteHandler.js"
 SHARP_VERSION="0.34.5"
 LAMBDA_SIZE_LIMIT_MB=250
 
@@ -35,6 +38,18 @@ npx esbuild "${PROJECT_ROOT}/${HANDLER_ENTRY}" \
   --alias:@="${PROJECT_ROOT}/src"
 
 echo "  Bundle created: ${LAMBDA_DIR}/${HANDLER_OUT}"
+
+echo "→ Bundling ${VIDEO_HANDLER_ENTRY} with esbuild..."
+npx esbuild "${PROJECT_ROOT}/${VIDEO_HANDLER_ENTRY}" \
+  --bundle \
+  --platform=node \
+  --target=node22 \
+  --format=cjs \
+  --outfile="${LAMBDA_DIR}/${VIDEO_HANDLER_OUT}" \
+  --external:sharp \
+  --alias:@="${PROJECT_ROOT}/src"
+
+echo "  Bundle created: ${LAMBDA_DIR}/${VIDEO_HANDLER_OUT}"
 echo ""
 
 # ── Step 3: Install Sharp for ARM64 Linux ──────────────────────────────────
@@ -65,6 +80,12 @@ if [ ! -f "${LAMBDA_DIR}/${HANDLER_OUT}" ]; then
 fi
 echo "  ✓ Handler file exists"
 
+if [ ! -f "${LAMBDA_DIR}/${VIDEO_HANDLER_OUT}" ]; then
+  echo "  ERROR: Video handler file not found: ${LAMBDA_DIR}/${VIDEO_HANDLER_OUT}"
+  exit 1
+fi
+echo "  ✓ Video handler file exists"
+
 # Check Sharp is installed
 if [ ! -d "${LAMBDA_DIR}/node_modules/sharp" ]; then
   echo "  ERROR: Sharp not found in node_modules"
@@ -85,6 +106,8 @@ echo "  ✓ Under ${LAMBDA_SIZE_LIMIT_MB}MB Lambda limit"
 
 echo ""
 echo "=== Lambda build complete ==="
-echo "Handler path: ${HANDLER_OUT} (exports 'handler')"
-echo "CDK handler:  src/infrastructure/jobs/lambdaHandler.handler"
+echo "Image handler: ${HANDLER_OUT} (exports 'handler')"
+echo "CDK handler:   src/infrastructure/jobs/lambdaHandler.handler"
+echo "Video handler: ${VIDEO_HANDLER_OUT} (exports 'handler')"
+echo "CDK handler:   src/infrastructure/jobs/videoCompleteHandler.handler"
 du -sh "${LAMBDA_DIR}"

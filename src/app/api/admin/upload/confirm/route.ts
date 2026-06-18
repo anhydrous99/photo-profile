@@ -86,6 +86,8 @@ export async function POST(request: NextRequest) {
         width: null,
         height: null,
         status: "processing",
+        mediaType: "image",
+        durationMs: null,
         createdAt: now,
         updatedAt: now,
       };

@@ -626,6 +626,12 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
           ? (item.height as number)
           : null,
       status: item.status as Photo["status"],
+      // Legacy records predate video support; default them to "image".
+      mediaType: item.mediaType === "video" ? "video" : "image",
+      durationMs:
+        item.durationMs !== undefined && item.durationMs !== null
+          ? (item.durationMs as number)
+          : null,
       createdAt: new Date(item.createdAt as number),
       updatedAt: new Date(item.updatedAt as number),
     };
@@ -642,6 +648,8 @@ export class DynamoDBPhotoRepository implements PhotoRepository {
       width: photo.width,
       height: photo.height,
       status: photo.status,
+      mediaType: photo.mediaType,
+      durationMs: photo.durationMs,
       createdAt: photo.createdAt.getTime(),
       updatedAt: photo.updatedAt.getTime(),
       _type: "PHOTO",

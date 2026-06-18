@@ -30,6 +30,10 @@ vi.mock("@/lib/imageLoader", () => ({
   getClientImageUrl: vi.fn(
     (photoId: string, filename: string) => `/api/images/${photoId}/${filename}`,
   ),
+  getVideoManifestUrl: vi.fn(
+    (photoId: string) =>
+      `https://cdn.example.com/processed/${photoId}/hls/master.m3u8`,
+  ),
 }));
 
 vi.mock("../ExifPanel", () => ({
@@ -78,6 +82,8 @@ describe("PhotoLightbox", () => {
         blurDataUrl: null,
         width: 2400,
         height: 1600,
+        mediaType: "image" as const,
+        durationMs: null,
       },
       {
         id: "photo-2",
@@ -87,6 +93,8 @@ describe("PhotoLightbox", () => {
         blurDataUrl: null,
         width: 1200,
         height: 800,
+        mediaType: "image" as const,
+        durationMs: null,
       },
     ],
     index: 0,
@@ -201,6 +209,31 @@ describe("PhotoLightbox", () => {
       const result = renderSlide({ slide: { type: "video", src: "vid.mp4" } });
 
       expect(result).toBeUndefined();
+    });
+
+    it("renders a video player for video slides", () => {
+      // Video branch takes precedence even if isImageSlide would return true
+      // (the poster makes a video slide look like an image slide).
+      mockIsImageSlide.mockReturnValue(true);
+
+      const lightbox = getLightboxElement(defaultProps);
+      const renderSlide = (
+        lightbox.props.render as { slide: (p: unknown) => unknown }
+      ).slide;
+
+      const el = renderSlide({
+        slide: {
+          mediaType: "video",
+          videoSrc: "https://cdn.example.com/master.m3u8",
+          poster: "/api/images/photo-1/1200w.webp",
+          src: "/api/images/photo-1/1200w.webp",
+        },
+      }) as TestElement;
+
+      expect(el).toBeDefined();
+      // VideoPlayer is a function component (not the "picture" host element).
+      expect(typeof el.type).toBe("function");
+      expect(el.props.src).toBe("https://cdn.example.com/master.m3u8");
     });
   });
 

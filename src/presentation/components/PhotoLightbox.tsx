@@ -7,11 +7,19 @@ import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
 import "yet-another-react-lightbox/styles.css";
 import "yet-another-react-lightbox/plugins/captions.css";
-import type { RenderSlideProps } from "yet-another-react-lightbox";
-import type { PhotoData } from "@/domain/entities/Photo";
+import type { RenderSlideProps, SlideImage } from "yet-another-react-lightbox";
+import type { MediaType, PhotoData } from "@/domain/entities/Photo";
 import { ExifPanel } from "./ExifPanel";
-import { getClientImageUrl } from "@/lib/imageLoader";
+import { VideoPlayer } from "./VideoPlayer";
+import { getClientImageUrl, getVideoManifestUrl } from "@/lib/imageLoader";
 import { THUMBNAIL_SIZES } from "@/lib/constants";
+
+/** Image slide augmented with video metadata for our custom renderer. */
+type LightboxSlide = SlideImage & {
+  mediaType: MediaType;
+  videoSrc: string | null;
+  poster: string;
+};
 
 interface PhotoLightboxProps {
   photos: PhotoData[];
@@ -60,6 +68,20 @@ export function PhotoLightbox({
 
   // Custom slide renderer with image download protections
   const renderSlide = (props: RenderSlideProps) => {
+    const slide = props.slide as LightboxSlide;
+
+    // Video slides render an HLS player. If no manifest is available (e.g.
+    // CloudFront not configured) we fall through to the poster image below.
+    if (slide.mediaType === "video" && slide.videoSrc) {
+      return (
+        <VideoPlayer
+          src={slide.videoSrc}
+          poster={slide.poster}
+          className="yarl__slide_image"
+        />
+      );
+    }
+
     if (isImageSlide(props.slide)) {
       const slide = props.slide;
       const webpSrcSet = slide.srcSet
@@ -97,10 +119,11 @@ export function PhotoLightbox({
   // Transform photo data to YARL slide format
   // Use largest available derivative based on photo's actual width
   // Only include srcSet when dimensions are known (graceful fallback for legacy photos)
-  const slides = photos.map((photo) => {
+  const slides: LightboxSlide[] = photos.map((photo) => {
     const largestWidth = getLargestAvailableWidth(photo.width);
+    const poster = getClientImageUrl(photo.id, `${largestWidth}w.webp`);
     return {
-      src: getClientImageUrl(photo.id, `${largestWidth}w.webp`),
+      src: poster,
       alt: photo.title || photo.originalFilename,
       ...(photo.width && photo.height
         ? {
@@ -111,6 +134,10 @@ export function PhotoLightbox({
         : {}),
       title: photo.title || undefined,
       description: photo.description || undefined,
+      mediaType: photo.mediaType,
+      videoSrc:
+        photo.mediaType === "video" ? getVideoManifestUrl(photo.id) : null,
+      poster,
     };
   });
 

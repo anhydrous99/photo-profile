@@ -10,6 +10,8 @@ import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as ecrAssets from "aws-cdk-lib/aws-ecr-assets";
+import * as events from "aws-cdk-lib/aws-events";
+import * as targets from "aws-cdk-lib/aws-events-targets";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
 export type ImageWorkerRuntime = "node" | "go";
@@ -27,6 +29,13 @@ export interface PhotoProfileStackProps extends cdk.StackProps {
   readonly dynamodbTablePrefix?: string;
 
   readonly imageWorkerRuntime?: string;
+
+  /**
+   * Provision video transcoding infrastructure (MediaConvert role, completion
+   * Lambda, EventBridge rule, and Vercel IAM grants).
+   * @default false
+   */
+  readonly videoEnabled?: boolean;
 }
 
 function validateImageWorkerRuntime(
@@ -51,6 +60,8 @@ export class PhotoProfileCdkStack extends cdk.Stack {
   public readonly albumsTable: dynamodb.Table;
   public readonly albumPhotosTable: dynamodb.Table;
   public readonly distribution: cloudfront.Distribution;
+  public readonly mediaConvertRole?: iam.Role;
+  public readonly videoCompleteFunction?: lambda.Function;
 
   constructor(scope: Construct, id: string, props: PhotoProfileStackProps) {
     super(scope, id, props);
@@ -59,6 +70,7 @@ export class PhotoProfileCdkStack extends cdk.Stack {
     const imageWorkerRuntime = validateImageWorkerRuntime(
       props.imageWorkerRuntime,
     );
+    const videoEnabled = props.videoEnabled ?? false;
 
     // DynamoDB Tables
     this.photosTable = new dynamodb.Table(this, "PhotosTable", {
@@ -135,6 +147,8 @@ export class PhotoProfileCdkStack extends cdk.Stack {
         origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        responseHeadersPolicy:
+          cloudfront.ResponseHeadersPolicy.CORS_ALLOW_ALL_ORIGINS,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
       },
       comment: "Photo Profile CDN - serves processed images from S3",
@@ -373,6 +387,137 @@ export class PhotoProfileCdkStack extends cdk.Stack {
         resources: [this.queue.queueArn],
       }),
     );
+
+    // ── Video transcoding infrastructure (MediaConvert -> HLS) ──────────────
+    if (videoEnabled) {
+      // Role assumed by MediaConvert to read originals and write HLS/poster.
+      const mediaConvertRole = new iam.Role(this, "MediaConvertRole", {
+        assumedBy: new iam.ServicePrincipal("mediaconvert.amazonaws.com"),
+        description:
+          "Assumed by MediaConvert to read originals and write HLS + poster outputs to S3",
+      });
+      mediaConvertRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["s3:GetObject", "s3:PutObject"],
+          resources: [`arn:aws:s3:::${props.s3BucketName}/*`],
+        }),
+      );
+      mediaConvertRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["s3:ListBucket"],
+          resources: [`arn:aws:s3:::${props.s3BucketName}`],
+        }),
+      );
+      this.mediaConvertRole = mediaConvertRole;
+
+      // EventBridge-driven completion handler: generates poster derivatives
+      // (Sharp) and finalizes the Photo record. Reuses the Node lambda-package.
+      const videoCompleteLogGroup = new logs.LogGroup(
+        this,
+        "VideoCompleteLogGroup",
+        { retention: logs.RetentionDays.ONE_MONTH },
+      );
+      const videoCompleteFunction = new lambda.Function(
+        this,
+        "VideoCompleteHandler",
+        {
+          runtime: lambda.Runtime.NODEJS_22_X,
+          architecture: lambda.Architecture.ARM_64,
+          handler: "src/infrastructure/jobs/videoCompleteHandler.handler",
+          code: lambda.Code.fromAsset("../lambda-package"),
+          timeout: cdk.Duration.minutes(2),
+          memorySize: 1536,
+          ephemeralStorageSize: cdk.Size.mebibytes(1024),
+          environment: imageProcessorEnvironment,
+          description:
+            "Finalizes video records after MediaConvert: poster derivatives, dimensions, duration, status",
+          logGroup: videoCompleteLogGroup,
+        },
+      );
+      videoCompleteFunction.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["s3:GetObject", "s3:PutObject"],
+          resources: [`arn:aws:s3:::${props.s3BucketName}/*`],
+        }),
+      );
+      videoCompleteFunction.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["s3:ListBucket"],
+          resources: [`arn:aws:s3:::${props.s3BucketName}`],
+        }),
+      );
+      videoCompleteFunction.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            "dynamodb:GetItem",
+            "dynamodb:PutItem",
+            "dynamodb:UpdateItem",
+            "dynamodb:Query",
+          ],
+          resources: [
+            this.photosTable.tableArn,
+            `${this.photosTable.tableArn}/index/*`,
+          ],
+        }),
+      );
+      this.videoCompleteFunction = videoCompleteFunction;
+
+      // Invoke the completion handler on MediaConvert COMPLETE/ERROR events.
+      new events.Rule(this, "MediaConvertJobStateChangeRule", {
+        description:
+          "Routes MediaConvert job completion/error to the video completion handler",
+        eventPattern: {
+          source: ["aws.mediaconvert"],
+          detailType: ["MediaConvert Job State Change"],
+          detail: { status: ["COMPLETE", "ERROR"] },
+        },
+        targets: [new targets.LambdaFunction(videoCompleteFunction)],
+      });
+
+      // Vercel app: submit MediaConvert jobs and pass the MediaConvert role.
+      vercelUser.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            "mediaconvert:CreateJob",
+            "mediaconvert:GetJob",
+            "mediaconvert:DescribeEndpoints",
+          ],
+          resources: ["*"],
+        }),
+      );
+      vercelUser.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["iam:PassRole"],
+          resources: [mediaConvertRole.roleArn],
+        }),
+      );
+      // Vercel app: abort/list parts for browser multipart uploads
+      // (CreateMultipartUpload/UploadPart/CompleteMultipartUpload are covered
+      // by the existing s3:PutObject grant).
+      vercelUser.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+          resources: [`arn:aws:s3:::${props.s3BucketName}/*`],
+        }),
+      );
+
+      new cdk.CfnOutput(this, "MediaConvertRoleArn", {
+        value: mediaConvertRole.roleArn,
+        description: "MediaConvert role ARN (set as AWS_MEDIACONVERT_ROLE_ARN)",
+      });
+      new cdk.CfnOutput(this, "VideoCompleteLambdaArn", {
+        value: videoCompleteFunction.functionArn,
+        description: "Video completion Lambda ARN",
+      });
+    }
 
     new cdk.CfnOutput(this, "CloudFrontDomain", {
       value: this.distribution.distributionDomainName,

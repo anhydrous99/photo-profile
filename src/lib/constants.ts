@@ -42,6 +42,36 @@ export const SERVE_MIME_TYPES: Record<string, string> = {
   ".avif": "image/avif",
 };
 
+/**
+ * MIME types accepted for video uploads (S3 multipart only).
+ * MediaConvert accepts MP4 (H.264/H.265), QuickTime (.mov), and WebM inputs.
+ */
+export const VIDEO_UPLOAD_MIME_TYPES = [
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+] as const;
+
+/**
+ * Maps a video MIME type to the originals file extension used in the S3 key.
+ */
+export const VIDEO_MIME_EXTENSION: Record<string, string> = {
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
+  "video/webm": "webm",
+};
+
+/**
+ * Maps a video file extension to its MIME type. Used to infer the content type
+ * when the browser reports an empty `file.type` (happens on some OS/browser
+ * combinations, notably for .mov files).
+ */
+export const VIDEO_EXTENSION_MIME: Record<string, string> = {
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  webm: "video/webm",
+};
+
 // ============================================================================
 // UPLOAD LIMITS
 // ============================================================================
@@ -57,6 +87,25 @@ export const MAX_FILE_SIZE = 100 * 1024 * 1024;
  * Used to validate Content-Length header before reading request body
  */
 export const MULTIPART_OVERHEAD = 5 * 1024 * 1024;
+
+/**
+ * Maximum file size for video uploads: 2GB.
+ * Videos are uploaded directly to S3 via multipart presigned URLs.
+ */
+export const MAX_VIDEO_FILE_SIZE = 2 * 1024 * 1024 * 1024;
+
+/**
+ * Size of each S3 multipart upload part: 64MB.
+ * S3 requires parts to be at least 5MB (except the last). At 64MB a 2GB
+ * upload is ~32 parts, keeping the presigned-URL count manageable.
+ */
+export const MULTIPART_PART_SIZE = 64 * 1024 * 1024;
+
+/**
+ * Maximum number of parts presigned in a single create request.
+ * S3 allows up to 10,000 parts; this guards against absurd part counts.
+ */
+export const MULTIPART_MAX_PARTS = 10_000;
 
 // ============================================================================
 // IMAGE PROCESSING
@@ -92,6 +141,45 @@ export const WEBP_EFFORT = 4;
  * Range: 0-9, 4 is a good middle ground between speed and compression
  */
 export const AVIF_EFFORT = 4;
+
+// ============================================================================
+// VIDEO PROCESSING (HLS via AWS MediaConvert)
+// ============================================================================
+
+/**
+ * Adaptive-bitrate HLS rendition ladder produced by MediaConvert.
+ * Renditions whose height exceeds the source are skipped at job-build time so
+ * we never upscale. Bitrates are conservative VBR targets (bits per second).
+ */
+export const HLS_RENDITIONS = [
+  { height: 1080, bitrate: 5_000_000 },
+  { height: 720, bitrate: 3_000_000 },
+  { height: 480, bitrate: 1_500_000 },
+  { height: 360, bitrate: 800_000 },
+] as const;
+
+/**
+ * HLS segment length in seconds. 6s is the Apple-recommended default and
+ * balances startup latency against request overhead.
+ */
+export const HLS_SEGMENT_SECONDS = 6;
+
+/**
+ * Storage key (relative to processed/{photoId}/) of the HLS master playlist.
+ */
+export const HLS_MASTER_PLAYLIST = "hls/master.m3u8";
+
+/**
+ * Storage key prefix (relative to processed/{photoId}/) for the MediaConvert
+ * poster frame capture. The completion handler converts the captured JPEG into
+ * the standard {width}w.webp/avif derivative set.
+ */
+export const VIDEO_POSTER_PREFIX = "poster";
+
+/**
+ * AAC audio bitrate (bits per second) for HLS renditions.
+ */
+export const HLS_AUDIO_BITRATE = 128_000;
 
 // ============================================================================
 // AUTHENTICATION
@@ -143,6 +231,14 @@ export const S3_GET_TIMEOUT_MS = 30_000;
  * 15 minutes for direct upload URLs
  */
 export const S3_PRESIGN_EXPIRY_SECONDS = 15 * 60;
+
+/**
+ * S3 multipart video presigned URL expiry in seconds.
+ * Large 2GB uploads can exceed the regular 15-minute image upload window,
+ * especially on slow upstream connections. All video part URLs are currently
+ * presigned in one batch, so the expiry must cover the whole upload.
+ */
+export const VIDEO_MULTIPART_PRESIGN_EXPIRY_SECONDS = 6 * 60 * 60;
 
 // ============================================================================
 // JOB QUEUE

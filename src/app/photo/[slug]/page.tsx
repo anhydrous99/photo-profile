@@ -94,6 +94,8 @@ export default async function PhotoDeepLinkPage({ params }: PageProps) {
       exifData: photo.exifData,
       width: photo.width,
       height: photo.height,
+      mediaType: photo.mediaType,
+      durationMs: photo.durationMs,
       weight: 1,
     };
     // Replace last photo with the deep-linked photo so lightbox can open to it
@@ -119,6 +121,8 @@ export default async function PhotoDeepLinkPage({ params }: PageProps) {
               exifData: p.exifData,
               width: p.width,
               height: p.height,
+              mediaType: p.mediaType,
+              durationMs: p.durationMs,
             }))}
             initialPhotoSlug={slug}
           />
