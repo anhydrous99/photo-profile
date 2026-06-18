@@ -16,6 +16,8 @@ import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
 export type ImageWorkerRuntime = "node" | "go";
 
+const MEDIA_CONVERT_ROLE_NAME = "PhotoProfileMediaConvertRole";
+
 export interface PhotoProfileStackProps extends cdk.StackProps {
   /**
    * S3 bucket name for photo storage.
@@ -392,6 +394,7 @@ export class PhotoProfileCdkStack extends cdk.Stack {
     if (videoEnabled) {
       // Role assumed by MediaConvert to read originals and write HLS/poster.
       const mediaConvertRole = new iam.Role(this, "MediaConvertRole", {
+        roleName: MEDIA_CONVERT_ROLE_NAME,
         assumedBy: new iam.ServicePrincipal("mediaconvert.amazonaws.com"),
         description:
           "Assumed by MediaConvert to read originals and write HLS + poster outputs to S3",
@@ -511,7 +514,8 @@ export class PhotoProfileCdkStack extends cdk.Stack {
 
       new cdk.CfnOutput(this, "MediaConvertRoleArn", {
         value: mediaConvertRole.roleArn,
-        description: "MediaConvert role ARN (set as AWS_MEDIACONVERT_ROLE_ARN)",
+        description:
+          "MediaConvert role ARN (optional AWS_MEDIACONVERT_ROLE_ARN override)",
       });
       new cdk.CfnOutput(this, "VideoCompleteLambdaArn", {
         value: videoCompleteFunction.functionArn,

@@ -72,6 +72,12 @@ export const VIDEO_EXTENSION_MIME: Record<string, string> = {
   webm: "video/webm",
 };
 
+/**
+ * Deterministic IAM role name used by MediaConvert to read originals and write
+ * HLS/poster outputs. Keep aligned with the CDK MediaConvert role.
+ */
+export const MEDIACONVERT_ROLE_NAME = "PhotoProfileMediaConvertRole";
+
 // ============================================================================
 // UPLOAD LIMITS
 // ============================================================================

@@ -236,9 +236,11 @@ describe("getUploadAdapter", () => {
 
   describe("when NEXT_PUBLIC_STORAGE_BACKEND is undefined", () => {
     const originalEnv = process.env.NEXT_PUBLIC_STORAGE_BACKEND;
+    const originalVideo = process.env.NEXT_PUBLIC_VIDEO_ENABLED;
 
     beforeEach(() => {
       delete process.env.NEXT_PUBLIC_STORAGE_BACKEND;
+      delete process.env.NEXT_PUBLIC_VIDEO_ENABLED;
     });
 
     afterEach(() => {
@@ -246,6 +248,11 @@ describe("getUploadAdapter", () => {
         delete process.env.NEXT_PUBLIC_STORAGE_BACKEND;
       } else {
         process.env.NEXT_PUBLIC_STORAGE_BACKEND = originalEnv;
+      }
+      if (originalVideo === undefined) {
+        delete process.env.NEXT_PUBLIC_VIDEO_ENABLED;
+      } else {
+        process.env.NEXT_PUBLIC_VIDEO_ENABLED = originalVideo;
       }
     });
 
@@ -268,6 +275,23 @@ describe("getUploadAdapter", () => {
         testFile,
         mockProgressCallback,
       );
+      expect(mockUploadFileViaPresign).not.toHaveBeenCalled();
+    });
+
+    it("routes video files to multipart upload by default", async () => {
+      vi.resetModules();
+      mockUploadVideoMultipart.mockResolvedValue({
+        photoId: "v",
+        status: "processing",
+      });
+      const { getUploadAdapter } = await import("../uploadAdapter");
+      const adapter = getUploadAdapter();
+      const file = new File(["x"], "clip.mov", { type: "video/quicktime" });
+
+      await adapter(file, mockProgressCallback).promise;
+
+      expect(mockUploadVideoMultipart).toHaveBeenCalledOnce();
+      expect(mockUploadFile).not.toHaveBeenCalled();
       expect(mockUploadFileViaPresign).not.toHaveBeenCalled();
     });
   });

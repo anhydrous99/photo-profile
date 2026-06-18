@@ -94,14 +94,6 @@ const createEnvSchema = () =>
             message: "STORAGE_BACKEND must be s3 when video is enabled",
           });
         }
-        if (!data.AWS_MEDIACONVERT_ROLE_ARN) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["AWS_MEDIACONVERT_ROLE_ARN"],
-            message:
-              "AWS_MEDIACONVERT_ROLE_ARN is required when video is enabled",
-          });
-        }
         if (!data.AWS_CLOUDFRONT_DOMAIN) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -167,7 +159,6 @@ describe("Environment Configuration", () => {
         AWS_REGION: "us-east-1",
         AWS_S3_BUCKET: "my-bucket",
         AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
-        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
       });
       expect(result.success).toBe(true);
       if (result.success) {
@@ -251,7 +242,6 @@ describe("Environment Configuration", () => {
         AWS_REGION: "us-east-1",
         AWS_S3_BUCKET: "my-bucket",
         AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
-        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
         AWS_ACCESS_KEY_ID: "AKIAIOSFODNN7EXAMPLE",
         AWS_SECRET_ACCESS_KEY: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
       });
@@ -296,7 +286,6 @@ describe("Environment Configuration", () => {
         AWS_REGION: "us-east-1",
         AWS_S3_BUCKET: "my-bucket",
         AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
-        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
       });
       expect(result.success).toBe(true);
     });
@@ -408,10 +397,7 @@ describe("Environment Configuration", () => {
 
     it("defaults VIDEO_ENABLED to true for S3 when unset", () => {
       const schema = createEnvSchema();
-      const result = schema.safeParse({
-        ...s3Env,
-        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
-      });
+      const result = schema.safeParse(s3Env);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.VIDEO_ENABLED).toBe(true);
@@ -432,7 +418,6 @@ describe("Environment Configuration", () => {
       const result = schema.safeParse({
         ...s3Env,
         VIDEO_ENABLED: "true",
-        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
       });
       expect(result.success).toBe(true);
       if (result.success) {
@@ -440,14 +425,10 @@ describe("Environment Configuration", () => {
       }
     });
 
-    it("requires AWS_MEDIACONVERT_ROLE_ARN when VIDEO_ENABLED is true", () => {
+    it("allows video without AWS_MEDIACONVERT_ROLE_ARN", () => {
       const schema = createEnvSchema();
       const result = schema.safeParse({ ...s3Env, VIDEO_ENABLED: "true" });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        const errors = z.flattenError(result.error);
-        expect(errors.fieldErrors.AWS_MEDIACONVERT_ROLE_ARN).toBeDefined();
-      }
+      expect(result.success).toBe(true);
     });
 
     it("requires s3 backend when VIDEO_ENABLED is true", () => {
@@ -456,7 +437,6 @@ describe("Environment Configuration", () => {
         ...baseValidEnv,
         STORAGE_BACKEND: "filesystem",
         VIDEO_ENABLED: "true",
-        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
         AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
       });
       expect(result.success).toBe(false);
@@ -471,7 +451,6 @@ describe("Environment Configuration", () => {
       const result = schema.safeParse({
         ...s3Env,
         VIDEO_ENABLED: "true",
-        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
       });
       expect(result.success).toBe(true);
     });
@@ -489,7 +468,6 @@ describe("Environment Configuration", () => {
         AWS_REGION: "us-east-1",
         AWS_S3_BUCKET: "my-bucket",
         AWS_CLOUDFRONT_DOMAIN: "d1234.cloudfront.net",
-        AWS_MEDIACONVERT_ROLE_ARN: "arn:aws:iam::123:role/mc",
         SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
         // STORAGE_PATH intentionally omitted
       });

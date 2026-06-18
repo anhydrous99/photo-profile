@@ -60,6 +60,15 @@ describe("DropZone", () => {
     });
   });
 
+  it("accepts videos by default when client storage backend is omitted", async () => {
+    delete process.env.NEXT_PUBLIC_STORAGE_BACKEND;
+    vi.resetModules();
+
+    const options = await renderDropZone();
+
+    expect(options.accept).toHaveProperty("video/quicktime", [".mov"]);
+  });
+
   it("omits videos when explicitly disabled", async () => {
     process.env.NEXT_PUBLIC_VIDEO_ENABLED = "false";
     vi.resetModules();

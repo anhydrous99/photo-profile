@@ -553,6 +553,7 @@ describe("PhotoProfileCdkStack (video enabled)", () => {
 
   test("creates a MediaConvert service role", () => {
     template.hasResourceProperties("AWS::IAM::Role", {
+      RoleName: "PhotoProfileMediaConvertRole",
       AssumeRolePolicyDocument: Match.objectLike({
         Statement: Match.arrayWith([
           Match.objectLike({

@@ -10,5 +10,5 @@ export function resolveVideoEnabled(params: {
   if (normalized === "false" || normalized === "0") return false;
   if (normalized === "true" || normalized === "1") return true;
 
-  return storageBackend === "s3";
+  return storageBackend !== "filesystem";
 }

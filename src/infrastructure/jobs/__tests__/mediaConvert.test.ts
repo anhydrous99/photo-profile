@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { buildTranscodeJobInput } from "../mediaConvert";
+import {
+  buildDefaultMediaConvertRoleArn,
+  buildTranscodeJobInput,
+} from "../mediaConvert";
 
 describe("buildTranscodeJobInput", () => {
   const input = buildTranscodeJobInput({
@@ -65,5 +68,25 @@ describe("buildTranscodeJobInput", () => {
       poster?.Outputs?.[0]?.VideoDescription?.CodecSettings
         ?.FrameCaptureSettings?.MaxCaptures,
     ).toBe(1);
+  });
+});
+
+describe("buildDefaultMediaConvertRoleArn", () => {
+  it("builds the CDK-managed MediaConvert role ARN for standard AWS regions", () => {
+    expect(
+      buildDefaultMediaConvertRoleArn({
+        accountId: "123456789012",
+        region: "us-east-2",
+      }),
+    ).toBe("arn:aws:iam::123456789012:role/PhotoProfileMediaConvertRole");
+  });
+
+  it("uses the AWS China partition for cn regions", () => {
+    expect(
+      buildDefaultMediaConvertRoleArn({
+        accountId: "123456789012",
+        region: "cn-north-1",
+      }),
+    ).toBe("arn:aws-cn:iam::123456789012:role/PhotoProfileMediaConvertRole");
   });
 });

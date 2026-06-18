@@ -3,11 +3,13 @@ import {
   CreateJobCommand,
   type CreateJobCommandInput,
 } from "@aws-sdk/client-mediaconvert";
+import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import { env } from "@/infrastructure/config/env";
 import {
   HLS_AUDIO_BITRATE,
   HLS_RENDITIONS,
   HLS_SEGMENT_SECONDS,
+  MEDIACONVERT_ROLE_NAME,
 } from "@/lib/constants";
 
 /**
@@ -24,6 +26,8 @@ import {
  */
 
 let _client: MediaConvertClient | null = null;
+let _stsClient: STSClient | null = null;
+let _defaultRoleArn: string | null = null;
 
 function getMediaConvertClient(): MediaConvertClient {
   if (!_client) {
@@ -35,6 +39,42 @@ function getMediaConvertClient(): MediaConvertClient {
     });
   }
   return _client;
+}
+
+function getStsClient(): STSClient {
+  if (!_stsClient) {
+    _stsClient = new STSClient({ region: env.AWS_REGION });
+  }
+  return _stsClient;
+}
+
+function getArnPartition(region: string | undefined): string {
+  if (region?.startsWith("cn-")) return "aws-cn";
+  if (region?.startsWith("us-gov-")) return "aws-us-gov";
+  return "aws";
+}
+
+export function buildDefaultMediaConvertRoleArn(params: {
+  accountId: string;
+  region?: string;
+}): string {
+  return `arn:${getArnPartition(params.region)}:iam::${params.accountId}:role/${MEDIACONVERT_ROLE_NAME}`;
+}
+
+async function resolveMediaConvertRoleArn(): Promise<string> {
+  if (env.AWS_MEDIACONVERT_ROLE_ARN) return env.AWS_MEDIACONVERT_ROLE_ARN;
+  if (_defaultRoleArn) return _defaultRoleArn;
+
+  const identity = await getStsClient().send(new GetCallerIdentityCommand({}));
+  if (!identity.Account) {
+    throw new Error("AWS account ID is not available for video transcoding");
+  }
+
+  _defaultRoleArn = buildDefaultMediaConvertRoleArn({
+    accountId: identity.Account,
+    region: env.AWS_REGION,
+  });
+  return _defaultRoleArn;
 }
 
 const MAX_ABR_BITRATE = Math.max(...HLS_RENDITIONS.map((r) => r.bitrate));
@@ -162,17 +202,13 @@ export async function submitVideoTranscode(params: {
   if (!env.AWS_S3_BUCKET) {
     throw new Error("AWS_S3_BUCKET is not configured for video transcoding");
   }
-  if (!env.AWS_MEDIACONVERT_ROLE_ARN) {
-    throw new Error(
-      "AWS_MEDIACONVERT_ROLE_ARN is not configured for video transcoding",
-    );
-  }
+  const roleArn = await resolveMediaConvertRoleArn();
 
   const input = buildTranscodeJobInput({
     photoId,
     originalKey,
     bucket: env.AWS_S3_BUCKET,
-    roleArn: env.AWS_MEDIACONVERT_ROLE_ARN,
+    roleArn,
   });
 
   const result = await getMediaConvertClient().send(

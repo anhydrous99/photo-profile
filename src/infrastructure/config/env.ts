@@ -17,9 +17,9 @@ const envSchema = z
     AWS_CLOUDFRONT_DOMAIN: z.string().optional(),
     AWS_ACCESS_KEY_ID: z.string().optional(),
     AWS_SECRET_ACCESS_KEY: z.string().optional(),
-    // Video transcoding (AWS Elemental MediaConvert). Required only when
-    // VIDEO_ENABLED is true. The role is assumed by MediaConvert to read the
-    // original from S3 and write HLS/poster outputs back to S3.
+    // Video transcoding (AWS Elemental MediaConvert). Optional override for the
+    // CDK-managed default role assumed by MediaConvert to read originals and
+    // write HLS/poster outputs back to S3.
     AWS_MEDIACONVERT_ROLE_ARN: z.string().optional(),
     // Optional account-specific MediaConvert endpoint. When omitted the SDK's
     // default regional endpoint is used.
@@ -102,14 +102,6 @@ const envSchema = z
           code: z.ZodIssueCode.custom,
           path: ["STORAGE_BACKEND"],
           message: "STORAGE_BACKEND must be s3 when video is enabled",
-        });
-      }
-      if (!data.AWS_MEDIACONVERT_ROLE_ARN) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["AWS_MEDIACONVERT_ROLE_ARN"],
-          message:
-            "AWS_MEDIACONVERT_ROLE_ARN is required when video is enabled",
         });
       }
       if (!data.AWS_CLOUDFRONT_DOMAIN) {

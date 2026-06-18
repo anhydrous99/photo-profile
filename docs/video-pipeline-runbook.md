@@ -40,7 +40,9 @@ cd photo-profile-cdk
 npx cdk deploy -c s3BucketName=<bucket> -c dynamodbTablePrefix=<prefix>
 ```
 
-Record the stack output `MediaConvertRoleArn`.
+The app derives the default MediaConvert role ARN from AWS STS at runtime. Record
+the stack output `MediaConvertRoleArn` only if you want to set an explicit
+`AWS_MEDIACONVERT_ROLE_ARN` override.
 To deploy image-only infrastructure, pass `-c VIDEO_ENABLED=false`.
 
 The CDK CloudFront distribution uses the managed
@@ -83,7 +85,7 @@ Server (Vercel):
 | --------------------------- | ---------------------------------------------------- |
 | `VIDEO_ENABLED`             | Optional; omit or set `true`. Set `false` to opt out |
 | `STORAGE_BACKEND`           | `s3` (required when video is enabled)                |
-| `AWS_MEDIACONVERT_ROLE_ARN` | CDK output `MediaConvertRoleArn`                     |
+| `AWS_MEDIACONVERT_ROLE_ARN` | Optional override; omit to use the CDK default role  |
 | `AWS_CLOUDFRONT_DOMAIN`     | CDK output `CloudFrontDomain`                        |
 | `AWS_MEDIACONVERT_ENDPOINT` | Optional; omit to use the default regional endpoint  |
 
@@ -96,8 +98,7 @@ Client (Vercel, inlined at build time):
 | `NEXT_PUBLIC_CLOUDFRONT_DOMAIN` | Same domain as `AWS_CLOUDFRONT_DOMAIN`               |
 
 `env.ts` fails fast at startup when video is enabled without
-`STORAGE_BACKEND=s3`, `AWS_MEDIACONVERT_ROLE_ARN`, and
-`AWS_CLOUDFRONT_DOMAIN`.
+`STORAGE_BACKEND=s3` and `AWS_CLOUDFRONT_DOMAIN`.
 
 ## Limits and Settings
 
