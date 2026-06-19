@@ -138,7 +138,6 @@ export function buildTranscodeJobInput(params: {
                   Codec: "H_264",
                   H264Settings: {
                     RateControlMode: "QVBR",
-                    QvbrSettings: { QvbrQualityLevel: 7 },
                     QualityTuningLevel: "MULTI_PASS_HQ",
                     SceneChangeDetect: "TRANSITION_DETECTION",
                   },

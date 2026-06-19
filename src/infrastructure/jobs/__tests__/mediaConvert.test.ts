@@ -55,6 +55,10 @@ describe("buildTranscodeJobInput", () => {
     expect(codec).toBe("H_264");
     expect(rateControl).toBe("QVBR");
     expect(qualityTuningLevel).toBe("MULTI_PASS_HQ");
+    expect(
+      hls?.Outputs?.[0]?.VideoDescription?.CodecSettings?.H264Settings
+        ?.QvbrSettings,
+    ).toBeUndefined();
   });
 
   it("produces a poster frame-capture output group", () => {
