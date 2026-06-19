@@ -40,7 +40,7 @@ describe("buildTranscodeJobInput", () => {
     );
   });
 
-  it("uses H.264 QVBR for the HLS video template", () => {
+  it("uses H.264 QVBR with multi-pass quality for automated ABR", () => {
     const groups = input.Settings?.OutputGroups ?? [];
     const hls = groups.find(
       (g) => g.OutputGroupSettings?.Type === "HLS_GROUP_SETTINGS",
@@ -49,8 +49,12 @@ describe("buildTranscodeJobInput", () => {
     const rateControl =
       hls?.Outputs?.[0]?.VideoDescription?.CodecSettings?.H264Settings
         ?.RateControlMode;
+    const qualityTuningLevel =
+      hls?.Outputs?.[0]?.VideoDescription?.CodecSettings?.H264Settings
+        ?.QualityTuningLevel;
     expect(codec).toBe("H_264");
     expect(rateControl).toBe("QVBR");
+    expect(qualityTuningLevel).toBe("MULTI_PASS_HQ");
   });
 
   it("produces a poster frame-capture output group", () => {
