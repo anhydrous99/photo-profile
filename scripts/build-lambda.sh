@@ -14,6 +14,7 @@ HANDLER_OUT="src/infrastructure/jobs/lambdaHandler.js"
 VIDEO_HANDLER_ENTRY="src/infrastructure/jobs/videoCompleteHandler.ts"
 VIDEO_HANDLER_OUT="src/infrastructure/jobs/videoCompleteHandler.js"
 SHARP_VERSION="0.34.5"
+SHARP_LIBVIPS_VERSION="1.2.4"
 LAMBDA_SIZE_LIMIT_MB=250
 
 echo "=== Lambda Build Script ==="
@@ -57,8 +58,12 @@ echo "→ Installing Sharp ${SHARP_VERSION} for ARM64 Linux..."
 cd "${LAMBDA_DIR}"
 npm init -y --silent > /dev/null 2>&1
 npm install "sharp@${SHARP_VERSION}" --silent 2>&1
-# npm won't install cross-platform optional deps, so force-install ARM64 Linux native binaries
-npm install --force "@img/sharp-linux-arm64" "@img/sharp-libvips-linux-arm64" --silent 2>&1
+# npm won't install cross-platform optional deps, so force-install ARM64 Linux
+# native binaries pinned to the versions required by sharp.
+npm install --force \
+  "@img/sharp-linux-arm64@${SHARP_VERSION}" \
+  "@img/sharp-libvips-linux-arm64@${SHARP_LIBVIPS_VERSION}" \
+  --silent 2>&1
 # Remove host platform binaries (not needed in Lambda)
 rm -rf "${LAMBDA_DIR}/node_modules/@img/sharp-darwin-arm64" \
        "${LAMBDA_DIR}/node_modules/@img/sharp-darwin-x64" \
