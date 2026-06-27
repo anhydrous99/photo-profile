@@ -42,24 +42,31 @@ export function SocialFooter() {
       process.env[link.envKey] !== undefined && process.env[link.envKey] !== "",
   );
 
-  if (links.length === 0) {
-    return null;
-  }
+  const year = new Date().getFullYear();
 
   return (
-    <footer className="flex items-center justify-center gap-6 px-6 py-8">
-      {links.map((link) => (
-        <a
-          key={link.name}
-          href={process.env[link.envKey]}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-text-tertiary transition-colors hover:text-text-primary"
-        >
-          {link.icon}
-          <span className="sr-only">{link.name}</span>
-        </a>
-      ))}
+    <footer className="mt-16 border-t border-border md:mt-24">
+      <div className="mx-auto flex w-full max-w-[1600px] flex-col items-center gap-6 px-4 py-10 sm:px-6 lg:px-8">
+        {links.length > 0 && (
+          <div className="flex items-center justify-center gap-6">
+            {links.map((link) => (
+              <a
+                key={link.name}
+                href={process.env[link.envKey]}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-text-tertiary transition-colors hover:text-text-primary"
+              >
+                {link.icon}
+                <span className="sr-only">{link.name}</span>
+              </a>
+            ))}
+          </div>
+        )}
+        <p className="text-[0.7rem] font-medium uppercase tracking-[0.25em] text-text-tertiary">
+          © {year} Armando Herrera III
+        </p>
+      </div>
     </footer>
   );
 }

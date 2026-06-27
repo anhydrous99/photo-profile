@@ -9,13 +9,15 @@ export const revalidate = 300;
 export default function AlbumsPage() {
   return (
     <>
-      <main className="mx-auto max-w-2xl px-4 py-8">
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-10 sm:px-6 md:py-16 lg:px-8">
         <Breadcrumb
           items={[{ label: "Home", href: "/" }, { label: "Albums" }]}
         />
-        <h1 className="mb-8 text-2xl font-semibold text-text-primary">
-          Albums
-        </h1>
+        <header className="mb-8 md:mb-12">
+          <h1 className="text-3xl font-medium tracking-tight text-text-primary md:text-5xl">
+            Albums
+          </h1>
+        </header>
 
         <Suspense fallback={<AlbumListSkeleton />}>
           <AlbumList />

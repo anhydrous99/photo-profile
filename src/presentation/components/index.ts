@@ -17,3 +17,4 @@ export { SocialFooter } from "./SocialFooter";
 export { ErrorBoundaryContent } from "./ErrorBoundaryContent";
 export { VideoPlayer } from "./VideoPlayer";
 export { VideoOverlay } from "./VideoOverlay";
+export { JustifiedGallery } from "./JustifiedGallery";

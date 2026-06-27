@@ -4,28 +4,28 @@
 :root {
   /* Base */
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a0a0a;
 
   /* Surfaces */
   --surface: #ffffff;
   --surface-secondary: #f5f5f5;
-  --surface-hover: #ebebeb;
-  --surface-inset: #e5e5e5;
+  --surface-hover: #ececec;
+  --surface-inset: #e4e4e4;
 
   /* Text */
-  --text-primary: #171717;
-  --text-secondary: #525252;
-  --text-tertiary: #a3a3a3;
+  --text-primary: #0a0a0a;
+  --text-secondary: #6b6b6b;
+  --text-tertiary: #9a9a9a;
 
   /* Borders */
-  --border: #e5e5e5;
+  --border: #ececec;
   --border-strong: #d4d4d4;
 
-  /* Accent / Interactive */
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-surface: #eff6ff;
-  --accent-text: #1e40af;
+  /* Accent / Interactive — monochrome ink (photos provide the color) */
+  --accent: #0a0a0a;
+  --accent-hover: #333333;
+  --accent-surface: #f5f5f5;
+  --accent-text: #0a0a0a;
 
   /* Status — Success */
   --status-success-bg: #dcfce7;
@@ -43,7 +43,7 @@
 
   /* Misc */
   --ring-offset: #ffffff;
-  --button-primary-bg: #171717;
+  --button-primary-bg: #0a0a0a;
   --button-primary-text: #ffffff;
 }
 
@@ -90,29 +90,29 @@
 @media (prefers-color-scheme: dark) {
   :root {
     /* Base */
-    --background: #1e1e1e;
+    --background: #0a0a0a;
     --foreground: #ededed;
 
     /* Surfaces */
-    --surface: #1e1e1e;
-    --surface-secondary: #2a2a2a;
-    --surface-hover: #333333;
-    --surface-inset: #171717;
+    --surface: #0a0a0a;
+    --surface-secondary: #1a1a1a;
+    --surface-hover: #242424;
+    --surface-inset: #000000;
 
     /* Text */
     --text-primary: #ededed;
-    --text-secondary: #a3a3a3;
-    --text-tertiary: #737373;
+    --text-secondary: #9a9a9a;
+    --text-tertiary: #6b6b6b;
 
     /* Borders */
-    --border: #333333;
-    --border-strong: #525252;
+    --border: #242424;
+    --border-strong: #3a3a3a;
 
-    /* Accent / Interactive */
-    --accent: #60a5fa;
-    --accent-hover: #93c5fd;
-    --accent-surface: #172554;
-    --accent-text: #93c5fd;
+    /* Accent / Interactive — monochrome ink */
+    --accent: #ededed;
+    --accent-hover: #cccccc;
+    --accent-surface: #1a1a1a;
+    --accent-text: #ededed;
 
     /* Status — Success */
     --status-success-bg: #052e16;
@@ -129,9 +129,9 @@
     --status-error-surface-text: #fca5a5;
 
     /* Misc */
-    --ring-offset: #1e1e1e;
+    --ring-offset: #0a0a0a;
     --button-primary-bg: #ededed;
-    --button-primary-text: #1e1e1e;
+    --button-primary-text: #0a0a0a;
   }
 }
 
@@ -143,5 +143,10 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:
+    var(--font-geist-sans),
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
 }

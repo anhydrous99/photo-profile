@@ -4,8 +4,7 @@ import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import type { PhotoData } from "@/domain/entities/Photo";
 import { Breadcrumb } from "@/presentation/components/Breadcrumb";
-import { FadeImage } from "./FadeImage";
-import { VideoOverlay } from "./VideoOverlay";
+import { JustifiedGallery } from "./JustifiedGallery";
 import { getSlug } from "@/lib/getSlug";
 
 // Dynamic import - lightbox bundle only loads when user clicks
@@ -70,7 +69,7 @@ export function AlbumGalleryClient({
   };
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
+    <main className="mx-auto w-full max-w-[1600px] px-4 py-10 sm:px-6 md:py-16 lg:px-8">
       <Breadcrumb
         items={[
           { label: "Home", href: "/" },
@@ -79,45 +78,28 @@ export function AlbumGalleryClient({
         ]}
       />
 
-      <h1 className="text-3xl font-semibold text-text-primary">
-        {album.title}
-      </h1>
-
-      {album.description && (
-        <p className="mt-2 mb-8 text-text-secondary">{album.description}</p>
-      )}
-
-      {!album.description && <div className="mb-8" />}
+      <header className="mb-8 md:mb-12">
+        <h1 className="text-3xl font-medium tracking-tight text-text-primary md:text-5xl">
+          {album.title}
+        </h1>
+        {album.description && (
+          <p className="mt-3 max-w-2xl text-base text-text-secondary">
+            {album.description}
+          </p>
+        )}
+        {photos.length > 0 && (
+          <p className="mt-4 text-xs font-medium uppercase tracking-[0.2em] text-text-tertiary">
+            {photos.length} {photos.length === 1 ? "Photograph" : "Photographs"}
+          </p>
+        )}
+      </header>
 
       {photos.length === 0 ? (
         <p className="py-12 text-center text-text-secondary">
           No photos in this album yet.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {photos.map((photo, index) => (
-            <button
-              key={photo.id}
-              type="button"
-              onClick={() => handlePhotoClick(index)}
-              className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-ring-offset"
-              aria-label={`View ${photo.title || photo.originalFilename}`}
-            >
-              <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
-                <FadeImage
-                  photoId={photo.id}
-                  alt={photo.title || photo.originalFilename}
-                  blurDataUrl={photo.blurDataUrl}
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  maxWidth={photo.width ?? undefined}
-                />
-              </div>
-              {photo.mediaType === "video" && (
-                <VideoOverlay durationMs={photo.durationMs} />
-              )}
-            </button>
-          ))}
-        </div>
+        <JustifiedGallery photos={photos} onPhotoClick={handlePhotoClick} />
       )}
 
       {/* Lightbox portal - only rendered when open */}

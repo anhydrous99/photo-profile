@@ -73,7 +73,9 @@ export function ExifPanel({ exifData, visible }: ExifPanelProps) {
         <div className="mx-auto flex max-w-4xl flex-wrap gap-x-6 gap-y-2">
           {getExifFields(exifData!).map((field) => (
             <div key={field.label} className="min-w-[80px]">
-              <div className="text-xs text-gray-400">{field.label}</div>
+              <div className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-white/50">
+                {field.label}
+              </div>
               <div className="text-sm font-medium text-white">
                 {field.value}
               </div>

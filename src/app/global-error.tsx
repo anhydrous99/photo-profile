@@ -19,9 +19,13 @@ export default function GlobalError({
         <style
           dangerouslySetInnerHTML={{
             __html: `
-              body { background-color: #ffffff; color: #171717; margin: 0; font-family: Arial, Helvetica, sans-serif; }
+              body { background-color: #ffffff; color: #0a0a0a; margin: 0; font-family: Arial, Helvetica, sans-serif; }
+              .ge-primary { background-color: #0a0a0a; color: #ffffff; }
+              .ge-secondary { border: 1px solid #d4d4d4; color: inherit; }
               @media (prefers-color-scheme: dark) {
-                body { background-color: #1e1e1e; color: #ededed; }
+                body { background-color: #0a0a0a; color: #ededed; }
+                .ge-primary { background-color: #ededed; color: #0a0a0a; }
+                .ge-secondary { border-color: #3a3a3a; }
               }
             `,
           }}
@@ -58,13 +62,12 @@ export default function GlobalError({
           <div style={{ display: "flex", gap: "0.75rem" }}>
             <button
               onClick={() => reset()}
+              className="ge-primary"
               style={{
-                borderRadius: "0.5rem",
-                backgroundColor: "#2563eb",
-                padding: "0.5rem 1rem",
+                borderRadius: 0,
+                padding: "0.625rem 1.25rem",
                 fontSize: "0.875rem",
                 fontWeight: 500,
-                color: "#ffffff",
                 border: "none",
                 cursor: "pointer",
               }}
@@ -74,14 +77,13 @@ export default function GlobalError({
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- global-error replaces root layout; Link component unavailable */}
             <a
               href="/"
+              className="ge-secondary"
               style={{
-                borderRadius: "0.5rem",
-                border: "1px solid #e5e5e5",
-                padding: "0.5rem 1rem",
+                borderRadius: 0,
+                padding: "0.625rem 1.25rem",
                 fontSize: "0.875rem",
                 fontWeight: 500,
                 textDecoration: "none",
-                color: "inherit",
               }}
             >
               Go home
