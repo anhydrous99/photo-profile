@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import type { PhotoData } from "@/domain/entities/Photo";
 import { FadeImage } from "./FadeImage";
 import { VideoOverlay } from "./VideoOverlay";
+import { JustifiedGallery } from "./JustifiedGallery";
 import { getSlug } from "@/lib/getSlug";
 
 // Dynamic import - lightbox bundle only loads when user clicks
@@ -68,21 +69,25 @@ export function HomepageClient({
 
   return (
     <>
-      {/* Hero photo */}
-      <section className="mb-8">
+      {/* Hero photo — rendered at its true aspect ratio, capped at 80vh */}
+      <section className="mb-10 md:mb-16">
         <button
           type="button"
           onClick={() => handlePhotoClick(0)}
-          className="relative aspect-[3/2] w-full cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-ring-offset"
+          className="group relative block max-h-[80vh] w-full cursor-pointer overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-ring-offset"
+          style={{
+            aspectRatio: `${heroPhoto.width ?? 3} / ${heroPhoto.height ?? 2}`,
+          }}
           aria-label={`View ${heroPhoto.title || heroPhoto.originalFilename}`}
         >
           <FadeImage
             photoId={heroPhoto.id}
             alt={heroPhoto.title || heroPhoto.originalFilename}
             blurDataUrl={heroPhoto.blurDataUrl}
-            sizes="(max-width: 1280px) 100vw, 1152px"
+            sizes="100vw"
             preload
             maxWidth={heroPhoto.width ?? undefined}
+            className="transition-transform duration-700 ease-out group-hover:scale-[1.02]"
           />
           {heroPhoto.mediaType === "video" && (
             <VideoOverlay durationMs={heroPhoto.durationMs} />
@@ -90,30 +95,12 @@ export function HomepageClient({
         </button>
       </section>
 
-      {/* Grid photos */}
+      {/* Remaining photos — justified rows preserve each photo's composition */}
       {gridPhotos.length > 0 && (
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:gap-6">
-          {gridPhotos.map((photo, index) => (
-            <button
-              key={photo.id}
-              type="button"
-              onClick={() => handlePhotoClick(index + 1)}
-              className="relative aspect-square cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-ring-offset"
-              aria-label={`View ${photo.title || photo.originalFilename}`}
-            >
-              <FadeImage
-                photoId={photo.id}
-                alt={photo.title || photo.originalFilename}
-                blurDataUrl={photo.blurDataUrl}
-                sizes="(max-width: 768px) 50vw, 33vw"
-                maxWidth={photo.width ?? undefined}
-              />
-              {photo.mediaType === "video" && (
-                <VideoOverlay durationMs={photo.durationMs} />
-              )}
-            </button>
-          ))}
-        </section>
+        <JustifiedGallery
+          photos={gridPhotos}
+          onPhotoClick={(index) => handlePhotoClick(index + 1)}
+        />
       )}
 
       {/* Lightbox portal - only rendered when open */}

@@ -1,20 +1,31 @@
+// Rows of varied ratios approximate the justified gallery layout.
+const SKELETON_ROWS = [
+  [3, 2, 4],
+  [4, 3, 3],
+];
+
 export function HomepagePhotosSkeleton() {
   return (
     <>
       {/* Hero placeholder */}
-      <section className="mb-8">
-        <div className="aspect-[3/2] w-full animate-pulse rounded bg-surface-secondary" />
+      <section className="mb-10 md:mb-16">
+        <div className="aspect-[3/2] max-h-[80vh] w-full animate-pulse bg-surface-secondary" />
       </section>
 
-      {/* Grid placeholders */}
-      <section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:gap-6">
-        {Array.from({ length: 9 }, (_, i) => (
-          <div
-            key={i}
-            className="aspect-square animate-pulse rounded bg-surface-secondary"
-          />
+      {/* Justified rows placeholder */}
+      <div className="space-y-3">
+        {SKELETON_ROWS.map((row, i) => (
+          <div key={i} className="flex gap-3">
+            {row.map((ratio, j) => (
+              <div
+                key={j}
+                className="h-40 animate-pulse bg-surface-secondary sm:h-56 md:h-72"
+                style={{ flexGrow: ratio, flexBasis: 0 }}
+              />
+            ))}
+          </div>
         ))}
-      </section>
+      </div>
     </>
   );
 }

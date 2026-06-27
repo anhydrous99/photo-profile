@@ -47,39 +47,44 @@ export async function AlbumList() {
 
   if (albumsWithCovers.length === 0) {
     return (
-      <p className="text-center text-text-secondary">No albums available.</p>
+      <p className="py-12 text-center text-text-secondary">
+        No albums available.
+      </p>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-12">
       {albumsWithCovers.map(({ album, coverPhotoId }) => (
         <Link
           key={album.id}
           href={`/albums/${album.id}`}
-          className="flex items-center gap-4 rounded-lg p-2 transition-colors hover:bg-surface-hover"
+          className="group block"
         >
-          <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg">
+          <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface-secondary">
             {coverPhotoId ? (
               <picture>
                 <source
                   type="image/avif"
-                  srcSet={getClientImageUrl(coverPhotoId, "300w.avif")}
+                  srcSet={`${getClientImageUrl(coverPhotoId, "600w.avif")} 600w, ${getClientImageUrl(coverPhotoId, "1200w.avif")} 1200w`}
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
                 <img
-                  src={getClientImageUrl(coverPhotoId, "300w.webp")}
+                  src={getClientImageUrl(coverPhotoId, "600w.webp")}
+                  srcSet={`${getClientImageUrl(coverPhotoId, "600w.webp")} 600w, ${getClientImageUrl(coverPhotoId, "1200w.webp")} 1200w`}
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                   alt={album.title}
-                  className="absolute inset-0 h-full w-full object-cover"
                   loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                 />
               </picture>
             ) : (
               <ImagePlaceholder />
             )}
           </div>
-          <span className="text-lg font-medium text-text-primary">
+          <h2 className="mt-3 text-xs font-medium uppercase tracking-[0.2em] text-text-secondary transition-colors group-hover:text-text-primary">
             {album.title}
-          </span>
+          </h2>
         </Link>
       ))}
     </div>
